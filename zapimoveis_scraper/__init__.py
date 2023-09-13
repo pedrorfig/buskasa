@@ -28,11 +28,9 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 from urllib.request import Request, urlopen
-from bs4 import BeautifulSoup
-import json
-import time
 
-from zapimoveis_scraper.enums import ZapAcao, ZapTipo
+import requests
+import time
 from zapimoveis_scraper.item import ZapItem
 from collections import defaultdict
 
@@ -42,92 +40,111 @@ __all__ = [
 ]
 
 
-# URL templates to make urls searches.
-url_home = "https://www.zapimoveis.com.br/%(acao)s/%(tipo)s/%(localization)s/?pagina=%(page)s"
+def get_page(tipo_negocio, state, city, neighborhood, usage_type, min_area, max_price, page):
+    """
+    Get results from a house search at Zap Imoveis
+    Args:
+        min_area:
+        max_price:
+        tipo_negocio (str):
+        state (str):
+        city (str):
+        neighborhood (str):
+        page (int):
+        usage_type (str):
 
-# Default user agent, unless instructed by the user to change it.
-USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36'
+    Returns:
 
+    """
+    number_of_listings = 100
+    initial_listing = number_of_listings*page
 
-def get_page(url):
-    request = Request(url)
-    request.add_header('User-Agent', USER_AGENT)
-    response = urlopen(request)
-    return response
+    headers = {
+        'Accept': '*/*',
+        'Accept-Language': 'en-US,en;q=0.9,pt-BR;q=0.8,pt;q=0.7',
+        'Authorization': 'Bearer undefined',
+        'Connection': 'keep-alive',
+        'DNT': '1',
+        'Origin': 'https://www.zapimoveis.com.br',
+        'Referer': 'https://www.zapimoveis.com.br/',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-site',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
+        'X-DeviceId': '0d645541-36ea-45b4-9c59-deb2d736595c',
+        'sec-ch-ua': '"Chromium";v="116", "Not)A;Brand";v="24", "Google Chrome";v="116"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"Windows"',
+        'x-domain': '.zapimoveis.com.br',
+    }
+    params = {
+        'user': '0d645541-36ea-45b4-9c59-deb2d736595c',
+        'portal': 'ZAP',
+        'categoryPage': 'RESULT',
+        'developmentsSize': '0',
+        'superPremiumSize': '0',
+        'business': tipo_negocio,
+        'parentId': 'null',
+        'listingType': 'USED',
+        'usableAreasMin': min_area,
+        'priceMax': max_price,
+        'addressCity': city,
+        'addressState': state,
+        'addressNeighborhood': neighborhood,
+        'page': '1',
+        'from': initial_listing,
+        'size': number_of_listings,
+        'usageTypes': usage_type
+    }
+    response = requests.get('https://glue-api.zapimoveis.com.br/v2/listings', params=params, headers=headers)
+    data = response.json()
 
+    return data
 
-def __get_text(element, content=False):
-    text = ''
-    if element is not None:
-        if content is False:
-            text = element.getText()
-        else:
-            text = element.get("content")
-
-    text.replace('\\n', '')
-    return text.strip()
 
 def convert_dict(data):
-    '''
+    """
     Simple function to convert the data from objects to a dictionary
-
-    dicts: Empty default dictionary
-    Keys: List with the keys for the dictionary
-    '''
-    #start dictonary 
+    Args:
+        data (list of ZapItem): Empty default dictionary
+    """
+    # start dictonary
     dicts = defaultdict(list)
-    #create a list with the keys
-    keys = ['price', 'condo_fee', 'bedrooms','bathrooms','vacancies','total_area_m2','address','description', 'link']
-    
-    #simple for loops to create the dictionary
+    # create a list with the keys
+    keys = [attribute for attribute in dir(data[0]) if not attribute.startswith('__')]
+
+    # simple for loops to create the dictionary
     for i in keys:
         for j in range(len(data)):
             to_dict = data[j].__dict__
             dicts[i].append(to_dict['%s' % i])
-            
+
     return dicts
 
 
-def get_listings(soup):
-    page_data_string = soup.find(lambda tag:tag.name=="script" and isinstance(tag.string, str) and tag.string.startswith("window"))
+def get_listings(data):
+    """
+    Get listings from a house search at Zap Imoveis
+    Args:
+        data (JSON string): Response content from a Zap Imoveis search result
+    """
+    listings = data['search']['result']['listings']
+    return listings
 
-    json_string = page_data_string.string.replace("window.__INITIAL_STATE__=","").replace(";(function(){var s;(s=document.currentScript||document.scripts[document.scripts.length-1]).parentNode.removeChild(s);}());","")
+def search(tipo_negocio, state, city, neighborhood, usage_type,min_area, max_price, num_pages=1, dictionary_out=False, time_to_wait=0):
 
-    return json.loads(json_string)['results']['listings']
-
-
-def get_ZapItem(listing):
-    item = ZapItem()
-    item.link = listing['link']['href']
-    item.price = listing['listing']['pricingInfos'][0].get('price', None) if len(listing['listing']['pricingInfos']) > 0 else 0
-    item.condo_fee = listing['listing']['pricingInfos'][0].get('monthlyCondoFee', None) if len(listing['listing']['pricingInfos']) > 0 else 0
-    item.bedrooms = listing['listing']['bedrooms'][0] if len(listing['listing']['bedrooms']) > 0 else 0
-    item.bathrooms = listing['listing']['bathrooms'][0] if len(listing['listing']['bathrooms']) > 0 else 0
-    item.vacancies =  listing['listing']['parkingSpaces'][0] if len(listing['listing']['parkingSpaces']) > 0 else 0
-    item.total_area_m2 = listing['listing']['usableAreas'][0] if len(listing['listing']['usableAreas']) > 0 else 0
-    item.address = (listing['link']['data']['street'] + ", " + listing['link']['data']['neighborhood']).strip(',').strip()
-    item.description = listing['listing']['title']
-
-    return item
-
-
-def search(localization='go+goiania++setor-marista', num_pages=1, acao=ZapAcao.aluguel.value, tipo=ZapTipo.apartamentos.value, dictionary_out = False, time_to_wait=0):
-    page = 1
     items = []
 
-    while page <= num_pages:
-        html = get_page(url_home % vars())
-        soup = BeautifulSoup(html, 'html.parser')
-
-        listings = get_listings(soup)
-
+    for page in range(1, num_pages+1):
+        page_data = get_page(tipo_negocio, state, city, neighborhood, usage_type, min_area, max_price, page)
+        listings = get_listings(page_data)
         for listing in listings:
             if 'type' not in listing or listing['type'] != 'nearby':
-                items.append(get_ZapItem(listing))
-
+                item = ZapItem(listing)
+                items.append(item)
         page += 1
         time.sleep(time_to_wait)
-        
+
     if dictionary_out:
         return convert_dict(items)
 
