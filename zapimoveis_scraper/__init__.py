@@ -31,6 +31,7 @@ from urllib.request import Request, urlopen
 
 import requests
 import time
+import pandas as pd
 from zapimoveis_scraper.item import ZapItem
 from collections import defaultdict
 
@@ -102,9 +103,9 @@ def get_page(tipo_negocio, state, city, neighborhood, usage_type, min_area, max_
     return data
 
 
-def convert_dict(data):
+def convert_to_dataframe(data):
     """
-    Simple function to convert the data from objects to a dictionary
+    Simple function to convert the data from objects to a pandas DataFrame
     Args:
         data (list of ZapItem): Empty default dictionary
     """
@@ -118,8 +119,8 @@ def convert_dict(data):
         for j in range(len(data)):
             to_dict = data[j].__dict__
             dicts[i].append(to_dict['%s' % i])
-
-    return dicts
+    results = pd.DataFrame(dicts)
+    return results
 
 
 def get_listings(data):
@@ -131,7 +132,7 @@ def get_listings(data):
     listings = data['search']['result']['listings']
     return listings
 
-def search(tipo_negocio, state, city, neighborhood, usage_type,min_area, max_price, num_pages=1, dictionary_out=False, time_to_wait=0):
+def search(tipo_negocio, state, city, neighborhood, usage_type,min_area, max_price, num_pages=1, dataframe_out=False, time_to_wait=0):
 
     items = []
 
@@ -145,7 +146,18 @@ def search(tipo_negocio, state, city, neighborhood, usage_type,min_area, max_pri
         page += 1
         time.sleep(time_to_wait)
 
-    if dictionary_out:
-        return convert_dict(items)
+    if dataframe_out:
+        return convert_to_dataframe(items)
 
     return items
+
+def export_results(data, path=r".\house_search.csv"):
+    """
+    Export listing results to the cloud or local file
+    Args:
+        data (pandas DataFrame): House search results
+    """
+    data.to_csv(path, sep=';')
+
+    return
+
