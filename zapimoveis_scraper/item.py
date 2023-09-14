@@ -1,3 +1,6 @@
+import numpy as np
+
+
 class ZapItem:
     """
     Zap Imoveis listing object
@@ -16,4 +19,27 @@ class ZapItem:
         self.address = (listing['link']['data']['street'] + ", " + listing['link']['data']['neighborhood']).strip(
             ',').strip()
         self.description = listing['listing']['title']
-        self.link = 'https://www.zapimoveis.com.br' + listing['link']['href']
+        self.url = 'https://www.zapimoveis.com.br'+listing['link']['href']
+        self.link = f'<a href="{self.url}">link</a>'
+        self.latitude = self.get_latitude(listing)
+        self.longitude = self.get_longitude(listing)
+
+    def get_instance_attributes(self):
+        attributes =[]
+        for attribute, value in self.__dict__.items():
+            attributes.append(attribute)
+        return attributes
+    def get_latitude(self, listing):
+
+        try:
+            lat = listing['listing']['address'].get('point').get('lat')
+        except AttributeError:
+            lat = np.nan
+        return lat
+    def get_longitude(self, listing):
+
+        try:
+            lon = listing['listing']['address'].get('point').get('lon')
+        except AttributeError:
+            lon = np.nan
+        return lon

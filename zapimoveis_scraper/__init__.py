@@ -1,37 +1,7 @@
-#!/usr/bin/env python
-
-# Python bindings to the Google search engine
-# Copyright (c) 2009-2016, Geovany Rodrigues
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-#     * Redistributions of source code must retain the above copyright notice,
-#       this list of conditions and the following disclaimer.
-#     * Redistributions in binary form must reproduce the above copyright
-#       notice,this list of conditions and the following disclaimer in the
-#       documentation and/or other materials provided with the distribution.
-#     * Neither the name of the copyright holder nor the names of its
-#       contributors may be used to endorse or promote products derived from
-#       this software without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
-from urllib.request import Request, urlopen
-
 import requests
 import time
 import pandas as pd
+import plotly.express as px
 from zapimoveis_scraper.item import ZapItem
 from collections import defaultdict
 
@@ -87,8 +57,11 @@ def get_page(tipo_negocio, state, city, neighborhood, usage_type, min_area, max_
         'business': tipo_negocio,
         'parentId': 'null',
         'listingType': 'USED',
+        'unitTypesV3': 'APARTMENT,HOME',
+        'unitTypes': 'APARTMENT,HOME',
         'usableAreasMin': min_area,
         'priceMax': max_price,
+        'priceMin': 100000,
         'addressCity': city,
         'addressState': state,
         'addressNeighborhood': neighborhood,
@@ -103,7 +76,7 @@ def get_page(tipo_negocio, state, city, neighborhood, usage_type, min_area, max_
     return data
 
 
-def convert_to_dataframe(data):
+def convert_to_dataframe(data, attributes):
     """
     Simple function to convert the data from objects to a pandas DataFrame
     Args:
@@ -112,7 +85,7 @@ def convert_to_dataframe(data):
     # start dictonary
     dicts = defaultdict(list)
     # create a list with the keys
-    keys = [attribute for attribute in dir(data[0]) if not attribute.startswith('__')]
+    keys = attributes
 
     # simple for loops to create the dictionary
     for i in keys:
@@ -147,7 +120,7 @@ def search(tipo_negocio, state, city, neighborhood, usage_type,min_area, max_pri
         time.sleep(time_to_wait)
 
     if dataframe_out:
-        return convert_to_dataframe(items)
+        return convert_to_dataframe(items, item.get_instance_attributes())
 
     return items
 
@@ -161,3 +134,9 @@ def export_results(data, path=r".\house_search.csv"):
 
     return
 
+def create_map(search_results, mapbox_token):
+
+    px.set_mapbox_access_token(mapbox_token)
+    fig = px.scatter_mapbox(search_results, lat="latitude", lon="longitude", size="price",
+                            color='price_per_area', hover_name='description', zoom=15,  hover_data='link')
+    fig.show()
