@@ -102,7 +102,7 @@ def get_listings(data):
     Args:
         data (JSON string): Response content from a Zap Imoveis search result
     """
-    listings = data['search']['result']['listings']
+    listings = data.get('search')['result']['listings']
     return listings
 
 def search(tipo_negocio, state, city, neighborhood, usage_type,min_area, max_price, num_pages=1, dataframe_out=False, time_to_wait=0):
