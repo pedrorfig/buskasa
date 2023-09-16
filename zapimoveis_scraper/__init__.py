@@ -140,3 +140,8 @@ def create_map(search_results, mapbox_token):
     fig = px.scatter_mapbox(search_results, lat="latitude", lon="longitude", size="price",
                             color='price_per_area', hover_name='description', zoom=15,  hover_data='link')
     fig.show()
+
+def filter_results(search_results, max_price_per_area, min_price_per_area):
+
+    search_results = search_results[search_results['price_per_area'].between(min_price_per_area, max_price_per_area)]
+    return search_results
