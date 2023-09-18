@@ -148,11 +148,13 @@ def export_results(data, path=r".\house_search.csv"):
         data (pandas DataFrame): House search results
     """
 
+    today_date = date.today().strftime('%Y-%m-%d')
+    update_date = pd.DataFrame({'update_date': [today_date]})
+
     connection = sqlite3.connect('..\data\listings.db')
-    update_date = pd.DataFrame({'update_date': date.today()})
     with connection as conn:
         data.to_sql(name='houses', con=conn, if_exists='replace')
-        update_date.to_sql(name='update_date', con=conn, if_exists='replace')
+        update_date.to_sql(name='update_date', con=conn, if_exists='replace', index=False)
     return
 
 
