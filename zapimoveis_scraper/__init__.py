@@ -1,14 +1,12 @@
+import sqlite3
+import numpy as np
 import requests
 import time
 import pandas as pd
 import plotly.express as px
-from zapimoveis_scraper.item import ZapItem
+from zapimoveis_scraper.classes import ZapItem
 from collections import defaultdict
-
-__all__ = [
-    # Main search function.
-    'search',
-]
+from datetime import date
 
 
 def get_page(tipo_negocio, state, city, neighborhood, usage_type, min_area, max_price, page):
@@ -28,7 +26,7 @@ def get_page(tipo_negocio, state, city, neighborhood, usage_type, min_area, max_
 
     """
     number_of_listings = 100
-    initial_listing = number_of_listings*page
+    initial_listing = number_of_listings * page
 
     headers = {
         'Accept': '*/*',
@@ -57,8 +55,8 @@ def get_page(tipo_negocio, state, city, neighborhood, usage_type, min_area, max_
         'business': tipo_negocio,
         'parentId': 'null',
         'listingType': 'USED',
-        'unitTypesV3': 'APARTMENT,HOME',
-        'unitTypes': 'APARTMENT,HOME',
+        'unitTypesV3': 'APARTMENT, HOME',
+        'unitTypes': 'APARTMENT, HOME',
         'usableAreasMin': min_area,
         'priceMax': max_price,
         'priceMin': 100000,
@@ -102,27 +100,46 @@ def get_listings(data):
     Args:
         data (JSON string): Response content from a Zap Imoveis search result
     """
-    listings = data.get('search')['result']['listings']
+    listings = data.get('search', {}).get('result', {}).get('listings', 'Not a listing')
     return listings
 
-def search(tipo_negocio, state, city, neighborhood, usage_type,min_area, max_price, num_pages=1, dataframe_out=False, time_to_wait=0):
 
+def search(tipo_negocio: str, state: str, city: str, neighborhoods: list, usage_type: str,
+           min_area: int, max_price: int, dataframe_out=False, time_to_wait=0):
     items = []
-
-    for page in range(1, num_pages+1):
-        page_data = get_page(tipo_negocio, state, city, neighborhood, usage_type, min_area, max_price, page)
-        listings = get_listings(page_data)
-        for listing in listings:
-            if 'type' not in listing or listing['type'] != 'nearby':
-                item = ZapItem(listing)
-                items.append(item)
-        page += 1
-        time.sleep(time_to_wait)
+    for neighborhood in neighborhoods:
+        page = 0
+        listings = None
+        while listings != []:
+            page_data = get_page(tipo_negocio, state, city, neighborhood, usage_type, min_area, max_price, page)
+            listings = get_listings(page_data)
+            if listings != 'Not a listing':
+                for listing in listings:
+                    if 'type' not in listing or listing['type'] != 'nearby':
+                        item = ZapItem(listing)
+                        items.append(item)
+            page += 1
+            time.sleep(time_to_wait)
 
     if dataframe_out:
         return convert_to_dataframe(items, item.get_instance_attributes())
 
     return items
+
+
+def check_if_update_needed(test: bool):
+    if test:
+        return True
+    today_date = date.today().strftime('%Y-%m-%d')
+    connection = sqlite3.connect('..\data\listings.db')
+    with connection as conn:
+        update_table = pd.read_sql('SELECT * from update_date', con=conn)
+        last_date = update_table['update_date'][0]
+        if today_date == last_date:
+            return False
+        else:
+            return True
+
 
 def export_results(data, path=r".\house_search.csv"):
     """
@@ -130,18 +147,52 @@ def export_results(data, path=r".\house_search.csv"):
     Args:
         data (pandas DataFrame): House search results
     """
-    data.to_csv(path, sep=';')
 
+    connection = sqlite3.connect('..\data\listings.db')
+    update_date = pd.DataFrame({'update_date': date.today()})
+    with connection as conn:
+        data.to_sql(name='houses', con=conn, if_exists='replace')
+        update_date.to_sql(name='update_date', con=conn, if_exists='replace')
     return
 
-def create_map(search_results, mapbox_token):
 
+def create_map(mapbox_token):
     px.set_mapbox_access_token(mapbox_token)
-    fig = px.scatter_mapbox(search_results, lat="latitude", lon="longitude", size="price",
-                            color='price_per_area', hover_name='description', zoom=15,  hover_data='link')
+    # read data
+    connection = sqlite3.connect('..\data\listings.db')
+    with connection as conn:
+        search_results = pd.read_sql('SELECT * from houses', con=conn)
+
+    size = 1 / search_results['price_per_area']
+    fig = px.scatter_mapbox(search_results, lat="latitude", lon="longitude", size=size,
+                            color='price_per_area', zoom=15, color_continuous_scale='Plotly3')
+    customdata = np.stack((search_results['link'], search_results['price'],
+                           search_results['price_per_area'], search_results['condo_fee'],
+                           search_results['total_area_m2'], search_results['floor']), axis=1)
+    hover_template = ('<b>%{customdata[0]}</b> <br>' +
+                      'Price: R$ %{customdata[1]:,.2f} <br>' +
+                      'Price per Area: R$/m<sup>2</sup> %{customdata[2]:,.2f} <br>' +
+                      'Condo Fee: R$ %{customdata[3]:,.2f} <br>' +
+                      'Usable Area: %{customdata[4]} m<sup>2</sup> <br>' +
+                      'Floor: %{customdata[5]}')
+    fig.update_traces(customdata=customdata, hovertemplate=hover_template)
+    fig.update_layout(
+        hoverlabel=dict(
+            bgcolor="white",
+            font_size=16,
+            font_family="Rockwell"
+        ),
+        hoverdistance=50
+    )
     fig.show()
 
-def filter_results(search_results, max_price_per_area, min_price_per_area):
 
+def filter_results(search_results, max_price_per_area, min_price_per_area):
     search_results = search_results[search_results['price_per_area'].between(min_price_per_area, max_price_per_area)]
+    return search_results
+
+
+def remove_fraudsters(search_results):
+    # Removing known fraudster
+    search_results = search_results[search_results['advertizer'] != "Camila Damaceno Bispo"]
     return search_results
