@@ -21,10 +21,13 @@ class ZapItem:
         self.price_per_area = self.price / self.total_area_m2
         self.street_address = listing['link']['data']['street']
         self.street_number = listing['link']['data']['streetNumber']
-        self.address = (self.street_address + " " + self.street_number + ", " +
-                        listing['link']['data']['neighborhood'] + ", " + listing['listing']['address']['zipCode'] + ", " +
-                        listing['listing']['address']['city'] + ", " + listing['listing']['address']['stateAcronym'] + ", " +
-                        listing['listing']['address']['country'])
+        self.neighborhood = listing['link']['data']['neighborhood']
+        self.zip_code = listing['listing']['address']['zipCode']
+        self.city = listing['listing']['address']['city']
+        self.state = listing['listing']['address']['stateAcronym']
+        self.country = listing['listing']['address']['country']
+        self.address = ", ".join([self.street_address + " " + self.street_number, self.neighborhood,
+                                  self.zip_code, self.city, self.state, self.country])
         self.description = listing['listing']['title']
         self.url = 'https://www.zapimoveis.com.br' + listing['link']['href']
         self.link = f'<a href="{self.url}">{self.description}</a>'

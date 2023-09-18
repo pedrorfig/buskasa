@@ -9,7 +9,7 @@ from collections import defaultdict
 from datetime import date
 
 
-def get_page(tipo_negocio, state, city, neighborhood, usage_type, min_area, max_price, page):
+def get_page(tipo_negocio, state, city, neighborhood, usage_type, unit_type, min_area, max_price, page):
     """
     Get results from a house search at Zap Imoveis
     Args:
@@ -55,8 +55,8 @@ def get_page(tipo_negocio, state, city, neighborhood, usage_type, min_area, max_
         'business': tipo_negocio,
         'parentId': 'null',
         'listingType': 'USED',
-        'unitTypesV3': 'APARTMENT, HOME',
-        'unitTypes': 'APARTMENT, HOME',
+        'unitTypesV3': unit_type,
+        'unitTypes': unit_type,
         'usableAreasMin': min_area,
         'priceMax': max_price,
         'priceMin': 100000,
@@ -104,14 +104,14 @@ def get_listings(data):
     return listings
 
 
-def search(tipo_negocio: str, state: str, city: str, neighborhoods: list, usage_type: str,
+def search(tipo_negocio: str, state: str, city: str, neighborhoods: list, usage_type: str, unit_type: str,
            min_area: int, max_price: int, dataframe_out=False, time_to_wait=0):
     items = []
     for neighborhood in neighborhoods:
         page = 0
         listings = None
         while listings != []:
-            page_data = get_page(tipo_negocio, state, city, neighborhood, usage_type, min_area, max_price, page)
+            page_data = get_page(tipo_negocio, state, city, neighborhood, usage_type, unit_type, min_area, max_price, page)
             listings = get_listings(page_data)
             if listings != 'Not a listing':
                 for listing in listings:
@@ -141,7 +141,7 @@ def check_if_update_needed(test: bool):
             return True
 
 
-def export_results(data, path=r".\house_search.csv"):
+def export_results(data):
     """
     Export listing results to the cloud or local file
     Args:
@@ -158,12 +158,8 @@ def export_results(data, path=r".\house_search.csv"):
     return
 
 
-def create_map(mapbox_token):
+def create_map(search_results, mapbox_token):
     px.set_mapbox_access_token(mapbox_token)
-    # read data
-    connection = sqlite3.connect('..\data\listings.db')
-    with connection as conn:
-        search_results = pd.read_sql('SELECT * from houses', con=conn)
 
     size = 1 / search_results['price_per_area']
     fig = px.scatter_mapbox(search_results, lat="latitude", lon="longitude", size=size,
@@ -184,12 +180,19 @@ def create_map(mapbox_token):
             font_size=16,
             font_family="Rockwell"
         ),
-        hoverdistance=50
+        hoverdistance=50,
+        mapbox={
+        'accesstoken': mapbox_token,
+        'style': "outdoors"}
     )
     fig.show()
 
 
-def filter_results(search_results, max_price_per_area, min_price_per_area):
+def filter_results( min_price_per_area, max_price_per_area):
+    # read data
+    connection = sqlite3.connect('..\data\listings.db')
+    with connection as conn:
+        search_results = pd.read_sql('SELECT * from houses', con=conn)
     search_results = search_results[search_results['price_per_area'].between(min_price_per_area, max_price_per_area)]
     return search_results
 
