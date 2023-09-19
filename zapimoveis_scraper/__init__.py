@@ -7,6 +7,7 @@ import plotly.express as px
 from zapimoveis_scraper.classes import ZapItem
 from collections import defaultdict
 from datetime import date
+import plotly.graph_objects as go
 
 
 def get_page(tipo_negocio, state, city, neighborhood, usage_type, unit_type, min_area, max_price, page):
@@ -111,7 +112,8 @@ def search(tipo_negocio: str, state: str, city: str, neighborhoods: list, usage_
         page = 0
         listings = None
         while listings != []:
-            page_data = get_page(tipo_negocio, state, city, neighborhood, usage_type, unit_type, min_area, max_price, page)
+            page_data = get_page(tipo_negocio, state, city, neighborhood, usage_type, unit_type, min_area, max_price,
+                                 page)
             listings = get_listings(page_data)
             if listings != 'Not a listing':
                 for listing in listings:
@@ -162,33 +164,64 @@ def create_map(search_results, mapbox_token):
     px.set_mapbox_access_token(mapbox_token)
 
     size = 1 / search_results['price_per_area']
-    fig = px.scatter_mapbox(search_results, lat="latitude", lon="longitude", size=size,
-                            color='price_per_area', zoom=15, color_continuous_scale='Plotly3')
-    customdata = np.stack((search_results['link'], search_results['price'],
-                           search_results['price_per_area'], search_results['condo_fee'],
-                           search_results['total_area_m2'], search_results['floor']), axis=1)
+
     hover_template = ('<b>%{customdata[0]}</b> <br>' +
                       'Price: R$ %{customdata[1]:,.2f} <br>' +
                       'Price per Area: R$/m<sup>2</sup> %{customdata[2]:,.2f} <br>' +
                       'Condo Fee: R$ %{customdata[3]:,.2f} <br>' +
                       'Usable Area: %{customdata[4]} m<sup>2</sup> <br>' +
                       'Floor: %{customdata[5]}')
-    fig.update_traces(customdata=customdata, hovertemplate=hover_template)
+
+    custom_data = np.stack((search_results['link'], search_results['price'], search_results['price_per_area'],
+                            search_results['condo_fee'], search_results['total_area_m2'], search_results['floor']),
+                           axis=1)
+    fig = go.Figure()
+
+    fig.add_trace(
+        go.Scattermapbox(
+            lat=search_results['latitude'],
+            lon=search_results['longitude'],
+            mode='markers',
+            name='',
+            customdata=custom_data,
+            hovertemplate=hover_template,
+            marker=go.scattermapbox.Marker(
+                size=size,
+                sizemin=5,
+                sizeref=0.00001,
+                colorscale='plotly3_r',
+                color=search_results['price_per_area'],
+                colorbar=dict(title='Price per Area (R$/m<sup>2</sup>)')
+            ),
+        )
+    )
+
     fig.update_layout(
+        title='Best Deals in São Paulo',
+        hovermode='closest',
+        hoverdistance=50,
         hoverlabel=dict(
             bgcolor="white",
             font_size=16,
             font_family="Rockwell"
         ),
-        hoverdistance=50,
-        mapbox={
-        'accesstoken': mapbox_token,
-        'style': "outdoors"}
+        mapbox=dict(
+            style='outdoors',
+            accesstoken=mapbox_token,
+            bearing=0,
+            center=dict(
+                lat=search_results['latitude'].mean(),
+                lon=search_results['longitude'].mean()
+            ),
+            pitch=0,
+            zoom=15
+        ),
     )
+
     fig.show()
 
 
-def filter_results( min_price_per_area, max_price_per_area):
+def filter_results(min_price_per_area, max_price_per_area):
     # read data
     connection = sqlite3.connect('..\data\listings.db')
     with connection as conn:
