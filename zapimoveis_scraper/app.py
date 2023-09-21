@@ -60,7 +60,15 @@ controls = \
                 multi=True
             )]
         )
-    ], body=True)
+    ],
+        body=True,
+        style={'height': '90vh'}
+    )
+
+graph = dbc.Card(
+    dcc.Graph(figure={}, id="graph", className="h-100"),
+    style={'height': '90vh'}
+)
 
 app.layout = dbc.Container(
     [
@@ -68,10 +76,11 @@ app.layout = dbc.Container(
         html.Hr(),
         dbc.Row([
             dbc.Col(controls, md=4),
-            dbc.Col(dcc.Graph(figure={}, id="graph"), md=8)
+            dbc.Col(graph, md=8)
         ], align='center'
         )
-    ], fluid=True
+    ],
+    fluid=True,
 )
 
 
@@ -215,8 +224,8 @@ def generate_chart(neighborhood, bedrooms, bathrooms, price_per_area, mapbox_tok
     )
 
     fig.update_layout(
-        width=1600,
-        height=1000,
+        # width=1600,
+        # height=1000,
         hovermode='closest',
         hoverdistance=50,
         hoverlabel=dict(
@@ -224,6 +233,7 @@ def generate_chart(neighborhood, bedrooms, bathrooms, price_per_area, mapbox_tok
             font_size=16,
             font_family="Rockwell"
         ),
+        margin=dict(l=0, r=0, t=0, b=0),
         mapbox=dict(
             style='outdoors',
             accesstoken=mapbox_token,
