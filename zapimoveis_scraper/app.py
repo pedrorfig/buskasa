@@ -27,7 +27,8 @@ controls = \
                 max=results['price_per_area'].max(),
                 step=30,
                 marks=None,
-                tooltip={"placement": "bottom", "always_visible": True}
+                tooltip={"placement": "bottom", "always_visible": True},
+                value=[min_price_per_area, max_price_per_area]
             )]
         ),
         html.Div([
@@ -92,12 +93,11 @@ app.layout = dbc.Container(
 )
 def chained_callback_neighborhood(bedrooms, bathrooms, price_per_area):
     dff = copy.deepcopy(results)
-
     if price_per_area:
         dff = dff[dff['price_per_area'].between(price_per_area[0], price_per_area[1])]
-    if bedrooms is not None:
+    if bedrooms:
         dff = dff.query("bedrooms == @bedrooms")
-    if bathrooms is not None:
+    if bathrooms:
         dff = dff.query("bathrooms == @bathrooms")
     return sorted(dff["neighborhood"].unique())
 
@@ -110,12 +110,11 @@ def chained_callback_neighborhood(bedrooms, bathrooms, price_per_area):
 )
 def chained_callback_bedrooms(neighborhood, bathrooms, price_per_area):
     dff = copy.deepcopy(results)
-
     if price_per_area:
         dff = dff[dff['price_per_area'].between(price_per_area[0], price_per_area[1])]
-    if neighborhood is not None:
+    if neighborhood:
         dff = dff.query("neighborhood == @neighborhood")
-    if bathrooms is not None:
+    if bathrooms:
         dff = dff.query("bathrooms == @bathrooms")
     return sorted(dff["bedrooms"].unique())
 
@@ -130,9 +129,9 @@ def chained_callback_bathrooms(neighborhood, bedrooms, price_per_area):
     dff = copy.deepcopy(results)
     if price_per_area:
         dff = dff[dff['price_per_area'].between(price_per_area[0], price_per_area[1])]
-    if neighborhood is not None:
+    if neighborhood:
         dff = dff.query("neighborhood == @neighborhood")
-    if bedrooms is not None:
+    if bedrooms:
         dff = dff.query("bedrooms == @bedrooms")
     return sorted(dff["bathrooms"].unique())
 
@@ -145,12 +144,11 @@ def chained_callback_bathrooms(neighborhood, bedrooms, price_per_area):
 )
 def chained_callback_price_per_area(neighborhood, bedrooms, bathrooms):
     dff = copy.deepcopy(results)
-
-    if neighborhood is not None:
+    if neighborhood:
         dff = dff.query("neighborhood == @neighborhood")
-    if bedrooms is not None:
+    if bedrooms:
         dff = dff.query("bedrooms == @bedrooms")
-    if bathrooms is not None:
+    if bathrooms:
         dff = dff.query("bathrooms == @bathrooms")
     return [dff["price_per_area"].min(), dff["price_per_area"].max()]
 
@@ -181,13 +179,13 @@ def generate_chart(neighborhood, bedrooms, bathrooms, price_per_area, mapbox_tok
     if price_per_area:
         results_copy = results_copy[results_copy['price_per_area'].between(price_per_area[0], price_per_area[1])]
 
-    if neighborhood is not None:
+    if neighborhood:
         results_copy = results_copy.query("neighborhood == @neighborhood")
 
-    if bedrooms is not None:
+    if bedrooms:
         results_copy = results_copy.query("bedrooms == @bedrooms")
 
-    if bathrooms is not None:
+    if bathrooms:
         results_copy = results_copy.query("bathrooms == @bathrooms")
 
     size = 1 / results_copy['price_per_area']
