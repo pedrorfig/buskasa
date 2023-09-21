@@ -16,6 +16,7 @@ min_price_per_area = 3500
 results = zap.filter_results(min_price_per_area, max_price_per_area)
 
 app = Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
+server = app.server
 
 controls = \
     dbc.Card([
