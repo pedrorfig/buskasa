@@ -8,10 +8,10 @@ mapbox_token = os.getenv('MAPBOX_TOKEN')
 city = 'São Paulo'
 state = 'São Paulo'
 # neighborhoods = ['']
-neighborhoods = ['Pinheiros']
-# neighborhoods = ['Pinheiros', 'Vila Madalena', 'Bela Vista', 'Vila Mariana', 'Jardim Paulista', 'Jardins', 'Jardim Europa', 'Consolação',
-#                  'Cerqueira César', 'Higienópolis', 'Itaim Bibi', 'Ibirapuera', 'Vila Nova Conceição', 'Vila Olímpia',
-#                  'Sumaré', 'Perdizes', 'Pacaembu']
+# neighborhoods = ['Pinheiros']
+neighborhoods = ['Pinheiros', 'Vila Madalena', 'Bela Vista', 'Vila Mariana', 'Jardim Paulista', 'Jardins', 'Jardim Europa', 'Consolação',
+                 'Cerqueira César', 'Higienópolis', 'Itaim Bibi', 'Ibirapuera', 'Vila Nova Conceição', 'Vila Olímpia',
+                 'Sumaré', 'Perdizes', 'Pacaembu']
 tipo_negocio = 'SALE'
 usage_type = 'RESIDENTIAL'
 unit_type = 'APARTMENT'
