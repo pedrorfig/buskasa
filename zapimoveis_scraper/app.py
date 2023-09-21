@@ -33,19 +33,24 @@ app.layout = html.Div(
             id="neighborhood",
             options=results['neighborhood'].unique(),
             value=None,
-            clearable=True
+            clearable=True,
+            multi=True
         ),
         html.P("Bedrooms"),
         dcc.Dropdown(
             id="bedrooms",
             options=sorted(results['bedrooms'].unique()),
             value=None,
+            clearable=True,
+            multi=True
         ),
         html.P("Bathrooms"),
         dcc.Dropdown(
             id="bathrooms",
             options=sorted(results['bathrooms'].unique()),
-            value=None
+            value=None,
+            clearable=True,
+            multi=True
         ),
 
         dcc.Graph(figure={}, id="graph")
