@@ -143,7 +143,7 @@ def check_if_update_needed(test: bool):
             return True
 
 
-def export_results(data):
+def export_results_to_db(data):
     """
     Export listing results to the cloud or local file
     Args:
@@ -152,7 +152,6 @@ def export_results(data):
 
     today_date = date.today().strftime('%Y-%m-%d')
     update_date = pd.DataFrame({'update_date': [today_date]})
-
     connection = sqlite3.connect('..\data\listings.db')
     with connection as conn:
         data.to_sql(name='houses', con=conn, if_exists='replace')
@@ -221,12 +220,19 @@ def create_map(search_results, mapbox_token):
     fig.show()
 
 
-def filter_results(min_price_per_area, max_price_per_area):
+def filter_results(search_results, min_price_per_area, max_price_per_area):
     # read data
-    connection = sqlite3.connect('.\data\listings.db')
+    search_results = search_results[search_results['price_per_area'].between(min_price_per_area, max_price_per_area)]
+    return search_results
+
+
+def read_listings_sql_table():
+    connection = sqlite3.connect('..\data\listings.db')
     with connection as conn:
         search_results = pd.read_sql('SELECT * from houses', con=conn)
-    search_results = search_results[search_results['price_per_area'].between(min_price_per_area, max_price_per_area)]
+    return search_results
+def read_listings_csv():
+    search_results = pd.read_csv(r'./data/listings.csv', index_col='index')
     return search_results
 
 
@@ -234,3 +240,10 @@ def remove_fraudsters(search_results):
     # Removing known fraudster
     search_results = search_results[search_results['advertizer'] != "Camila Damaceno Bispo"]
     return search_results
+
+def convert_sqlite_to_csv():
+
+    sqllite_data = read_listings_sql_table()
+    sqllite_data.to_csv(r'../data/listings.csv', index=False)
+
+    return
