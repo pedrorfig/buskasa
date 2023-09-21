@@ -223,7 +223,7 @@ def create_map(search_results, mapbox_token):
 
 def filter_results(min_price_per_area, max_price_per_area):
     # read data
-    connection = sqlite3.connect('..\data\listings.db')
+    connection = sqlite3.connect('.\data\listings.db')
     with connection as conn:
         search_results = pd.read_sql('SELECT * from houses', con=conn)
     search_results = search_results[search_results['price_per_area'].between(min_price_per_area, max_price_per_area)]
