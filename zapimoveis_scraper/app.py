@@ -1,6 +1,7 @@
 import copy
 import numpy as np
 from dash import Dash, dcc, html, Input, Output
+import dash_bootstrap_components as dbc
 import zapimoveis_scraper as zap
 import plotly.graph_objects as go
 from dotenv import load_dotenv
@@ -14,48 +15,65 @@ min_price_per_area = 3500
 
 results = zap.filter_results(min_price_per_area, max_price_per_area)
 
-app = Dash(__name__)
+app = Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 
-app.layout = html.Div(
+controls = \
+    dbc.Card([
+        html.Div([
+            html.P(r'Price per Area (R$/m²)'),
+            dcc.RangeSlider(
+                id="price_per_area",
+                min=results['price_per_area'].min(),
+                max=results['price_per_area'].max(),
+                step=30,
+                marks=None,
+                tooltip={"placement": "bottom", "always_visible": True}
+            )]
+        ),
+        html.Div([
+            html.P("Neighborhood"),
+            dcc.Dropdown(
+                id="neighborhood",
+                options=results['neighborhood'].unique(),
+                value=None,
+                clearable=True,
+                multi=True
+            )]
+        ),
+        html.Div([
+            html.P("Bedrooms"),
+            dcc.Dropdown(
+                id="bedrooms",
+                options=sorted(results['bedrooms'].unique()),
+                value=None,
+                clearable=True,
+                multi=True
+            )]
+        ),
+        html.Div([
+            html.P("Bathrooms"),
+            dcc.Dropdown(
+                id="bathrooms",
+                options=sorted(results['bathrooms'].unique()),
+                value=None,
+                clearable=True,
+                multi=True
+            )]
+        )
+    ], body=True)
+
+app.layout = dbc.Container(
     [
         html.H1("Best Deals in São Paulo"),
-        html.P(r'Price per Area (R$/m²)'),
-        dcc.RangeSlider(
-            id="price_per_area",
-            min=results['price_per_area'].min(),
-            max=results['price_per_area'].max(),
-            step=30,
-            marks=None,
-            tooltip={"placement": "bottom", "always_visible": True}
-        ),
-        html.P("Neighborhood"),
-        dcc.Dropdown(
-            id="neighborhood",
-            options=results['neighborhood'].unique(),
-            value=None,
-            clearable=True,
-            multi=True
-        ),
-        html.P("Bedrooms"),
-        dcc.Dropdown(
-            id="bedrooms",
-            options=sorted(results['bedrooms'].unique()),
-            value=None,
-            clearable=True,
-            multi=True
-        ),
-        html.P("Bathrooms"),
-        dcc.Dropdown(
-            id="bathrooms",
-            options=sorted(results['bathrooms'].unique()),
-            value=None,
-            clearable=True,
-            multi=True
-        ),
-
-        dcc.Graph(figure={}, id="graph")
-    ]
+        html.Hr(),
+        dbc.Row([
+            dbc.Col(controls, md=4),
+            dbc.Col(dcc.Graph(figure={}, id="graph"), md=8)
+        ], align='center'
+        )
+    ], fluid=True
 )
+
 
 @app.callback(
     Output("neighborhood", "options"),
@@ -73,6 +91,8 @@ def chained_callback_neighborhood(bedrooms, bathrooms, price_per_area):
     if bathrooms is not None:
         dff = dff.query("bathrooms == @bathrooms")
     return sorted(dff["neighborhood"].unique())
+
+
 @app.callback(
     Output("bedrooms", "options"),
     Input('neighborhood', 'value'),
@@ -89,6 +109,8 @@ def chained_callback_bedrooms(neighborhood, bathrooms, price_per_area):
     if bathrooms is not None:
         dff = dff.query("bathrooms == @bathrooms")
     return sorted(dff["bedrooms"].unique())
+
+
 @app.callback(
     Output("bathrooms", "options"),
     Input('neighborhood', 'value'),
@@ -104,6 +126,8 @@ def chained_callback_bathrooms(neighborhood, bedrooms, price_per_area):
     if bedrooms is not None:
         dff = dff.query("bedrooms == @bedrooms")
     return sorted(dff["bathrooms"].unique())
+
+
 @app.callback(
     Output("price_per_area", "value"),
     Input('neighborhood', 'value'),
@@ -119,7 +143,8 @@ def chained_callback_price_per_area(neighborhood, bedrooms, bathrooms):
         dff = dff.query("bedrooms == @bedrooms")
     if bathrooms is not None:
         dff = dff.query("bathrooms == @bathrooms")
-    return [dff["price_per_area"].min(),dff["price_per_area"].max()]
+    return [dff["price_per_area"].min(), dff["price_per_area"].max()]
+
 
 @app.callback(
     Output("graph", "figure"),
@@ -212,6 +237,7 @@ def generate_chart(neighborhood, bedrooms, bathrooms, price_per_area, mapbox_tok
         ),
     )
     return fig
+
 
 if __name__ == "__main__":
     app.run_server(debug=True)
