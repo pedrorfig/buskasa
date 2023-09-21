@@ -24,5 +24,4 @@ if zap.check_if_update_needed(test=False):
                                 min_area, max_price, dataframe_out=True)
     search_results = zap.remove_fraudsters(search_results)
     zap.export_results(search_results)
-# search_results = zap.filter_results(min_price_per_area, max_price_per_area)
-# zap.create_map(search_results, mapbox_token)
+
