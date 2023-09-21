@@ -1,1 +1,1 @@
-web: gunicorn app:server
+web: gunicorn zapimoveis_scraper/app:server
