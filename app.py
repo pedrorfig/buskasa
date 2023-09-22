@@ -192,6 +192,8 @@ def generate_chart(neighborhood, bedrooms, bathrooms, price_per_area, mapbox_tok
 
     size = 1 / results_copy['price_per_area']
 
+    new_listings = results_copy[results_copy.loc[:,'new_listing'] == 1]
+
     hover_template = ('<b>%{customdata[0]}</b> <br>' +
                       'Price: R$ %{customdata[1]:,.2f} <br>' +
                       'Price per Area: R$/m<sup>2</sup> %{customdata[2]:,.2f} <br>' +
@@ -220,6 +222,19 @@ def generate_chart(neighborhood, bedrooms, bathrooms, price_per_area, mapbox_tok
                 color=results_copy['price_per_area'],
                 colorbar=dict(title='Price per Area (R$/m<sup>2</sup>)')
             ),
+        )
+    )
+
+    fig.add_trace(
+        go.Scattermapbox(
+            lat=new_listings['latitude'],
+            lon=new_listings['longitude'],
+            mode='markers',
+            marker=go.scattermapbox.Marker(
+                size=8,
+                color='yellow'
+            ),
+            hoverinfo='none'
         )
     )
 

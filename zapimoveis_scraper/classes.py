@@ -1,12 +1,17 @@
 import numpy as np
 import pandas as pd
 from geopy import Nominatim
+from datetime import datetime, timedelta
+
 
 class ZapItem:
     """
     Zap Imoveis listing object
     """
     def __init__(self, listing):
+        self.id = listing['listing']['sourceId']
+        self.listing_date = datetime.fromisoformat(listing['listing']['createdAt'].replace('Z', '+00:00')).date()
+        self.new_listing = self.is_new_listing()
         self.price = int(listing['listing']['pricingInfos'][0].get('price', None)) if len(
             listing['listing']['pricingInfos']) > 0 else 0
         self.condo_fee = int(listing['listing']['pricingInfos'][0].get('monthlyCondoFee', 0)) if len(
@@ -80,3 +85,13 @@ class ZapItem:
                 else:
                     lon = location.longitude
         return lon
+
+    def is_new_listing(self):
+
+        current_date = datetime.now().date()
+        one_month_ago = current_date - timedelta(days=30)
+
+        if self.listing_date >= one_month_ago:
+            return True
+        else:
+            return False

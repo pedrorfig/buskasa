@@ -112,8 +112,7 @@ def search(tipo_negocio: str, state: str, city: str, neighborhoods: list, usage_
         page = 0
         listings = None
         while listings != []:
-            page_data = get_page(tipo_negocio, state, city, neighborhood, usage_type, unit_type, min_area, max_price,
-                                 page)
+            page_data = get_page(tipo_negocio, state, city, neighborhood, usage_type, unit_type, min_area, max_price,page)
             listings = get_listings(page_data)
             if listings != 'Not a listing':
                 for listing in listings:
