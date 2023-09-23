@@ -77,7 +77,7 @@ def get_page(tipo_negocio, state, city, neighborhood, usage_type, unit_type, min
 
     return data
 
-def create_db_engine(user=os.getenv('DB_USER'), password=os.getenv('DB_PASS'), port=5432):
+def create_db_engine(user=os.environ['DB_USER'], password=os.environ['DB_PASS'], port=5432):
     """
     Creates engine needed to create connections to the database
     with the credentials and parameters provided.
