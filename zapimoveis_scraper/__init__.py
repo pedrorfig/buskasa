@@ -77,14 +77,13 @@ def get_page(tipo_negocio, state, city, neighborhood, usage_type, unit_type, min
 
     return data
 
-def create_db_engine(default_schema=None, user=os.getenv('DB_USER'), password=os.getenv('DB_PASS'), port=5432):
+def create_db_engine(user=os.getenv('DB_USER'), password=os.getenv('DB_PASS'), port=5432):
     """
     Creates engine needed to create connections to the database
     with the credentials and parameters provided.
 
     Args:
-        default_schema (str): Schema that will be used as default to query data on DB
-        user (str): Database username credential
+        duser (str): Database username credential
         password (str): Database password credential
         port (int): Source port for database connection
     Returns:
@@ -98,9 +97,10 @@ def create_db_engine(default_schema=None, user=os.getenv('DB_USER'), password=os
     assert user is not None, 'Username is empty'
     assert password is not None, 'Password is empty'
 
-    db_uri = f'postgres://{user}:{password}@dpg-ck7ghkvq54js73fbrei0-a/house_listings'
     if is_running_locally():
         db_uri = f'postgresql://{user}:{password}@dpg-ck7ghkvq54js73fbrei0-a.oregon-postgres.render.com/house_listings'
+    else:
+        db_uri = f'postgresql://{user}:{password}@dpg-ck7ghkvq54js73fbrei0-a/house_listings'
     engine = create_engine(db_uri, future=True)
 
     return engine
@@ -219,4 +219,4 @@ def convert_sqlite_to_csv():
 
 def is_running_locally():
     hostname = socket.gethostname()
-    return hostname == "localhost" or hostname == "127.0.0.1"
+    return hostname == "localhost" or hostname == "127.0.0.1" or hostname == 'SAOX1Y6-58781'
