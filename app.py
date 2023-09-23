@@ -10,9 +10,6 @@ import os
 load_dotenv()
 mapbox_token = os.environ['MAPBOX_TOKEN']
 
-max_price_per_area = 6000
-min_price_per_area = 3500
-
 results = zap.read_listings_sql_table()
 
 app = Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
@@ -28,8 +25,7 @@ controls = \
                 max=results['price_per_area'].max(),
                 step=30,
                 marks=None,
-                tooltip={"placement": "bottom", "always_visible": True},
-                value=[min_price_per_area, max_price_per_area]
+                tooltip={"placement": "bottom", "always_visible": True}
             )]
         ),
         html.Div([
