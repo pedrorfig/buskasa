@@ -15,10 +15,10 @@ neighborhoods = ['Pinheiros', 'Vila Madalena', 'Bela Vista', 'Vila Mariana', 'Ja
 tipo_negocio = 'SALE'
 usage_type = 'RESIDENTIAL'
 unit_type = 'APARTMENT'
-min_area = 100
-max_price = 1200000
-max_price_per_area = 6000
-min_price_per_area = 3500
+min_area = 80
+max_price = 1000000
+max_price_per_area = 6500
+min_price_per_area = 3000
 
 if zap.check_if_update_needed(test=True):
     search_results = zap.search(tipo_negocio, state, city, neighborhoods, usage_type, unit_type,

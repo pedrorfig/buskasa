@@ -1,13 +1,16 @@
 import sqlite3
-import numpy as np
 import requests
 import time
 import pandas as pd
-import plotly.express as px
+from sqlalchemy import create_engine
 from zapimoveis_scraper.classes import ZapItem
 from collections import defaultdict
 from datetime import date
-import plotly.graph_objects as go
+import os
+from dotenv import load_dotenv
+import socket
+
+load_dotenv()
 
 
 def get_page(tipo_negocio, state, city, neighborhood, usage_type, unit_type, min_area, max_price, page):
@@ -73,6 +76,34 @@ def get_page(tipo_negocio, state, city, neighborhood, usage_type, unit_type, min
     data = response.json()
 
     return data
+
+def create_db_engine(default_schema=None, user=os.getenv('DB_USER'), password=os.getenv('DB_PASS'), port=5432):
+    """
+    Creates engine needed to create connections to the database
+    with the credentials and parameters provided.
+
+    Args:
+        default_schema (str): Schema that will be used as default to query data on DB
+        user (str): Database username credential
+        password (str): Database password credential
+        port (int): Source port for database connection
+    Returns:
+        SQLAlchemy engine object
+    Notes:
+        Check https://github.com/Bain/ekpi-priorities/ README for setup
+        instructions
+    """
+
+    assert isinstance(port, int), "Port must be numeric"
+    assert user is not None, 'Username is empty'
+    assert password is not None, 'Password is empty'
+
+    db_uri = f'postgres://{user}:{password}@dpg-ck7ghkvq54js73fbrei0-a/house_listings'
+    if is_running_locally():
+        db_uri = f'postgresql://{user}:{password}@dpg-ck7ghkvq54js73fbrei0-a.oregon-postgres.render.com/house_listings'
+    engine = create_engine(db_uri, future=True)
+
+    return engine
 
 
 def convert_to_dataframe(data, attributes):
@@ -151,73 +182,11 @@ def export_results_to_db(data):
 
     today_date = date.today().strftime('%Y-%m-%d')
     update_date = pd.DataFrame({'update_date': [today_date]})
-    connection = sqlite3.connect('..\data\listings.db')
-    with connection as conn:
-        data.to_sql(name='houses', con=conn, if_exists='replace')
+    engine = create_db_engine()
+    with engine.connect() as conn:
+        data.to_sql(name='listings', con=conn, index=True, if_exists='replace')
         update_date.to_sql(name='update_date', con=conn, if_exists='replace', index=False)
     return
-
-
-def create_map(search_results, mapbox_token):
-    px.set_mapbox_access_token(mapbox_token)
-
-    size = 1 / search_results['price_per_area']
-
-    hover_template = ('<b>%{customdata[0]}</b> <br>' +
-                      'Price: R$ %{customdata[1]:,.2f} <br>' +
-                      'Price per Area: R$/m<sup>2</sup> %{customdata[2]:,.2f} <br>' +
-                      'Condo Fee: R$ %{customdata[3]:,.2f} <br>' +
-                      'Usable Area: %{customdata[4]} m<sup>2</sup> <br>' +
-                      'Floor: %{customdata[5]}')
-
-    custom_data = np.stack((search_results['link'], search_results['price'], search_results['price_per_area'],
-                            search_results['condo_fee'], search_results['total_area_m2'], search_results['floor']),
-                           axis=1)
-    fig = go.Figure()
-
-    fig.add_trace(
-        go.Scattermapbox(
-            lat=search_results['latitude'],
-            lon=search_results['longitude'],
-            mode='markers',
-            name='',
-            customdata=custom_data,
-            hovertemplate=hover_template,
-            marker=go.scattermapbox.Marker(
-                size=size,
-                sizemin=5,
-                sizeref=0.00001,
-                colorscale='plotly3_r',
-                color=search_results['price_per_area'],
-                colorbar=dict(title='Price per Area (R$/m<sup>2</sup>)')
-            ),
-        )
-    )
-
-    fig.update_layout(
-        title='Best Deals in São Paulo',
-        hovermode='closest',
-        hoverdistance=50,
-        hoverlabel=dict(
-            bgcolor="white",
-            font_size=16,
-            font_family="Rockwell"
-        ),
-        mapbox=dict(
-            style='outdoors',
-            accesstoken=mapbox_token,
-            bearing=0,
-            center=dict(
-                lat=search_results['latitude'].mean(),
-                lon=search_results['longitude'].mean()
-            ),
-            pitch=0,
-            zoom=15
-        ),
-    )
-
-    fig.show()
-
 
 def filter_results(search_results, min_price_per_area, max_price_per_area):
     # read data
@@ -226,9 +195,9 @@ def filter_results(search_results, min_price_per_area, max_price_per_area):
 
 
 def read_listings_sql_table():
-    connection = sqlite3.connect('..\data\listings.db')
-    with connection as conn:
-        search_results = pd.read_sql('SELECT * from houses', con=conn)
+    engine = create_db_engine()
+    with engine.connect() as conn:
+        search_results = pd.read_sql('SELECT * from listings', con=conn, index_col='id')
     return search_results
 def read_listings_csv():
     search_results = pd.read_csv(r'./data/listings.csv', index_col='index')
@@ -246,3 +215,8 @@ def convert_sqlite_to_csv():
     sqllite_data.to_csv(r'../data/listings.csv', index=False)
 
     return
+
+
+def is_running_locally():
+    hostname = socket.gethostname()
+    return hostname == "localhost" or hostname == "127.0.0.1"
