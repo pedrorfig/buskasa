@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv()
-mapbox_token = os.getenv('MAPBOX_TOKEN')
+mapbox_token = os.environ['MAPBOX_TOKEN']
 
 max_price_per_area = 6000
 min_price_per_area = 3500
