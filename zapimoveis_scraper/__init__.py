@@ -231,7 +231,7 @@ def read_listings_sql_table():
         search_results = pd.read_sql('SELECT * from houses', con=conn)
     return search_results
 def read_listings_csv():
-    search_results = pd.read_csv(r'./data/listings.csv', index_col='index')
+    search_results = pd.read_csv(r'../data/listings.csv', index_col='index')
     return search_results
 
 
