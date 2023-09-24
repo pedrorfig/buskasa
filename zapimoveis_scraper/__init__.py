@@ -1,6 +1,7 @@
-import sqlite3
 import requests
 import time
+from scipy import stats
+import numpy as np
 import pandas as pd
 from sqlalchemy import create_engine
 from zapimoveis_scraper.classes import ZapItem
@@ -17,14 +18,15 @@ def get_page(tipo_negocio, state, city, neighborhood, usage_type, unit_type, min
     """
     Get results from a house search at Zap Imoveis
     Args:
-        min_area:
-        max_price:
         tipo_negocio (str):
         state (str):
         city (str):
         neighborhood (str):
-        page (int):
         usage_type (str):
+        unit_type:
+        min_area:
+        max_price:
+        page:
 
     Returns:
 
@@ -160,11 +162,19 @@ def search(tipo_negocio: str, state: str, city: str, neighborhoods: list, usage_
 
 
 def check_if_update_needed(test: bool):
+    """
+    Check if the data was already updated in the current day
+    Args:
+        test:
+
+    Returns:
+
+    """
     if test:
         return True
     today_date = date.today().strftime('%Y-%m-%d')
-    connection = sqlite3.connect('..\data\listings.db')
-    with connection as conn:
+    db_connection = create_db_engine()
+    with db_connection as conn:
         update_table = pd.read_sql('SELECT * from update_date', con=conn)
         last_date = update_table['update_date'][0]
         if today_date == last_date:
@@ -209,13 +219,17 @@ def remove_fraudsters(search_results):
     search_results = search_results[search_results['advertizer'] != "Camila Damaceno Bispo"]
     return search_results
 
-def convert_sqlite_to_csv():
+def remove_outliers(data_with_outliers, feature='price_per_area'):
+    """
+    Removing outlier on assigned feature
 
-    sqllite_data = read_listings_sql_table()
-    sqllite_data.to_csv(r'../data/listings.csv', index=False)
-
-    return
-
+    Args:
+        feature:
+        data_with_outliers:
+    """
+    z = np.abs(stats.zscore(data_with_outliers[feature]))
+    data_without_outliers = data_with_outliers[z < 3]
+    return data_without_outliers
 
 def is_running_locally():
     hostname = socket.gethostname()

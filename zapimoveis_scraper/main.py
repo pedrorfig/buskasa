@@ -3,7 +3,6 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv()
-mapbox_token = os.getenv('MAPBOX_TOKEN')
 
 city = 'São Paulo'
 state = 'São Paulo'
@@ -15,10 +14,8 @@ neighborhoods = ['Pinheiros', 'Vila Madalena', 'Bela Vista', 'Vila Mariana', 'Ja
 tipo_negocio = 'SALE'
 usage_type = 'RESIDENTIAL'
 unit_type = 'APARTMENT'
-min_area = 80
+min_area = 100
 max_price = 1000000
-max_price_per_area = 6500
-min_price_per_area = 3000
 
 if zap.check_if_update_needed(test=True):
     search_results = zap.search(tipo_negocio, state, city, neighborhoods, usage_type, unit_type,
@@ -27,5 +24,5 @@ else:
     search_results = zap.read_listings_sql_table()
 
 search_results = zap.remove_fraudsters(search_results)
+search_results = zap.remove_outliers(search_results)
 zap.export_results_to_db(search_results)
-zap.convert_sqlite_to_csv()

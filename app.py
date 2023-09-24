@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv()
+
 mapbox_token = os.environ['MAPBOX_TOKEN']
 
 results = zap.read_listings_sql_table()
