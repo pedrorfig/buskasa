@@ -24,7 +24,7 @@ controls = \
                 id="price_per_area",
                 min=results['price_per_area'].min(),
                 max=results['price_per_area'].max(),
-                step=30,
+                step=1,
                 marks=None,
                 tooltip={"placement": "bottom", "always_visible": True}
             )]
@@ -188,7 +188,11 @@ def generate_chart(neighborhood, bedrooms, bathrooms, price_per_area, mapbox_tok
 
     size = 1 / results_copy['price_per_area']
 
-    new_listings = results_copy[results_copy.loc[:,'new_listing'] == 1]
+    new_listings = results_copy[results_copy.loc[:, 'new_listing'] == 1]
+
+    approximate_listings = results_copy[results_copy.loc[:, 'precision'] == 'approximate']
+
+    exact_listings = results_copy[results_copy.loc[:, 'precision'] == 'exact']
 
     hover_template = ('<b>%{customdata[0]}</b> <br>' +
                       'Price: R$ %{customdata[1]:,.2f} <br>' +
@@ -212,7 +216,8 @@ def generate_chart(neighborhood, bedrooms, bathrooms, price_per_area, mapbox_tok
             hovertemplate=hover_template,
             marker=go.scattermapbox.Marker(
                 size=size,
-                sizemin=5,
+                sizemin=8,
+                symbol="circle",
                 sizeref=0.00001,
                 colorscale='plotly3_r',
                 color=results_copy['price_per_area'],
@@ -223,11 +228,27 @@ def generate_chart(neighborhood, bedrooms, bathrooms, price_per_area, mapbox_tok
 
     fig.add_trace(
         go.Scattermapbox(
+            lat=approximate_listings['latitude'],
+            lon=approximate_listings['longitude'],
+            mode='markers',
+            name='',
+            customdata=custom_data,
+            hovertemplate=hover_template,
+            marker=go.scattermapbox.Marker(
+                symbol="triangle",
+                size=8,
+                colorscale='plotly3_r'
+            ),
+        )
+    )
+
+    fig.add_trace(
+        go.Scattermapbox(
             lat=new_listings['latitude'],
             lon=new_listings['longitude'],
             mode='markers',
             marker=go.scattermapbox.Marker(
-                size=8,
+                size=5,
                 color='yellow'
             ),
             hoverinfo='none'
@@ -235,8 +256,6 @@ def generate_chart(neighborhood, bedrooms, bathrooms, price_per_area, mapbox_tok
     )
 
     fig.update_layout(
-        # width=1600,
-        # height=1000,
         hovermode='closest',
         hoverdistance=50,
         hoverlabel=dict(

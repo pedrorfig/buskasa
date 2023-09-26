@@ -85,7 +85,7 @@ def create_db_engine(user=os.environ['DB_USER'], password=os.environ['DB_PASS'],
     with the credentials and parameters provided.
 
     Args:
-        duser (str): Database username credential
+        user (str): Database username credential
         password (str): Database password credential
         port (int): Source port for database connection
     Returns:
