@@ -1,3 +1,5 @@
+import copy
+
 import requests
 import time
 from scipy import stats
@@ -5,7 +7,6 @@ import numpy as np
 import pandas as pd
 from sqlalchemy import create_engine
 from zapimoveis_scraper.classes import ZapItem
-from collections import defaultdict
 from datetime import date
 import os
 from dotenv import load_dotenv
@@ -108,24 +109,31 @@ def create_db_engine(user=os.environ['DB_USER'], password=os.environ['DB_PASS'],
     return engine
 
 
-def convert_to_dataframe(data, attributes):
+def convert_to_dataframe(data):
     """
     Simple function to convert the data from objects to a pandas DataFrame
     Args:
         data (list of ZapItem): Empty default dictionary
     """
-    # start dictonary
-    dicts = defaultdict(list)
-    # create a list with the keys
-    keys = attributes
+    # Iterate through your objects
+    obj_data = []
+    for obj in data:
+        # Create a dictionary to hold the attributes of the current object
 
-    # simple for loops to create the dictionary
-    for i in keys:
-        for j in range(len(data)):
-            to_dict = data[j].__dict__
-            dicts[i].append(to_dict['%s' % i])
-    results = pd.DataFrame(dicts)
-    return results
+        # Get all attributes of the current object using vars()
+        object_dict = vars(obj)
+
+        # Append the dictionary to the data list
+        obj_data.append(object_dict)
+
+    # Create a DataFrame from the list of dictionaries
+    df = pd.DataFrame(obj_data)
+    cols_to_drop = []
+    for col in df.columns:
+        if col.startswith('_'):
+            cols_to_drop.append(col)
+    df = df.drop(columns=cols_to_drop)
+    return df
 
 
 def get_listings(data):
@@ -140,7 +148,25 @@ def get_listings(data):
 
 def search(tipo_negocio: str, state: str, city: str, neighborhoods: list, usage_type: str, unit_type: str,
            min_area: int, max_price: int, dataframe_out=False, time_to_wait=0):
+    """
+
+    Args:
+        tipo_negocio:
+        state:
+        city:
+        neighborhoods:
+        usage_type:
+        unit_type:
+        min_area:
+        max_price:
+        dataframe_out:
+        time_to_wait:
+
+    Returns:
+
+    """
     items = []
+    existing_ids = get_available_ids()
     for neighborhood in neighborhoods:
         page = 0
         listings = None
@@ -149,18 +175,22 @@ def search(tipo_negocio: str, state: str, city: str, neighborhoods: list, usage_
             listings = get_listings(page_data)
             if listings != 'Not a listing':
                 for listing in listings:
-                    if 'type' not in listing or listing['type'] != 'nearby':
+                    listing_id = listing.get('listing').get('sourceId')
+                    if listing_id not in existing_ids:
                         item = ZapItem(listing)
                         items.append(item)
             page += 1
             time.sleep(time_to_wait)
-
     if dataframe_out:
-        return convert_to_dataframe(items, item.get_instance_attributes())
-
+        return convert_to_dataframe(items)
     return items
 
-
+def get_available_ids():
+    engine = create_db_engine()
+    with engine.connect() as conn:
+        ids = pd.read_sql('SELECT id from listings', con=conn)
+    ids_list = [*ids['id']]
+    return ids_list
 def check_if_update_needed(test: bool):
     """
     Check if the data was already updated in the current day
@@ -185,7 +215,7 @@ def check_if_update_needed(test: bool):
 
 def export_results_to_db(data):
     """
-    Export listing results to the cloud or local file
+    Export listing results to the cloud
     Args:
         data (pandas DataFrame): House search results
     """
@@ -194,29 +224,34 @@ def export_results_to_db(data):
     update_date = pd.DataFrame({'update_date': [today_date]})
     engine = create_db_engine()
     with engine.connect() as conn:
-        data.to_sql(name='listings', con=conn, index=True, if_exists='replace')
+        data.to_sql(name='listings', con=conn, index=True, if_exists='append')
         update_date.to_sql(name='update_date', con=conn, if_exists='replace', index=False)
     return
 
-def filter_results(search_results, min_price_per_area, max_price_per_area):
-    # read data
-    search_results = search_results[search_results['price_per_area'].between(min_price_per_area, max_price_per_area)]
-    return search_results
-
-
 def read_listings_sql_table():
+    """
+    Read house listings from db table
+    Returns:
+
+    """
     engine = create_db_engine()
     with engine.connect() as conn:
         search_results = pd.read_sql('SELECT * from listings', con=conn, index_col='id')
     return search_results
-def read_listings_csv():
-    search_results = pd.read_csv(r'./data/listings.csv', index_col='index')
-    return search_results
-
 
 def remove_fraudsters(search_results):
+    """
+    Remove possible fraudsters from house listings
+    Args:
+        search_results:
+
+    Returns:
+
+    """
     # Removing known fraudster
     search_results = search_results[search_results['advertizer'] != "Camila Damaceno Bispo"]
+    # Removing fraudsters by primary phone location inconsistency
+    search_results = search_results[search_results['primary_phone'].str.startswith('11')]
     return search_results
 
 def remove_outliers(data_with_outliers, feature='price_per_area'):
@@ -232,5 +267,10 @@ def remove_outliers(data_with_outliers, feature='price_per_area'):
     return data_without_outliers
 
 def is_running_locally():
+    """
+    Check if code is running locally or in the cloud
+
+    Returns:
+    """
     hostname = socket.gethostname()
     return hostname == "localhost" or hostname == "127.0.0.1" or hostname == 'SAOX1Y6-58781'

@@ -19,6 +19,25 @@ server = app.server
 controls = \
     dbc.Card([
         html.Div([
+            html.P("Neighborhood"),
+            dcc.Dropdown(
+                id="neighborhood",
+                options=results['neighborhood'].unique(),
+                value=None,
+                clearable=True,
+                multi=True
+            )]
+        ),
+        html.Div([
+            html.P("Location Type"),
+            dcc.Dropdown(
+                id="location_type",
+                options=sorted(results['location_type'].unique()),
+                value=None,
+                clearable=True
+            )]
+        ),
+        html.Div([
             html.P(r'Price per Area (R$/m²)'),
             dcc.RangeSlider(
                 id="price_per_area",
@@ -27,16 +46,6 @@ controls = \
                 step=1,
                 marks=None,
                 tooltip={"placement": "bottom", "always_visible": True}
-            )]
-        ),
-        html.Div([
-            html.P("Neighborhood"),
-            dcc.Dropdown(
-                id="neighborhood",
-                options=results['neighborhood'].unique(),
-                value=None,
-                clearable=True,
-                multi=True
             )]
         ),
         html.Div([
@@ -58,7 +67,7 @@ controls = \
                 clearable=True,
                 multi=True
             )]
-        )
+        ),
     ],
         body=True,
         style={'height': '90vh'}
@@ -82,21 +91,44 @@ app.layout = dbc.Container(
     fluid=True,
 )
 
+# TODO: check why circular dependency is happening between location type and price_per_area
+@app.callback(
+    Output("location_type", "value"),
+    Input('neighborhood', 'value'),
+    Input('bedrooms', 'value'),
+    Input('bathrooms', 'value'),
+    # Input("price_per_area", "value")
+)
+def chained_callback_location_type(neighborhood, bedrooms, bathrooms):
+    dff = copy.deepcopy(results)
+    if neighborhood:
+        dff = dff.query("neighborhood == @neighborhood")
+    if bedrooms:
+        dff = dff.query("bedrooms == @bedrooms")
+    if bathrooms:
+        dff = dff.query("bathrooms == @bathrooms")
+    # if price_per_area:
+    #     dff = dff[dff['price_per_area'].between(price_per_area[0], price_per_area[1])]
+    return sorted(dff["location_type"].unique())
+
 
 @app.callback(
     Output("neighborhood", "options"),
     Input('bedrooms', 'value'),
     Input('bathrooms', 'value'),
-    Input('price_per_area', 'value')
+    Input('price_per_area', 'value'),
+    Input('location_type', 'value')
 )
-def chained_callback_neighborhood(bedrooms, bathrooms, price_per_area):
+def chained_callback_neighborhood(bedrooms, bathrooms, price_per_area, location_type):
     dff = copy.deepcopy(results)
-    if price_per_area:
-        dff = dff[dff['price_per_area'].between(price_per_area[0], price_per_area[1])]
     if bedrooms:
         dff = dff.query("bedrooms == @bedrooms")
     if bathrooms:
         dff = dff.query("bathrooms == @bathrooms")
+    if price_per_area:
+        dff = dff[dff['price_per_area'].between(price_per_area[0], price_per_area[1])]
+    if location_type:
+        dff = dff.query("location_type == @location_type")
     return sorted(dff["neighborhood"].unique())
 
 
@@ -104,16 +136,19 @@ def chained_callback_neighborhood(bedrooms, bathrooms, price_per_area):
     Output("bedrooms", "options"),
     Input('neighborhood', 'value'),
     Input('bathrooms', 'value'),
-    Input('price_per_area', 'value')
+    Input('price_per_area', 'value'),
+    Input('location_type', 'value')
 )
-def chained_callback_bedrooms(neighborhood, bathrooms, price_per_area):
+def chained_callback_bedrooms(neighborhood, bathrooms, price_per_area, location_type):
     dff = copy.deepcopy(results)
-    if price_per_area:
-        dff = dff[dff['price_per_area'].between(price_per_area[0], price_per_area[1])]
     if neighborhood:
         dff = dff.query("neighborhood == @neighborhood")
     if bathrooms:
         dff = dff.query("bathrooms == @bathrooms")
+    if price_per_area:
+        dff = dff[dff['price_per_area'].between(price_per_area[0], price_per_area[1])]
+    if location_type:
+        dff = dff.query("location_type == @location_type")
     return sorted(dff["bedrooms"].unique())
 
 
@@ -121,16 +156,19 @@ def chained_callback_bedrooms(neighborhood, bathrooms, price_per_area):
     Output("bathrooms", "options"),
     Input('neighborhood', 'value'),
     Input('bedrooms', 'value'),
-    Input('price_per_area', 'value')
+    Input('price_per_area', 'value'),
+    Input('location_type', 'value')
 )
-def chained_callback_bathrooms(neighborhood, bedrooms, price_per_area):
+def chained_callback_bathrooms(neighborhood, bedrooms, price_per_area, location_type):
     dff = copy.deepcopy(results)
-    if price_per_area:
-        dff = dff[dff['price_per_area'].between(price_per_area[0], price_per_area[1])]
     if neighborhood:
         dff = dff.query("neighborhood == @neighborhood")
     if bedrooms:
         dff = dff.query("bedrooms == @bedrooms")
+    if price_per_area:
+        dff = dff[dff['price_per_area'].between(price_per_area[0], price_per_area[1])]
+    if location_type:
+        dff = dff.query("location_type == @location_type")
     return sorted(dff["bathrooms"].unique())
 
 
@@ -138,9 +176,10 @@ def chained_callback_bathrooms(neighborhood, bedrooms, price_per_area):
     Output("price_per_area", "value"),
     Input('neighborhood', 'value'),
     Input('bedrooms', 'value'),
-    Input('bathrooms', 'value')
+    Input('bathrooms', 'value'),
+    Input('location_type', 'value')
 )
-def chained_callback_price_per_area(neighborhood, bedrooms, bathrooms):
+def chained_callback_price_per_area(neighborhood, bedrooms, bathrooms, location_type):
     dff = copy.deepcopy(results)
     if neighborhood:
         dff = dff.query("neighborhood == @neighborhood")
@@ -148,21 +187,25 @@ def chained_callback_price_per_area(neighborhood, bedrooms, bathrooms):
         dff = dff.query("bedrooms == @bedrooms")
     if bathrooms:
         dff = dff.query("bathrooms == @bathrooms")
+    if location_type:
+        dff = dff.query("location_type == @location_type")
     return [dff["price_per_area"].min(), dff["price_per_area"].max()]
 
 
 @app.callback(
     Output("graph", "figure"),
+    Input('location_type', 'value'),
     Input("neighborhood", "value"),
     Input("bedrooms", "value"),
     Input("bathrooms", "value"),
     Input('price_per_area', 'value')
 )
-def generate_chart(neighborhood, bedrooms, bathrooms, price_per_area, mapbox_token=mapbox_token):
+def generate_chart(location_type, neighborhood, bedrooms, bathrooms, price_per_area, mapbox_token=mapbox_token):
     """
    Generate a scatterplot on a mapbox map based on the selected filters.
 
     Args:
+        location_type:
         neighborhood (str): The selected neighborhood.
         bedrooms (int): The selected number of bedrooms.
         bathrooms (int): The selected number of bathrooms.
@@ -174,9 +217,6 @@ def generate_chart(neighborhood, bedrooms, bathrooms, price_per_area, mapbox_tok
     """
     results_copy = copy.deepcopy(results)
 
-    if price_per_area:
-        results_copy = results_copy[results_copy['price_per_area'].between(price_per_area[0], price_per_area[1])]
-
     if neighborhood:
         results_copy = results_copy.query("neighborhood == @neighborhood")
 
@@ -186,13 +226,17 @@ def generate_chart(neighborhood, bedrooms, bathrooms, price_per_area, mapbox_tok
     if bathrooms:
         results_copy = results_copy.query("bathrooms == @bathrooms")
 
+    if price_per_area:
+        results_copy = results_copy[results_copy['price_per_area'].between(price_per_area[0], price_per_area[1])]
+
+    if location_type:
+        results_copy = results_copy.query("location_type == @location_type")
+
     size = 1 / results_copy['price_per_area']
 
     new_listings = results_copy[results_copy.loc[:, 'new_listing'] == 1]
 
     approximate_listings = results_copy[results_copy.loc[:, 'precision'] == 'approximate']
-
-    exact_listings = results_copy[results_copy.loc[:, 'precision'] == 'exact']
 
     hover_template = ('<b>%{customdata[0]}</b> <br>' +
                       'Price: R$ %{customdata[1]:,.2f} <br>' +
