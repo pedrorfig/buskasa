@@ -79,20 +79,31 @@ graph = dbc.Card(
     dcc.Graph(figure={}, id="graph", className="h-100"),
     style={'height': '90vh'}
 )
-
 app.layout = dbc.Container(
     [
         html.H1("Bargain Bungalow"),
-        html.P("House hunting made easier"),
         html.Hr(),
+        dbc.Modal(
+            [
+                dbc.ModalHeader(dbc.ModalTitle("Bargain Bungalow")),
+                dbc.ModalBody("Finding for good deals when house hunting is a must.\n"
+                              "Bargain Bungalow helps you by a curated list of house listings from São Paulo posted on the biggest real state search engine."),
+            ],
+            id="modal",
+            is_open=True,
+            backdrop=True,
+            fade=True,
+            centered=True
+        ),
         dbc.Row([
             dbc.Col(controls, md=4),
-            dbc.Col(graph, md=8)
+            dbc.Col(graph, md=8),
         ], align='center'
-        )
+        ),
     ],
     fluid=True,
 )
+
 
 
 # @app.callback(
@@ -258,7 +269,6 @@ def generate_chart(location_type, neighborhood, bedrooms, bathrooms, price_per_a
             lon=results_copy['longitude'],
             mode='markers',
             name='',
-
             customdata=custom_data,
             hovertemplate=hover_template,
             showlegend=False,
@@ -271,7 +281,8 @@ def generate_chart(location_type, neighborhood, bedrooms, bathrooms, price_per_a
                 color=results_copy['price_per_area'],
                 colorbar=dict(
                         title='Price per Area <br> (R$/m<sup>2</sup>)',
-                        x=0.90
+                        x=0.90,
+                        y=0.50
                     ,
                         xpad=0,
                         thicknessmode="pixels",
