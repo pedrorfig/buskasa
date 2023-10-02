@@ -34,18 +34,8 @@ controls = \
                 id="location_type",
                 options=sorted(results['location_type'].unique()),
                 value=None,
-                clearable=True
-            )]
-        ),
-        html.Div([
-            html.P(r'Price per Area (R$/m²)'),
-            dcc.RangeSlider(
-                id="price_per_area",
-                min=results['price_per_area'].min(),
-                max=results['price_per_area'].max(),
-                step=1,
-                marks=None,
-                tooltip={"placement": "bottom", "always_visible": True}
+                clearable=True,
+                multi=True
             )]
         ),
         html.Div([
@@ -68,6 +58,18 @@ controls = \
                 multi=True
             )]
         ),
+        html.Div([
+            html.P(r'Price per Area (R$/m²)'),
+            dcc.RangeSlider(
+                id="price_per_area",
+                min=results['price_per_area'].min(),
+                max=results['price_per_area'].max(),
+                step=1,
+                marks=None,
+                tooltip={"placement": "bottom", "always_visible": True}
+            )
+        ]
+        )
     ],
         body=True,
         style={'height': '90vh'}
@@ -80,7 +82,8 @@ graph = dbc.Card(
 
 app.layout = dbc.Container(
     [
-        html.H1("Best Deals in São Paulo"),
+        html.H1("Bargain Bungalow"),
+        html.P("House hunting made easier"),
         html.Hr(),
         dbc.Row([
             dbc.Col(controls, md=4),
@@ -91,25 +94,6 @@ app.layout = dbc.Container(
     fluid=True,
 )
 
-# TODO: check why circular dependency is happening between location type and price_per_area
-@app.callback(
-    Output("location_type", "value"),
-    Input('neighborhood', 'value'),
-    Input('bedrooms', 'value'),
-    Input('bathrooms', 'value'),
-    # Input("price_per_area", "value")
-)
-def chained_callback_location_type(neighborhood, bedrooms, bathrooms):
-    dff = copy.deepcopy(results)
-    if neighborhood:
-        dff = dff.query("neighborhood == @neighborhood")
-    if bedrooms:
-        dff = dff.query("bedrooms == @bedrooms")
-    if bathrooms:
-        dff = dff.query("bathrooms == @bathrooms")
-    # if price_per_area:
-    #     dff = dff[dff['price_per_area'].between(price_per_area[0], price_per_area[1])]
-    return sorted(dff["location_type"].unique())
 
 
 @app.callback(
@@ -131,6 +115,25 @@ def chained_callback_neighborhood(bedrooms, bathrooms, price_per_area, location_
         dff = dff.query("location_type == @location_type")
     return sorted(dff["neighborhood"].unique())
 
+# TODO: check why circular dependency is happening between location type and price_per_area
+@app.callback(
+    Output("location_type", "value"),
+    Input('neighborhood', 'value'),
+    Input('bedrooms', 'value'),
+    Input('bathrooms', 'value'),
+    # Input("price_per_area", "value")
+)
+def chained_callback_location_type(neighborhood, bedrooms, bathrooms):
+    dff = copy.deepcopy(results)
+    if neighborhood:
+        dff = dff.query("neighborhood == @neighborhood")
+    if bedrooms:
+        dff = dff.query("bedrooms == @bedrooms")
+    if bathrooms:
+        dff = dff.query("bathrooms == @bathrooms")
+    # if price_per_area:
+    #     dff = dff[dff['price_per_area'].between(price_per_area[0], price_per_area[1])]
+    return sorted(dff["location_type"].unique())
 
 @app.callback(
     Output("bedrooms", "options"),
@@ -283,19 +286,6 @@ def generate_chart(location_type, neighborhood, bedrooms, bathrooms, price_per_a
                 size=8,
                 colorscale='plotly3_r'
             ),
-        )
-    )
-
-    fig.add_trace(
-        go.Scattermapbox(
-            lat=new_listings['latitude'],
-            lon=new_listings['longitude'],
-            mode='markers',
-            marker=go.scattermapbox.Marker(
-                size=5,
-                color='yellow'
-            ),
-            hoverinfo='none'
         )
     )
 

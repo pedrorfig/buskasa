@@ -2,9 +2,207 @@ import random
 import re
 import numpy as np
 import pandas as pd
+import requests
 from geopy import Nominatim
 from datetime import datetime, timedelta
 import requests as r
+from scipy.stats import stats
+
+import zapimoveis_scraper as zap
+
+
+class ZapPage:
+    """
+    Zap Imoveis page object
+    """
+
+    def __init__(self, business_type, state, city, neighborhood, usage_type, unit_type, min_area, max_price, batch_id):
+        self._engine = zap.create_db_engine()
+        self.batch_id = batch_id
+        self.business_type = business_type
+        self.state = state
+        self.city = city
+        self.neighborhood = neighborhood
+        self.usage_type = usage_type
+        self.unit_type = unit_type
+        self.min_area = min_area
+        self.max_price = max_price
+        self.zip_code_to_add = {}
+        self.zap_items_to_add = []
+        self.zap_page_listings = None
+        self.existing_zip_codes = self.read_zip_code_table()
+
+    def get_page(self):
+        """
+        Get results from a house search at Zap Imoveis
+        Args:
+            tipo_negocio (str):
+            state (str):
+            city (str):
+            neighborhood (str):
+            usage_type (str):
+            unit_type:
+            min_area:
+            max_price:
+            page:
+
+        Returns:
+
+        """
+        number_of_listings = 100
+        initial_listing = number_of_listings * self.batch_id
+
+        headers = {
+            'Accept': '*/*',
+            'Accept-Language': 'en-US,en;q=0.9,pt-BR;q=0.8,pt;q=0.7',
+            'Authorization': 'Bearer undefined',
+            'Connection': 'keep-alive',
+            'DNT': '1',
+            'Origin': 'https://www.zapimoveis.com.br',
+            'Referer': 'https://www.zapimoveis.com.br/',
+            'Sec-Fetch-Dest': 'empty',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Site': 'same-site',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
+            'X-DeviceId': '0d645541-36ea-45b4-9c59-deb2d736595c',
+            'sec-ch-ua': '"Chromium";v="116", "Not)A;Brand";v="24", "Google Chrome";v="116"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"Windows"',
+            'x-domain': '.zapimoveis.com.br',
+        }
+        params = {
+            'user': '0d645541-36ea-45b4-9c59-deb2d736595c',
+            'portal': 'ZAP',
+            'categoryPage': 'RESULT',
+            'developmentsSize': '0',
+            'superPremiumSize': '0',
+            'business': self.business_type,
+            'parentId': 'null',
+            'listingType': 'USED',
+            'unitTypesV3': self.unit_type,
+            'unitTypes': self.unit_type,
+            'usableAreasMin': self.min_area,
+            'priceMax': self.max_price,
+            'priceMin': 100000,
+            'addressCity': self.city,
+            'addressState': self.state,
+            'addressNeighborhood': self.neighborhood,
+            'page': '1',
+            'from': initial_listing,
+            'size': number_of_listings,
+            'usageTypes': self.usage_type
+        }
+        response = requests.get('https://glue-api.zapimoveis.com.br/v2/listings', params=params, headers=headers)
+        page_data = response.json()
+        self.page_data = page_data
+
+    def get_listings(self):
+        """
+        Get listings from a house search at Zap Imoveis
+        Args:
+            data (JSON string): Response content from a Zap Imoveis search result
+        """
+
+        listings = self.page_data.get('search', {}).get('result', {}).get('listings', 'Not a listing')
+        if listings != 'Not a listing':
+            return listings
+        else:
+            return None
+
+    def add_zip_code(self, zip_code, complement):
+        """
+
+        Args:
+            zip_code:
+            complement:
+        """
+        self.zip_code_to_add[zip_code] = complement
+
+    def convert_zip_code_to_df(self):
+        """
+
+        """
+        zip_code_df = pd.DataFrame.from_dict(self.zip_code_to_add, columns=['complement'], orient='index')
+        self.zip_code_df = zip_code_df
+
+    def read_zip_code_table(self):
+        """
+        Read db table
+        Returns:
+
+        """
+        engine = self._engine
+        data = pd.read_sql(f'SELECT * from dim_zip_code', con=engine, index_col='zip_code')
+        return data
+
+    def save_zip_codes_to_db(self):
+        """
+
+        """
+        zip_df = self.zip_code_df
+        if not zip_df.empty:
+            zip_df.to_sql(name='dim_zip_code', con=self._engine, if_exists='append', index=True, index_label='zip_code')
+    def save_zip_codes_to_db(self):
+        """
+
+        """
+        page_listings = self.zap_page_listings
+        if page_listings.shape[0] > 0:
+            page_listings.to_sql(name='listings', con=self._engine, if_exists='append', index=True)
+
+    def save_listings_to_db(self):
+        """
+
+        """
+        page_listings = self.zap_page_listings
+        if not page_listings.empty:
+            page_listings.to_sql(name='listings', con=self._engine, if_exists='append', index=True)
+
+    def add_zap_item(self, zap_item):
+
+        self.zap_items_to_add.append(zap_item)
+
+    def close_engine(self):
+        self._engine.invalidate()
+
+    def convert_listing_to_df(self):
+        items = self.zap_items_to_add
+        page_listings = zap.convert_to_dataframe(items)
+        self.zap_page_listings = page_listings
+
+    def remove_fraudsters(self):
+        """
+        Remove possible fraudsters from house listings
+        Args:
+            search_results:
+
+        Returns:
+
+        """
+        print("Removing fraudsters")
+        page_listings = self.zap_page_listings
+        if not page_listings.empty:
+            # Removing known fraudster
+            page_listings = page_listings[page_listings['advertizer'] != "Camila Damaceno Bispo"]
+            # Removing fraudsters by primary phone location inconsistency
+            page_listings = page_listings[page_listings['primary_phone'].str.startswith('11')]
+
+            self.zap_page_listings = page_listings
+
+    def remove_outliers(self, feature='price_per_area'):
+        """
+        Removing outlier on assigned feature
+
+        Args:
+            feature:
+            data_with_outliers:
+        """
+        print("Removing outliers on listing prices")
+        page_listings = self.zap_page_listings
+        if not page_listings.empty:
+            z = np.abs(stats.zscore(page_listings[feature]))
+            page_listings_without_outlier = page_listings[z < 3]
+            self.zap_page_listings = page_listings_without_outlier
 
 
 class ZapItem:
@@ -12,7 +210,9 @@ class ZapItem:
     Zap Imoveis listing object
     """
 
-    def __init__(self, listing):
+    def __init__(self, listing, zap_page):
+        # Getting ZapPage object
+        self._zap_page = zap_page
         # Getting listing data
         self._listing_data = listing
         self.id = self.get_listing_id()
@@ -58,6 +258,7 @@ class ZapItem:
 
     def get_html_link(self):
         return f'<a href="{self.url}">{self.description}</a>'
+
     def get_listing_url(self):
         return 'https://www.zapimoveis.com.br' + self._listing_data['link']['href']
 
@@ -133,37 +334,33 @@ class ZapItem:
         if assigned_number != "":
             return assigned_number
         else:
-            return self.get_random_streetnumber_from_zipcode()
+            return self.get_random_street_number_from_zipcode()
 
     def get_construction_year(self):
 
         try:
             deliver_date = self._listing_data['listing']['deliveredAt']
-            deliver_year = pd.to_datetime(deliver_date, errors='coerce').year
+            deliver_year = deliver_date[:4]
         except KeyError:
             deliver_year = -1
         return deliver_year
 
-    def get_instance_attributes(self):
-        attributes = []
-        for attribute, value in self.__dict__.items():
-            if not attribute.startswith('_'):
-                attributes.append(attribute)
-        return attributes
-
-    def get_random_streetnumber_from_zipcode(self):
+    def get_random_street_number_from_zipcode(self):
         """
         Assign
         Returns:
 
         """
         zip_code = self.zip_code
+        existing_zip_codes = self._zap_page.existing_zip_codes
         random_limited_numbers = str(round(random.uniform(0, 1000)))
-        if zip_code != "":
+        if zip_code not in ["", "00000000"]:
             try:
-                response = r.get(f'https://viacep.com.br/ws/{zip_code}/json/')
-                zip_data = response.json()
-                street_complement = zip_data['complemento']
+                if zip_code not in existing_zip_codes.index:
+                    street_complement = self.download_street_complement(zip_code)
+                    self._zap_page.add_zip_code(zip_code, street_complement)
+                else:
+                    street_complement = existing_zip_codes.loc[self.zip_code, 'complement']
                 street_complement_numbers = re.findall(r'\d+', street_complement)
                 if street_complement_numbers:
                     num_max = int(max(street_complement_numbers))
@@ -176,6 +373,12 @@ class ZapItem:
         else:
             random_number = ""
         return random_number
+
+    def download_street_complement(self, zip_code):
+        response = r.get(f'https://brasilaberto.com/api/v1/zipcode/{zip_code}.json')
+        zip_data = response.json()
+        street_complement = zip_data.get('result').get('complement')
+        return street_complement
 
     def get_latitude(self):
 

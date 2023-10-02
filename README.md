@@ -10,13 +10,13 @@ Use the package manager [pip](https://pip.pypa.io/en/stable/) to install zapimov
     pip install zapimoveis_scraper
 ```
 
-### Usage 
+### Usage
 
 ```python
 import zapimoveis_scraper as zap
 
 # returns a list with objects containing scraped data
-zap.search(localization="go+goiania++setor-oeste", num_pages=5) 
+zap.search(, 
 ```
 
 #### Available search parameters:
