@@ -139,35 +139,31 @@ class ZapPage:
         """
 
         """
+        print("Saving ZIP codes")
         zip_df = self.zip_code_df
         if not zip_df.empty:
             zip_df.to_sql(name='dim_zip_code', con=self._engine, if_exists='append', index=True, index_label='zip_code')
-    def save_zip_codes_to_db(self):
-        """
-
-        """
-        page_listings = self.zap_page_listings
-        if page_listings.shape[0] > 0:
-            page_listings.to_sql(name='listings', con=self._engine, if_exists='append', index=True)
 
     def save_listings_to_db(self):
         """
 
         """
+        print("Saving house listings")
         page_listings = self.zap_page_listings
         if not page_listings.empty:
-            page_listings.to_sql(name='listings', con=self._engine, if_exists='append', index=True)
+            page_listings.to_sql(name='listings', con=self._engine, if_exists='append', index=False, index_label='listing_id')
 
     def add_zap_item(self, zap_item):
 
         self.zap_items_to_add.append(zap_item)
 
     def close_engine(self):
-        self._engine.invalidate()
+        self._engine.dispose()
 
     def convert_listing_to_df(self):
         items = self.zap_items_to_add
         page_listings = zap.convert_to_dataframe(items)
+        page_listings = page_listings.drop_duplicates(subset='listing_id')
         self.zap_page_listings = page_listings
 
     def remove_fraudsters(self):
@@ -215,7 +211,7 @@ class ZapItem:
         self._zap_page = zap_page
         # Getting listing data
         self._listing_data = listing
-        self.id = self.get_listing_id()
+        self.listing_id = self.get_listing_id()
         self.listing_date = self.get_listing_date()
         self.new_listing = self.is_new_listing()
         self.description = self.get_listing_title()

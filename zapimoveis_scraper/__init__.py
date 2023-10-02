@@ -34,7 +34,7 @@ def create_db_engine(user=os.environ['DB_USER'], password=os.environ['DB_PASS'],
         db_uri = f'postgresql://{user}:{password}@dpg-ck7ghkvq54js73fbrei0-a.oregon-postgres.render.com/house_listings'
     else:
         db_uri = f'postgresql://{user}:{password}@dpg-ck7ghkvq54js73fbrei0-a/house_listings'
-    engine = create_engine(db_uri, future=True).connect()
+    engine = create_engine(db_uri, future=True, pool_pre_ping=True)
 
     return engine
 
@@ -84,13 +84,12 @@ def search(business_type: str, state: str, city: str, neighborhoods: list, usage
     Returns:
 
     """
-    items = []
-    existing_ids = get_available_ids()
     for neighborhood in neighborhoods:
         page = 0
         print(f"Getting listings from neighborhood {neighborhood}")
         while True:
             print(f"Page #{page} on {neighborhood}")
+            existing_ids = get_available_ids()
             zap_page = ZapPage(business_type, state, city, neighborhood, usage_type, unit_type, min_area, max_price,page)
             zap_page.get_page()
             listings = zap_page.get_listings()
@@ -101,7 +100,6 @@ def search(business_type: str, state: str, city: str, neighborhoods: list, usage
                 if listing_id not in existing_ids:
                     item = ZapItem(listing, zap_page)
                     zap_page.add_zap_item(item)
-                    items.append(item)
             # Convert output to standard format before saving
             zap_page.convert_zip_code_to_df()
             zap_page.convert_listing_to_df()
@@ -119,10 +117,10 @@ def search(business_type: str, state: str, city: str, neighborhoods: list, usage
 
 
 def get_available_ids():
-    engine = create_db_engine()
+    engine = create_db_engine().connect()
     with engine as conn:
-        ids = pd.read_sql('SELECT id from listings', con=conn)
-    ids_list = [*ids['id']]
+        ids = pd.read_sql('SELECT DISTINCT listing_id from listings', con=conn)
+    ids_list = [*ids['listing_id']]
     return ids_list
 
 
@@ -138,7 +136,7 @@ def check_if_update_needed(test: bool):
     if test:
         return True
     today_date = date.today().strftime('%Y-%m-%d')
-    db_connection = create_db_engine()
+    db_connection = create_db_engine().connect()
     with db_connection as conn:
         update_table = pd.read_sql('SELECT * from update_date', con=conn)
         last_date = update_table['update_date'][0]
@@ -153,9 +151,9 @@ def read_listings_sql_table():
     Returns:
 
     """
-    engine = create_db_engine()
+    engine = create_db_engine().connect()
     with engine as conn:
-        search_results = pd.read_sql('SELECT * from listings', con=conn, index_col='id')
+        search_results = pd.read_sql('SELECT * from listings', con=conn, index_col='listing_id')
     return search_results
 
 def is_running_locally():
