@@ -13,7 +13,7 @@ mapbox_token = os.environ['MAPBOX_TOKEN']
 
 results = zap.read_listings_sql_table()
 
-app = Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = Dash(external_stylesheets=[dbc.themes.CYBORG])
 server = app.server
 
 controls = \
@@ -95,45 +95,44 @@ app.layout = dbc.Container(
 )
 
 
-
-@app.callback(
-    Output("neighborhood", "options"),
-    Input('bedrooms', 'value'),
-    Input('bathrooms', 'value'),
-    Input('price_per_area', 'value'),
-    Input('location_type', 'value')
-)
-def chained_callback_neighborhood(bedrooms, bathrooms, price_per_area, location_type):
-    dff = copy.deepcopy(results)
-    if bedrooms:
-        dff = dff.query("bedrooms == @bedrooms")
-    if bathrooms:
-        dff = dff.query("bathrooms == @bathrooms")
-    if price_per_area:
-        dff = dff[dff['price_per_area'].between(price_per_area[0], price_per_area[1])]
-    if location_type:
-        dff = dff.query("location_type == @location_type")
-    return sorted(dff["neighborhood"].unique())
+# @app.callback(
+#     Output("neighborhood", "options"),
+#     Input('bedrooms', 'value'),
+#     Input('bathrooms', 'value'),
+#     Input('price_per_area', 'value'),
+#     Input('location_type', 'value')
+# )
+# def chained_callback_neighborhood(bedrooms, bathrooms, price_per_area, location_type):
+#     dff = copy.deepcopy(results)
+#     if bedrooms:
+#         dff = dff.query("bedrooms == @bedrooms")
+#     if bathrooms:
+#         dff = dff.query("bathrooms == @bathrooms")
+#     if price_per_area:
+#         dff = dff[dff['price_per_area'].between(price_per_area[0], price_per_area[1])]
+#     if location_type:
+#         dff = dff.query("location_type == @location_type")
+#     return sorted(dff["neighborhood"].unique())
 
 # TODO: check why circular dependency is happening between location type and price_per_area
-@app.callback(
-    Output("location_type", "value"),
-    Input('neighborhood', 'value'),
-    Input('bedrooms', 'value'),
-    Input('bathrooms', 'value'),
-    # Input("price_per_area", "value")
-)
-def chained_callback_location_type(neighborhood, bedrooms, bathrooms):
-    dff = copy.deepcopy(results)
-    if neighborhood:
-        dff = dff.query("neighborhood == @neighborhood")
-    if bedrooms:
-        dff = dff.query("bedrooms == @bedrooms")
-    if bathrooms:
-        dff = dff.query("bathrooms == @bathrooms")
-    # if price_per_area:
-    #     dff = dff[dff['price_per_area'].between(price_per_area[0], price_per_area[1])]
-    return sorted(dff["location_type"].unique())
+# @app.callback(
+#     Output("location_type", "value"),
+#     Input('neighborhood', 'value'),
+#     Input('bedrooms', 'value'),
+#     Input('bathrooms', 'value'),
+#     # Input("price_per_area", "value")
+# )
+# def chained_callback_location_type(neighborhood, bedrooms, bathrooms):
+#     dff = copy.deepcopy(results)
+#     if neighborhood:
+#         dff = dff.query("neighborhood == @neighborhood")
+#     if bedrooms:
+#         dff = dff.query("bedrooms == @bedrooms")
+#     if bathrooms:
+#         dff = dff.query("bathrooms == @bathrooms")
+#     # if price_per_area:
+#     #     dff = dff[dff['price_per_area'].between(price_per_area[0], price_per_area[1])]
+#     return sorted(dff["location_type"].unique())
 
 @app.callback(
     Output("bedrooms", "options"),
@@ -259,8 +258,10 @@ def generate_chart(location_type, neighborhood, bedrooms, bathrooms, price_per_a
             lon=results_copy['longitude'],
             mode='markers',
             name='',
+
             customdata=custom_data,
             hovertemplate=hover_template,
+            showlegend=False,
             marker=go.scattermapbox.Marker(
                 size=size,
                 sizemin=8,
@@ -268,7 +269,13 @@ def generate_chart(location_type, neighborhood, bedrooms, bathrooms, price_per_a
                 sizeref=0.00001,
                 colorscale='plotly3_r',
                 color=results_copy['price_per_area'],
-                colorbar=dict(title='Price per Area (R$/m<sup>2</sup>)')
+                colorbar=dict(
+                        title='Price per Area <br> (R$/m<sup>2</sup>)',
+                        x=0.90
+                    ,
+                        xpad=0,
+                        thicknessmode="pixels",
+                    )
             ),
         )
     )
@@ -281,6 +288,7 @@ def generate_chart(location_type, neighborhood, bedrooms, bathrooms, price_per_a
             name='',
             customdata=custom_data,
             hovertemplate=hover_template,
+            showlegend=False,
             marker=go.scattermapbox.Marker(
                 symbol="triangle",
                 size=8,
@@ -298,6 +306,7 @@ def generate_chart(location_type, neighborhood, bedrooms, bathrooms, price_per_a
             font_family="Rockwell"
         ),
         margin=dict(l=0, r=0, t=0, b=0),
+        legend={'bgcolor': 'rgba(0,0,0,0)'},
         mapbox=dict(
             style='outdoors',
             accesstoken=mapbox_token,

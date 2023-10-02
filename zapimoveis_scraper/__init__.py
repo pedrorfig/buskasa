@@ -117,10 +117,11 @@ def search(business_type: str, state: str, city: str, neighborhoods: list, usage
 
 
 def get_available_ids():
-    engine = create_db_engine().connect()
-    with engine as conn:
+    engine = create_db_engine()
+    with engine.connect() as conn:
         ids = pd.read_sql('SELECT DISTINCT listing_id from listings', con=conn)
-    ids_list = [*ids['listing_id']]
+        ids_list = [*ids['listing_id']]
+    engine.dispose()
     return ids_list
 
 
@@ -136,14 +137,15 @@ def check_if_update_needed(test: bool):
     if test:
         return True
     today_date = date.today().strftime('%Y-%m-%d')
-    db_connection = create_db_engine().connect()
-    with db_connection as conn:
+    engine = create_db_engine()
+    with engine.connect() as conn:
         update_table = pd.read_sql('SELECT * from update_date', con=conn)
         last_date = update_table['update_date'][0]
-        if today_date == last_date:
-            return False
-        else:
-            return True
+    engine.dispose()
+    if today_date == last_date:
+        return False
+    else:
+        return True
 
 def read_listings_sql_table():
     """
@@ -151,9 +153,10 @@ def read_listings_sql_table():
     Returns:
 
     """
-    engine = create_db_engine().connect()
-    with engine as conn:
+    engine = create_db_engine()
+    with engine.connect() as conn:
         search_results = pd.read_sql('SELECT * from listings', con=conn, index_col='listing_id')
+    engine.dispose()
     return search_results
 
 def is_running_locally():
