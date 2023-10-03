@@ -34,7 +34,11 @@ def create_db_engine(user=os.environ['DB_USER'], password=os.environ['DB_PASS'],
         db_uri = f'postgresql://{user}:{password}@dpg-ck7ghkvq54js73fbrei0-a.oregon-postgres.render.com/house_listings'
     else:
         db_uri = f'postgresql://{user}:{password}@dpg-ck7ghkvq54js73fbrei0-a/house_listings'
-    engine = create_engine(db_uri, future=True, pool_pre_ping=True)
+    engine = create_engine(db_uri, future=True, pool_size=10,
+                           max_overflow=2,
+                           pool_recycle=300,
+                           pool_pre_ping=True,
+                           pool_use_lifo=True)
 
     return engine
 
@@ -67,7 +71,7 @@ def convert_to_dataframe(data):
 
 
 def search(business_type: str, state: str, city: str, neighborhoods: list, usage_type: str, unit_type: str,
-           min_area: int, max_price: int, time_to_wait=0):
+           min_area: int, min_price: int, max_price: int, time_to_wait=0):
     """
 
     Args:
@@ -90,7 +94,8 @@ def search(business_type: str, state: str, city: str, neighborhoods: list, usage
         while True:
             print(f"Page #{page} on {neighborhood}")
             existing_ids = get_available_ids()
-            zap_page = ZapPage(business_type, state, city, neighborhood, usage_type, unit_type, min_area, max_price,page)
+            zap_page = ZapPage(business_type, state, city, neighborhood, usage_type, unit_type, min_area, min_price, max_price,
+                               page)
             zap_page.get_page()
             listings = zap_page.get_listings()
             if not listings:
@@ -147,6 +152,7 @@ def check_if_update_needed(test: bool):
     else:
         return True
 
+
 def read_listings_sql_table():
     """
     Read house listings from db table
@@ -158,6 +164,7 @@ def read_listings_sql_table():
         search_results = pd.read_sql('SELECT * from listings', con=conn, index_col='listing_id')
     engine.dispose()
     return search_results
+
 
 def is_running_locally():
     """

@@ -16,7 +16,7 @@ class ZapPage:
     Zap Imoveis page object
     """
 
-    def __init__(self, business_type, state, city, neighborhood, usage_type, unit_type, min_area, max_price, batch_id):
+    def __init__(self, business_type, state, city, neighborhood, usage_type, unit_type, min_area, min_price, max_price, batch_id):
         self._engine = zap.create_db_engine()
         self.batch_id = batch_id
         self.business_type = business_type
@@ -26,6 +26,7 @@ class ZapPage:
         self.usage_type = usage_type
         self.unit_type = unit_type
         self.min_area = min_area
+        self.min_price = None
         self.max_price = max_price
         self.zip_code_to_add = {}
         self.zap_items_to_add = []
@@ -83,7 +84,7 @@ class ZapPage:
             'unitTypes': self.unit_type,
             'usableAreasMin': self.min_area,
             'priceMax': self.max_price,
-            'priceMin': 100000,
+            'priceMin': self.min_price,
             'addressCity': self.city,
             'addressState': self.state,
             'addressNeighborhood': self.neighborhood,
@@ -132,7 +133,8 @@ class ZapPage:
 
         """
         engine = self._engine
-        data = pd.read_sql(f'SELECT * from dim_zip_code', con=engine, index_col='zip_code')
+        with engine.connect() as conn:
+            data = pd.read_sql(f'SELECT * from dim_zip_code', con=conn, index_col='zip_code')
         return data
 
     def save_zip_codes_to_db(self):
@@ -142,7 +144,8 @@ class ZapPage:
         print("Saving ZIP codes")
         zip_df = self.zip_code_df
         if not zip_df.empty:
-            zip_df.to_sql(name='dim_zip_code', con=self._engine, if_exists='append', index=True, index_label='zip_code')
+            with self._engine.connect() as conn:
+                zip_df.to_sql(name='dim_zip_code', con=conn, if_exists='append', index=True, index_label='zip_code')
 
     def save_listings_to_db(self):
         """
@@ -151,7 +154,8 @@ class ZapPage:
         print("Saving house listings")
         page_listings = self.zap_page_listings
         if not page_listings.empty:
-            page_listings.to_sql(name='listings', con=self._engine, if_exists='append', index=False, index_label='listing_id')
+            with self._engine.connect() as conn:
+                page_listings.to_sql(name='listings', con=conn, if_exists='append', index=False, index_label='listing_id')
 
     def add_zap_item(self, zap_item):
 

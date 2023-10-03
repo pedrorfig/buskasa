@@ -247,8 +247,6 @@ def generate_chart(location_type, neighborhood, bedrooms, bathrooms, price_per_a
 
     size = 1 / results_copy['price_per_area']
 
-    new_listings = results_copy[results_copy.loc[:, 'new_listing'] == 1]
-
     approximate_listings = results_copy[results_copy.loc[:, 'precision'] == 'approximate']
 
     hover_template = ('<b>%{customdata[0]}</b> <br>' +
