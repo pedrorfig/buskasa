@@ -17,6 +17,15 @@ class ZapSearch:
         self.neighborhood_zip_codes = None
         self.zip_codes_to_add = None
         self.listings_to_add = None
+        self.existing_zip_codes = None
+        self.existing_listing_ids = None
+
+    def get_existing_ids(self):
+        engine = self._engine
+        with engine.connect() as conn:
+            ids = pd.read_sql('SELECT DISTINCT listing_id from listings', con=conn)
+            ids_list = [*ids['listing_id']]
+        self.existing_listing_ids = ids_list
 
     def concat_zip_codes(self):
         zip_codes = self.zip_codes_to_add
@@ -88,6 +97,16 @@ class ZapSearch:
             with self._engine.connect() as conn:
                 page_listings.to_sql(name='listings', con=conn, if_exists='append', index=False, index_label='listing_id')
 
+    def get_existing_zip_codes(self):
+        """
+        Read db table
+        Returns:
+
+        """
+        engine = self._engine
+        with engine.connect() as conn:
+            data = pd.read_sql(f'SELECT * from dim_zip_code', con=conn, index_col='zip_code')
+        self.existing_zip_codes = data
     def close_engine(self):
         self._engine.dispose()
 
@@ -209,30 +228,15 @@ class ZapPage:
         zip_code_df = pd.DataFrame.from_dict(self.zip_code_to_add, columns=['complement'], orient='index')
         self.zip_code_df = zip_code_df
 
-    def get_existing_ids(self):
-        engine = self.zap_search._engine
-        with engine.connect() as conn:
-            ids = pd.read_sql('SELECT DISTINCT listing_id from listings', con=conn)
-            ids_list = [*ids['listing_id']]
-        self.existing_listing_ids = ids_list
+
 
     def create_zap_items(self):
         for listing in self.listings:
             listing_id = listing.get('listing').get('sourceId')
-            if listing_id not in self.existing_listing_ids:
+            if listing_id not in self.zap_search.existing_listing_ids:
                 item = ZapItem(listing, self)
                 self.add_zap_item(item)
 
-    def get_existing_zip_codes(self):
-        """
-        Read db table
-        Returns:
-
-        """
-        engine = self.zap_search._engine
-        with engine.connect() as conn:
-            data = pd.read_sql(f'SELECT * from dim_zip_code', con=conn, index_col='zip_code')
-        self.existing_zip_codes = data
 
 
 
@@ -399,7 +403,7 @@ class ZapItem:
 
         """
         zip_code = self.zip_code
-        existing_zip_codes = self._zap_page.existing_zip_codes
+        existing_zip_codes = self._zap_page.zap_search.existing_zip_codes
         random_limited_numbers = str(round(random.uniform(0, 1000)))
         if zip_code not in ["", "00000000"]:
             try:
