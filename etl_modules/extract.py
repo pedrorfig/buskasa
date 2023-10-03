@@ -1,0 +1,82 @@
+import pandas as pd
+from sqlalchemy import create_engine
+from datetime import date
+import os
+import socket
+from dotenv import load_dotenv
+
+load_dotenv()
+
+def create_db_engine(user=os.environ['DB_USER'], password=os.environ['DB_PASS'], port=5432):
+    """
+    Creates engine needed to create connections to the database
+    with the credentials and parameters provided.
+
+    Args:
+        user (str): Database username credential
+        password (str): Database password credential
+        port (int): Source port for database connection
+    Returns:
+        SQLAlchemy engine object
+    Notes:
+        Check https://github.com/Bain/ekpi-priorities/ README for setup
+        instructions
+    """
+
+    assert isinstance(port, int), "Port must be numeric"
+    assert user is not None, 'Username is empty'
+    assert password is not None, 'Password is empty'
+
+    if is_running_locally():
+        db_uri = f'postgresql+psycopg2://{user}:{password}@dpg-ck7ghkvq54js73fbrei0-a.oregon-postgres.render.com/house_listings'
+    else:
+        db_uri = f'postgresql+psycopg2://{user}:{password}@dpg-ck7ghkvq54js73fbrei0-a/house_listings'
+    engine = create_engine(db_uri, future=True, pool_size=10,
+                           max_overflow=2,
+                           pool_recycle=300,
+                           pool_pre_ping=True,
+                           pool_use_lifo=True)
+
+    return engine
+
+def check_if_update_needed(test: bool):
+    """
+    Check if the data was already updated in the current day
+    Args:
+        test:
+
+    Returns:
+
+    """
+    if test:
+        return True
+    today_date = date.today().strftime('%Y-%m-%d')
+    engine = create_db_engine()
+    with engine.connect() as conn:
+        update_table = pd.read_sql('SELECT * from update_date', con=conn)
+        last_date = update_table['update_date'][0]
+    engine.dispose()
+    if today_date == last_date:
+        return False
+    else:
+        return True
+def read_listings_sql_table():
+    """
+    Read house listings from db table
+    Returns:
+
+    """
+    engine = create_db_engine()
+    with engine.connect() as conn:
+        search_results = pd.read_sql('SELECT * from listings', con=conn, index_col='listing_id')
+    engine.dispose()
+    return search_results
+
+def is_running_locally():
+    """
+    Check if code is running locally or in the cloud
+
+    Returns:
+    """
+    hostname = socket.gethostname()
+    return hostname == "localhost" or hostname == "127.0.0.1" or hostname == 'SAOX1Y6-58781'

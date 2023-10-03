@@ -7,8 +7,7 @@ from geopy import Nominatim
 from datetime import datetime, timedelta
 import requests as r
 from scipy.stats import stats
-
-import zapimoveis_scraper as zap
+from etl_modules import extract, transform
 
 
 class ZapPage:
@@ -17,7 +16,7 @@ class ZapPage:
     """
 
     def __init__(self, business_type, state, city, neighborhood, usage_type, unit_type, min_area, min_price, max_price, batch_id):
-        self._engine = zap.create_db_engine()
+        self._engine = extract.create_db_engine()
         self.batch_id = batch_id
         self.business_type = business_type
         self.state = state
@@ -31,7 +30,8 @@ class ZapPage:
         self.zip_code_to_add = {}
         self.zap_items_to_add = []
         self.zap_page_listings = None
-        self.existing_zip_codes = self.read_zip_code_table()
+        self.existing_listing_ids = None
+        self.existing_zip_codes = None
 
     def get_page(self):
         """
@@ -106,6 +106,7 @@ class ZapPage:
 
         listings = self.page_data.get('search', {}).get('result', {}).get('listings', 'Not a listing')
         if listings != 'Not a listing':
+            self.listings = listings
             return listings
         else:
             return None
@@ -126,6 +127,20 @@ class ZapPage:
         zip_code_df = pd.DataFrame.from_dict(self.zip_code_to_add, columns=['complement'], orient='index')
         self.zip_code_df = zip_code_df
 
+    def get_available_ids(self):
+        engine = self._engine
+        with engine.connect() as conn:
+            ids = pd.read_sql('SELECT DISTINCT listing_id from listings', con=conn)
+            ids_list = [*ids['listing_id']]
+        self.existing_listing_ids = ids_list
+
+    def create_zap_items(self):
+        for listing in self.listings:
+            listing_id = listing.get('listing').get('sourceId')
+            if listing_id not in self.existing_listing_ids:
+                item = ZapItem(listing, self)
+                self.add_zap_item(item)
+
     def read_zip_code_table(self):
         """
         Read db table
@@ -135,7 +150,7 @@ class ZapPage:
         engine = self._engine
         with engine.connect() as conn:
             data = pd.read_sql(f'SELECT * from dim_zip_code', con=conn, index_col='zip_code')
-        return data
+        self.existing_zip_codes = data
 
     def save_zip_codes_to_db(self):
         """
