@@ -9,14 +9,95 @@ import requests as r
 from scipy.stats import stats
 from etl_modules import extract, transform
 
+class ZapSearch:
+    def __init__(self):
+        self._engine = extract.create_db_engine()
+        self.zap_pages = []
+        self.neighborhood_listings = None
+        self.neighborhood_zip_codes = None
+        self.zip_codes_to_add = None
+        self.listings_to_add = None
+
+    def concat_zip_codes(self):
+        zip_codes = self.zip_codes_to_add
+        for zap_page in self.zap_pages:
+            zap_page.convert_zap_page_zip_code_to_df()
+            zip_codes = pd.concat([zip_codes, zap_page.zip_code_df])
+        zip_codes = zip_codes.drop_duplicates()
+        self.zip_codes_to_add = zip_codes
+    def concat_listings(self):
+        listings = self.listings_to_add
+        for zap_page in self.zap_pages:
+            zap_page.convert_zap_page_listing_to_df()
+            listings = pd.concat([listings, zap_page.zap_page_listings])
+        listings = listings.drop_duplicates(subset='listing_id')
+        self.listings_to_add = listings
+    def save_zap_pages(self, zap_page):
+        self.zap_pages.append(zap_page)
+    def remove_fraudsters(self):
+        """
+        Remove possible fraudsters from house listings
+        Args:
+            search_results:
+
+        Returns:
+
+        """
+        print("Removing fraudsters")
+        page_listings = self.listings_to_add
+        if not page_listings.empty:
+            # Removing known fraudster
+            page_listings = page_listings[page_listings['advertizer'] != "Camila Damaceno Bispo"]
+            # Removing fraudsters by primary phone location inconsistency
+            page_listings = page_listings[page_listings['primary_phone'].str.startswith('11')]
+
+            self.listings_to_add = page_listings
+
+    def remove_outliers(self, feature='price_per_area'):
+        """
+        Removing outlier on assigned feature
+
+        Args:
+            feature:
+            data_with_outliers:
+        """
+        print("Removing outliers on listing prices")
+        page_listings = self.listings_to_add
+        if not page_listings.empty:
+            z = np.abs(stats.zscore(page_listings[feature]))
+            page_listings_without_outlier = page_listings[z < 3]
+            self.listings_to_add = page_listings_without_outlier
+
+    def save_zip_codes_to_db(self):
+        """
+
+        """
+        print("Saving ZIP codes")
+        zip_df = self.zip_codes_to_add
+        if not zip_df.empty:
+            with self._engine.connect() as conn:
+                zip_df.to_sql(name='dim_zip_code', con=conn, if_exists='append', index=True, index_label='zip_code')
+
+    def save_listings_to_db(self):
+        """
+
+        """
+        print("Saving house listings")
+        page_listings = self.listings_to_add
+        if not page_listings.empty:
+            with self._engine.connect() as conn:
+                page_listings.to_sql(name='listings', con=conn, if_exists='append', index=False, index_label='listing_id')
+
+    def close_engine(self):
+        self._engine.dispose()
 
 class ZapPage:
     """
     Zap Imoveis page object
     """
 
-    def __init__(self, business_type, state, city, neighborhood, usage_type, unit_type, min_area, min_price, max_price, batch_id):
-        self._engine = extract.create_db_engine()
+    def __init__(self, business_type, state, city, neighborhood, usage_type, unit_type, min_area, min_price, max_price, batch_id, zap_search):
+
         self.batch_id = batch_id
         self.business_type = business_type
         self.state = state
@@ -25,8 +106,9 @@ class ZapPage:
         self.usage_type = usage_type
         self.unit_type = unit_type
         self.min_area = min_area
-        self.min_price = None
+        self.min_price = min_price
         self.max_price = max_price
+        self.zap_search = zap_search
         self.zip_code_to_add = {}
         self.zap_items_to_add = []
         self.zap_page_listings = None
@@ -120,15 +202,15 @@ class ZapPage:
         """
         self.zip_code_to_add[zip_code] = complement
 
-    def convert_zip_code_to_df(self):
+    def convert_zap_page_zip_code_to_df(self):
         """
 
         """
         zip_code_df = pd.DataFrame.from_dict(self.zip_code_to_add, columns=['complement'], orient='index')
         self.zip_code_df = zip_code_df
 
-    def get_available_ids(self):
-        engine = self._engine
+    def get_existing_ids(self):
+        engine = self.zap_search._engine
         with engine.connect() as conn:
             ids = pd.read_sql('SELECT DISTINCT listing_id from listings', con=conn)
             ids_list = [*ids['listing_id']]
@@ -141,83 +223,33 @@ class ZapPage:
                 item = ZapItem(listing, self)
                 self.add_zap_item(item)
 
-    def read_zip_code_table(self):
+    def get_existing_zip_codes(self):
         """
         Read db table
         Returns:
 
         """
-        engine = self._engine
+        engine = self.zap_search._engine
         with engine.connect() as conn:
             data = pd.read_sql(f'SELECT * from dim_zip_code', con=conn, index_col='zip_code')
         self.existing_zip_codes = data
 
-    def save_zip_codes_to_db(self):
-        """
 
-        """
-        print("Saving ZIP codes")
-        zip_df = self.zip_code_df
-        if not zip_df.empty:
-            with self._engine.connect() as conn:
-                zip_df.to_sql(name='dim_zip_code', con=conn, if_exists='append', index=True, index_label='zip_code')
-
-    def save_listings_to_db(self):
-        """
-
-        """
-        print("Saving house listings")
-        page_listings = self.zap_page_listings
-        if not page_listings.empty:
-            with self._engine.connect() as conn:
-                page_listings.to_sql(name='listings', con=conn, if_exists='append', index=False, index_label='listing_id')
 
     def add_zap_item(self, zap_item):
 
         self.zap_items_to_add.append(zap_item)
 
-    def close_engine(self):
-        self._engine.dispose()
 
-    def convert_listing_to_df(self):
+    def convert_zap_page_listing_to_df(self):
+        """
+
+        """
         items = self.zap_items_to_add
-        page_listings = zap.convert_to_dataframe(items)
+        page_listings = transform.convert_to_dataframe(items)
         page_listings = page_listings.drop_duplicates(subset='listing_id')
         self.zap_page_listings = page_listings
 
-    def remove_fraudsters(self):
-        """
-        Remove possible fraudsters from house listings
-        Args:
-            search_results:
-
-        Returns:
-
-        """
-        print("Removing fraudsters")
-        page_listings = self.zap_page_listings
-        if not page_listings.empty:
-            # Removing known fraudster
-            page_listings = page_listings[page_listings['advertizer'] != "Camila Damaceno Bispo"]
-            # Removing fraudsters by primary phone location inconsistency
-            page_listings = page_listings[page_listings['primary_phone'].str.startswith('11')]
-
-            self.zap_page_listings = page_listings
-
-    def remove_outliers(self, feature='price_per_area'):
-        """
-        Removing outlier on assigned feature
-
-        Args:
-            feature:
-            data_with_outliers:
-        """
-        print("Removing outliers on listing prices")
-        page_listings = self.zap_page_listings
-        if not page_listings.empty:
-            z = np.abs(stats.zscore(page_listings[feature]))
-            page_listings_without_outlier = page_listings[z < 3]
-            self.zap_page_listings = page_listings_without_outlier
 
 
 class ZapItem:

@@ -1,10 +1,4 @@
-import time
-import pandas as pd
-from sqlalchemy import create_engine
-from zapimoveis_scraper.classes import ZapItem, ZapPage
-from datetime import date
-import os
-import socket
+from zapimoveis_scraper.classes import ZapPage, ZapSearch
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -16,46 +10,50 @@ usage_type = 'RESIDENTIAL'
 unit_type = 'APARTMENT'
 min_area = 100
 min_price = 1000000
-max_price = 1500000
+max_price = 1100000
 # neighborhoods = ['Pinheiros', 'Vila Madalena,]
 neighborhoods = ['Bela Vista', 'Vila Mariana', 'Jardim Paulista', 'Jardins', 'Jardim Europa', 'Consolação',
                  'Cerqueira César', 'Higienópolis', 'Itaim Bibi', 'Ibirapuera', 'Vila Nova Conceição', 'Vila Olímpia',
                  'Sumaré', 'Perdizes', 'Pacaembu']
 
-def save(zap_page):
+def save(zap_search):
     # Save results to db
-    zap_page.save_listings_to_db()
-    zap_page.save_zip_codes_to_db()
+    zap_search.save_listings_to_db()
+    zap_search.save_zip_codes_to_db()
     # Close engine
-    zap_page.close_engine()
+    zap_search.close_engine()
 
 
-def transform(zap_page):
+def transform(zap_search):
     # Convert output to standard format before saving
-    zap_page.convert_zip_code_to_df()
-    zap_page.convert_listing_to_df()
+
+    zap_search.concat_zip_codes()
+    zap_search.concat_listings()
     # Treating listings
-    zap_page.remove_fraudsters()
-    zap_page.remove_outliers()
-    return zap_page
+    zap_search.remove_fraudsters()
+    zap_search.remove_outliers()
+    return zap_search
 
 
 def extract(business_type, city, max_price, min_area, min_price, neighborhood, state, unit_type, usage_type):
     page = 0
     print(f"Getting listings from neighborhood {neighborhood}")
+    zap_search = ZapSearch()
     while True:
         print(f"Page #{page} on {neighborhood}")
         zap_page = ZapPage(business_type, state, city, neighborhood, usage_type, unit_type, min_area, min_price,
-                           max_price,
-                           page)
+                           max_price, page, zap_search)
         zap_page.get_page()
-        zap_page.get_available_ids()
+        zap_page.get_existing_ids()
+        zap_page.get_existing_zip_codes()
         listings = zap_page.get_listings()
         if not listings:
             break
         zap_page.create_zap_items()
+        zap_search.save_zap_pages(zap_page)
         page += 1
-    return zap_page
+
+    return zap_search
 
 
 def search(business_type: str, state: str, city: str, neighborhoods: list, usage_type: str, unit_type: str,
@@ -75,9 +73,9 @@ def search(business_type: str, state: str, city: str, neighborhoods: list, usage
 
     """
     for neighborhood in neighborhoods:
-        zap_page = extract(business_type, city, max_price, min_area, min_price, neighborhood, state, unit_type,
+        zap_search = extract(business_type, city, max_price, min_area, min_price, neighborhood, state, unit_type,
                            usage_type)
-        zap_page = transform(zap_page)
+        zap_page = transform(zap_search)
         save(zap_page)
 
 if __name__ == '__main__':
