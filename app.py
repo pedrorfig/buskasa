@@ -2,16 +2,17 @@ import copy
 import numpy as np
 from dash import Dash, dcc, html, Input, Output
 import dash_bootstrap_components as dbc
-import zapimoveis_scraper as zap
 import plotly.graph_objects as go
 from dotenv import load_dotenv
+from etl_modules import extract
 import os
+
 
 load_dotenv()
 
 mapbox_token = os.environ['MAPBOX_TOKEN']
 
-results = zap.read_listings_sql_table()
+results = extract.read_listings_sql_table()
 
 app = Dash(external_stylesheets=[dbc.themes.CYBORG])
 server = app.server
