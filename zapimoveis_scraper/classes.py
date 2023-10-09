@@ -10,8 +10,9 @@ from scipy.stats import stats
 from etl_modules import extract, transform
 
 class ZapSearch:
-    def __init__(self):
+    def __init__(self, neighborhood):
         self._engine = extract.create_db_engine()
+        self.neighborhood = neighborhood
         self.zap_pages = []
         self.neighborhood_listings = None
         self.neighborhood_zip_codes = None
@@ -62,7 +63,21 @@ class ZapSearch:
 
             self.listings_to_add = page_listings
 
-    def remove_outliers(self, feature='price_per_area'):
+    # def remove_outliers(self, feature='price_per_area'):
+    #     """
+    #     Removing outlier on assigned feature
+    #
+    #     Args:
+    #         feature:
+    #         data_with_outliers:
+    #     """
+    #     print("Removing outliers on listing prices")
+    #     page_listings = self.listings_to_add
+    #     if not page_listings.empty:
+    #         z = np.abs(stats.zscore(page_listings[feature]))
+    #         page_listings_without_outlier = page_listings[z < 3]
+    #         self.listings_to_add = page_listings_without_outlier
+    def remove_outliers(self):
         """
         Removing outlier on assigned feature
 
@@ -71,11 +86,27 @@ class ZapSearch:
             data_with_outliers:
         """
         print("Removing outliers on listing prices")
+        engine = self._engine
+        with engine.connect() as conn:
+            max_min = pd.read_sql(
+                f"""with stats as
+                        (SELECT
+                        percentile_cont(0.80) within group (order by price_per_area asc) as q1,
+                        percentile_cont(0.20) within group (order by price_per_area asc) as q3
+                        from listings
+                        where neighborhood = '{self.neighborhood}')
+                    SELECT
+                        q1-(q3-q1)*1.5 as max,
+                        q3+(q3-q1)*1.5 as min
+                    from stats
+                    """,
+                    con=conn)
         page_listings = self.listings_to_add
-        if not page_listings.empty:
-            z = np.abs(stats.zscore(page_listings[feature]))
-            page_listings_without_outlier = page_listings[z < 3]
+        if not page_listings.empty and not max_min.empty:
+            page_listings_without_outlier = page_listings[page_listings['price_per_area'].between(max_min['min'][0], max_min['max'][0])]
             self.listings_to_add = page_listings_without_outlier
+        else:
+            self.listings_to_add = page_listings
 
     def save_zip_codes_to_db(self):
         """

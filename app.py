@@ -7,104 +7,94 @@ from dotenv import load_dotenv
 from etl_modules import extract
 import os
 
-
 load_dotenv()
 
 mapbox_token = os.environ['MAPBOX_TOKEN']
 
 results = extract.read_listings_sql_table()
 
-app = Dash(external_stylesheets=[dbc.themes.CYBORG])
+app = Dash(external_stylesheets=[dbc.themes.SLATE])
 server = app.server
+
+mapbox_scatter_chart = dbc.Card([dcc.Graph(figure={}, id="mapbox_scatter_chart", className="h-100")], className="h-100")
+histogram_chart = dcc.Graph(figure={}, id="histogram_chart")
 
 controls = \
     dbc.Card([
-        html.Div([
-            html.P("Neighborhood"),
-            dcc.Dropdown(
-                id="neighborhood",
-                options=results['neighborhood'].unique(),
-                value=None,
-                clearable=True,
-                multi=True
-            )]
-        ),
-        html.Div([
-            html.P("Location Type"),
-            dcc.Dropdown(
-                id="location_type",
-                options=sorted(results['location_type'].unique()),
-                value=None,
-                clearable=True,
-                multi=True
-            )]
-        ),
-        html.Div([
-            html.P("Bedrooms"),
-            dcc.Dropdown(
-                id="bedrooms",
-                options=sorted(results['bedrooms'].unique()),
-                value=None,
-                clearable=True,
-                multi=True
-            )]
-        ),
-        html.Div([
-            html.P("Bathrooms"),
-            dcc.Dropdown(
-                id="bathrooms",
-                options=sorted(results['bathrooms'].unique()),
-                value=None,
-                clearable=True,
-                multi=True
-            )]
-        ),
-        html.Div([
-            html.P(r'Price per Area (R$/m²)'),
-            dcc.RangeSlider(
-                id="price_per_area",
-                min=results['price_per_area'].min(),
-                max=results['price_per_area'].max(),
-                step=1,
-                marks=None,
-                tooltip={"placement": "bottom", "always_visible": True}
-            )
-        ]
-        )
-    ],
-        body=True,
-        style={'height': '90vh'}
-    )
+        html.H4("Filters", className='card-header'),
+        html.Ul([
+            html.Li([
+                html.H5("Neighborhood", className='card-title'),
+                dcc.Dropdown(
+                    id="neighborhood",
+                    options=results['neighborhood'].unique(),
+                    value=None,
+                    clearable=True,
+                    multi=True
+                )], className='list-group-item'),
+            html.Li([
+                html.H5("Location Type", className='card-title'),
+                dcc.Dropdown(
+                    id="location_type",
+                    options=sorted(results['location_type'].unique()),
+                    value=None,
+                    clearable=True,
+                    multi=True
+                )], className='list-group-item'),
+            html.Li([
+                html.H5("Number of Bedrooms", className='card-title'),
+                dcc.Dropdown(
+                    id="bedrooms",
+                    options=sorted(results['bedrooms'].unique()),
+                    value=None,
+                    clearable=True,
+                    multi=True)], className='list-group-item'),
+            html.Li([
+                html.H5("Number of Bathrooms", className='card-title'),
+                dcc.Dropdown(
+                    id="bathrooms",
+                    options=sorted(results['bathrooms'].unique()),
+                    value=None,
+                    clearable=True,
+                    multi=True
+                )], className='list-group-item'),
+            html.Li([
+                html.H5(r'Price per Area (R$/m²)', className='card-title'),
+                histogram_chart,
+                dcc.RangeSlider(
+                    id="price_per_area",
+                    min=results['price_per_area'].min(),
+                    max=results['price_per_area'].max(),
+                    step=1,
+                    marks=None,
+                    tooltip={"placement": "bottom", "always_visible": True}
+                )
+            ], className='list-group-item')
 
-graph = dbc.Card(
-    dcc.Graph(figure={}, id="graph", className="h-100"),
-    style={'height': '90vh'}
-)
-app.layout = dbc.Container(
-    [
-        html.H1("Bargain Bungalow"),
-        html.Hr(),
-        dbc.Modal(
-            [
-                dbc.ModalHeader(dbc.ModalTitle("Bargain Bungalow")),
-                dbc.ModalBody("Finding for good deals when house hunting is a must.\n"
-                              "Bargain Bungalow helps you by a curated list of house listings from São Paulo posted on the biggest real state search engine."),
-            ],
-            id="modal",
-            is_open=True,
-            backdrop=True,
-            fade=True,
-            centered=True
-        ),
-        dbc.Row([
-            dbc.Col(controls, md=4),
-            dbc.Col(graph, md=8),
-        ], align='center'
-        ),
-    ],
-    fluid=True,
-)
+        ], className='list-group list-group-flush')
+    ])
 
+modal = dbc.Modal([dbc.ModalHeader(dbc.ModalTitle("Bargain Bungalow")),
+                   dbc.ModalBody("Finding for good deals when house hunting is a must." \
+                                 "Bargain Bungalow helps you by a curated list of house listings from São Paulo posted on the biggest real state search engine."), ],
+                  id="modal", is_open=True, backdrop=True, fade=True, centered=True)
+
+# App layout
+app.layout = dbc.Container(children=[
+    dbc.Row([
+        dbc.Col([
+            html.H1("Bargain Bungalow")
+        ])
+    ]),
+    dbc.Row(
+        [
+            dbc.Col(controls, md=3),
+            dbc.Col(mapbox_scatter_chart, md=9)
+        ], className='mb-5'
+    ),
+    modal,
+], fluid=True
+)
 
 
 # @app.callback(
@@ -147,6 +137,7 @@ app.layout = dbc.Container(
 #     return sorted(dff["location_type"].unique())
 
 @app.callback(
+
     Output("bedrooms", "options"),
     Input('neighborhood', 'value'),
     Input('bathrooms', 'value'),
@@ -207,14 +198,14 @@ def chained_callback_price_per_area(neighborhood, bedrooms, bathrooms, location_
 
 
 @app.callback(
-    Output("graph", "figure"),
+    Output("mapbox_scatter_chart", "figure"),
     Input('location_type', 'value'),
     Input("neighborhood", "value"),
     Input("bedrooms", "value"),
     Input("bathrooms", "value"),
     Input('price_per_area', 'value')
 )
-def generate_chart(location_type, neighborhood, bedrooms, bathrooms, price_per_area, mapbox_token=mapbox_token):
+def generate_mapbox_chart(location_type, neighborhood, bedrooms, bathrooms, price_per_area, mapbox_token=mapbox_token):
     """
    Generate a scatterplot on a mapbox map based on the selected filters.
 
@@ -276,16 +267,16 @@ def generate_chart(location_type, neighborhood, bedrooms, bathrooms, price_per_a
                 sizemin=8,
                 symbol="circle",
                 sizeref=0.00001,
-                colorscale='plotly3_r',
+                colorscale='RdYlGn_r',
                 color=results_copy['price_per_area'],
                 colorbar=dict(
-                        title='Price per Area <br> (R$/m<sup>2</sup>)',
-                        x=0.90,
-                        y=0.50
+                    title='Price per Area <br> (R$/m<sup>2</sup>)',
+                    x=0.90,
+                    y=0.50
                     ,
-                        xpad=0,
-                        thicknessmode="pixels",
-                    )
+                    xpad=0,
+                    thicknessmode="pixels",
+                )
             ),
         )
     )
@@ -301,8 +292,7 @@ def generate_chart(location_type, neighborhood, bedrooms, bathrooms, price_per_a
             showlegend=False,
             marker=go.scattermapbox.Marker(
                 symbol="triangle",
-                size=8,
-                colorscale='plotly3_r'
+                size=8
             ),
         )
     )
@@ -318,7 +308,7 @@ def generate_chart(location_type, neighborhood, bedrooms, bathrooms, price_per_a
         margin=dict(l=0, r=0, t=0, b=0),
         legend={'bgcolor': 'rgba(0,0,0,0)'},
         mapbox=dict(
-            style='outdoors',
+            style='dark',
             accesstoken=mapbox_token,
             bearing=0,
             center=dict(
@@ -328,7 +318,63 @@ def generate_chart(location_type, neighborhood, bedrooms, bathrooms, price_per_a
             pitch=0,
             zoom=15
         ),
+
     )
+    return fig
+
+
+@app.callback(
+    Output("histogram_chart", "figure"),
+    Input('location_type', 'value'),
+    Input("neighborhood", "value"),
+    Input("bedrooms", "value"),
+    Input("bathrooms", "value")
+)
+def generate_histogram_chart(location_type, neighborhood, bedrooms, bathrooms):
+    """
+   Generate a histogram on price per area values
+
+    Args:
+        location_type:
+        neighborhood (str): The selected neighborhood.
+        bedrooms (int): The selected number of bedrooms.
+        bathrooms (int): The selected number of bathrooms.
+    Returns:
+        plotly.graph_objects.Figure: The generated scatterplot figure.
+    """
+    results_copy = copy.deepcopy(results)
+
+    if neighborhood:
+        results_copy = results_copy.query("neighborhood == @neighborhood")
+
+    if bedrooms:
+        results_copy = results_copy.query("bedrooms == @bedrooms")
+
+    if bathrooms:
+        results_copy = results_copy.query("bathrooms == @bathrooms")
+
+    if location_type:
+        results_copy = results_copy.query("location_type == @location_type")
+
+    fig = go.Figure()
+    hist, bins = np.histogram(results_copy['price_per_area'], bins='auto')
+    fig.add_trace(
+        go.Histogram(
+            x=results_copy['price_per_area'],
+            xbins={'size': bins[1] - bins[0]},
+            marker={'colorscale': 'RdYlGn_r', 'color': bins,
+                    'cmin': bins.min(), 'cmax': results_copy['price_per_area'].max()
+                    }
+        )
+    )
+
+    fig.update_yaxes(showgrid=False)
+    fig.update_layout(
+        margin=dict(l=0, r=0, t=0, b=0),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)'
+    )
+
     return fig
 
 

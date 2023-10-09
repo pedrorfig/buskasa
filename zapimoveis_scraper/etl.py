@@ -38,7 +38,7 @@ def transform(zap_search):
 def extract(business_type, city, max_price, min_area, min_price, neighborhood, state, unit_type, usage_type):
     page = 0
     print(f"Getting listings from neighborhood {neighborhood}")
-    zap_search = ZapSearch()
+    zap_search = ZapSearch(neighborhood)
     while True:
         print(f"Page #{page} on {neighborhood}")
         zap_page = ZapPage(business_type, state, city, neighborhood, usage_type, unit_type, min_area, min_price,
