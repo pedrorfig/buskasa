@@ -61,14 +61,16 @@ controls = \
             html.Li([
                 html.H5(r'Price per Area (R$/m²)', className='card-title'),
                 histogram_chart,
+                html.Div([
                 dcc.RangeSlider(
                     id="price_per_area",
                     min=results['price_per_area'].min(),
                     max=results['price_per_area'].max(),
                     step=1,
                     marks=None,
+                    allowCross=False,
                     tooltip={"placement": "bottom", "always_visible": True}
-                )
+                )], style={"padding": "0 5 25"})
             ], className='list-group-item')
 
         ], className='list-group list-group-flush')
@@ -232,27 +234,12 @@ def generate_mapbox_chart(location_type, neighborhood, bedrooms, bathrooms, pric
                 symbol="circle",
                 sizeref=0.00001,
                 colorscale='RdYlGn_r',
-                # color=results_copy['price_per_area'],
-                colorbar=dict(
-                    title='Price per Area <br> (R$/m<sup>2</sup>)',
-                    x=0.90,
-                    y=0.50,
-                    xpad=0,
-                    thicknessmode="pixels",
-                ),
                 color=price_per_area_colorbar,
                 cmin=price_per_area_colorbar.min(),
                 cmax=price_per_area_colorbar.max()
             ),
         )
     )
-    #         x=results_copy['price_per_area'],
-    #         xbins={'size': bins[1] - bins[0]},
-    #         marker={'colorscale': 'RdYlGn_r', 'color': bins,
-    #                 'cmin': bins.min(), 'cmax': results_copy['price_per_area'].max()
-    #                 }
-    #     )
-    # )
 
     fig.add_trace(
         go.Scattermapbox(
@@ -341,7 +328,7 @@ def generate_histogram_chart(location_type, neighborhood, bedrooms, bathrooms):
         )
     )
 
-    fig.update_yaxes(showgrid=False)
+    fig.update_yaxes(showgrid=False, visible=False, showticklabels=False)
     fig.update_layout(
         margin=dict(l=0, r=0, t=0, b=0),
         plot_bgcolor='rgba(0,0,0,0)',
