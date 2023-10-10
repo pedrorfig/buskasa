@@ -76,10 +76,15 @@ controls = \
         ], className='list-group list-group-flush')
     ])
 
-modal = dbc.Modal([dbc.ModalHeader(dbc.ModalTitle("Bargain Bungalow")),
-                   dbc.ModalBody("Finding for good deals when house hunting is a must." \
-                                 "Bargain Bungalow helps you by a curated list of house listings from São Paulo posted on the biggest real state search engine."), ],
-                  id="modal", is_open=True, backdrop=True, fade=True, centered=True)
+modal = dbc.Modal([dbc.ModalHeader(dbc.ModalTitle("Welcome house hunter!")),
+                   dbc.ModalBody(
+                       [
+                       html.P("Bargain Bungalow helps you by a curated list of house listings from São Paulo posted on the biggest real state search engine."),
+                       html.P('🤑 It helps you find good deals'),
+                       html.P('🧐 Removes fraudsters from the house listings')
+                       ]
+                       )],
+                  id="modal", size="lg", is_open=True, backdrop=True, fade=True, centered=True)
 
 # App layout
 app.layout = dbc.Container(children=[
