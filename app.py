@@ -97,45 +97,6 @@ app.layout = dbc.Container(children=[
 )
 
 
-# @app.callback(
-#     Output("neighborhood", "options"),
-#     Input('bedrooms', 'value'),
-#     Input('bathrooms', 'value'),
-#     Input('price_per_area', 'value'),
-#     Input('location_type', 'value')
-# )
-# def chained_callback_neighborhood(bedrooms, bathrooms, price_per_area, location_type):
-#     dff = copy.deepcopy(results)
-#     if bedrooms:
-#         dff = dff.query("bedrooms == @bedrooms")
-#     if bathrooms:
-#         dff = dff.query("bathrooms == @bathrooms")
-#     if price_per_area:
-#         dff = dff[dff['price_per_area'].between(price_per_area[0], price_per_area[1])]
-#     if location_type:
-#         dff = dff.query("location_type == @location_type")
-#     return sorted(dff["neighborhood"].unique())
-
-# TODO: check why circular dependency is happening between location type and price_per_area
-# @app.callback(
-#     Output("location_type", "value"),
-#     Input('neighborhood', 'value'),
-#     Input('bedrooms', 'value'),
-#     Input('bathrooms', 'value'),
-#     # Input("price_per_area", "value")
-# )
-# def chained_callback_location_type(neighborhood, bedrooms, bathrooms):
-#     dff = copy.deepcopy(results)
-#     if neighborhood:
-#         dff = dff.query("neighborhood == @neighborhood")
-#     if bedrooms:
-#         dff = dff.query("bedrooms == @bedrooms")
-#     if bathrooms:
-#         dff = dff.query("bathrooms == @bathrooms")
-#     # if price_per_area:
-#     #     dff = dff[dff['price_per_area'].between(price_per_area[0], price_per_area[1])]
-#     return sorted(dff["location_type"].unique())
-
 @app.callback(
 
     Output("bedrooms", "options"),
@@ -231,15 +192,21 @@ def generate_mapbox_chart(location_type, neighborhood, bedrooms, bathrooms, pric
     if bathrooms:
         results_copy = results_copy.query("bathrooms == @bathrooms")
 
-    if price_per_area:
-        results_copy = results_copy[results_copy['price_per_area'].between(price_per_area[0], price_per_area[1])]
-
     if location_type:
         results_copy = results_copy.query("location_type == @location_type")
+
+    price_per_area_colorbar = results_copy['price_per_area']
+
+    if price_per_area:
+        results_copy = results_copy[results_copy['price_per_area'].between(price_per_area[0], price_per_area[1])]
 
     size = 1 / results_copy['price_per_area']
 
     approximate_listings = results_copy[results_copy.loc[:, 'precision'] == 'approximate']
+
+    custom_data = np.stack((results_copy['link'], results_copy['price'], results_copy['price_per_area'],
+                            results_copy['condo_fee'], results_copy['total_area_m2'], results_copy['floor']),
+                           axis=1)
 
     hover_template = ('<b>%{customdata[0]}</b> <br>' +
                       'Price: R$ %{customdata[1]:,.2f} <br>' +
@@ -248,9 +215,6 @@ def generate_mapbox_chart(location_type, neighborhood, bedrooms, bathrooms, pric
                       'Usable Area: %{customdata[4]} m<sup>2</sup> <br>' +
                       'Floor: %{customdata[5]}')
 
-    custom_data = np.stack((results_copy['link'], results_copy['price'], results_copy['price_per_area'],
-                            results_copy['condo_fee'], results_copy['total_area_m2'], results_copy['floor']),
-                           axis=1)
     fig = go.Figure()
 
     fig.add_trace(
@@ -268,18 +232,27 @@ def generate_mapbox_chart(location_type, neighborhood, bedrooms, bathrooms, pric
                 symbol="circle",
                 sizeref=0.00001,
                 colorscale='RdYlGn_r',
-                color=results_copy['price_per_area'],
+                # color=results_copy['price_per_area'],
                 colorbar=dict(
                     title='Price per Area <br> (R$/m<sup>2</sup>)',
                     x=0.90,
-                    y=0.50
-                    ,
+                    y=0.50,
                     xpad=0,
                     thicknessmode="pixels",
-                )
+                ),
+                color=price_per_area_colorbar,
+                cmin=price_per_area_colorbar.min(),
+                cmax=price_per_area_colorbar.max()
             ),
         )
     )
+    #         x=results_copy['price_per_area'],
+    #         xbins={'size': bins[1] - bins[0]},
+    #         marker={'colorscale': 'RdYlGn_r', 'color': bins,
+    #                 'cmin': bins.min(), 'cmax': results_copy['price_per_area'].max()
+    #                 }
+    #     )
+    # )
 
     fig.add_trace(
         go.Scattermapbox(
