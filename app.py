@@ -30,7 +30,8 @@ controls = \
                     options=results['neighborhood'].unique(),
                     value=None,
                     clearable=True,
-                    multi=True
+                    multi=True,
+                    style={'color': 'black'}
                 )], className='list-group-item'),
             html.Li([
                 html.H5("Location Type", className='card-title'),
@@ -39,7 +40,8 @@ controls = \
                     options=sorted(results['location_type'].unique()),
                     value=None,
                     clearable=True,
-                    multi=True
+                    multi=True,
+                    style={'color': 'black'}
                 )], className='list-group-item'),
             html.Li([
                 html.H5("Number of Bedrooms", className='card-title'),
@@ -48,7 +50,9 @@ controls = \
                     options=sorted(results['bedrooms'].unique()),
                     value=None,
                     clearable=True,
-                    multi=True)], className='list-group-item'),
+                    multi=True,
+                    style={'color': 'black'},
+                )], className='list-group-item'),
             html.Li([
                 html.H5("Number of Bathrooms", className='card-title'),
                 dcc.Dropdown(
@@ -56,12 +60,12 @@ controls = \
                     options=sorted(results['bathrooms'].unique()),
                     value=None,
                     clearable=True,
-                    multi=True
+                    multi=True,
+                    style={'color': 'black'},
                 )], className='list-group-item'),
             html.Li([
                 html.H5(r'Price per Area (R$/m²)', className='card-title'),
                 histogram_chart,
-                html.Div([
                 dcc.RangeSlider(
                     id="price_per_area",
                     min=results['price_per_area'].min(),
@@ -69,37 +73,37 @@ controls = \
                     step=1,
                     marks=None,
                     allowCross=False,
-                    tooltip={"placement": "bottom", "always_visible": True}
-                )], style={"padding": "0 5 25"})
+                    tooltip={"placement": "bottom", "always_visible": True},
+                    className='px-1'
+                )
             ], className='list-group-item')
-
         ], className='list-group list-group-flush')
     ])
-
 modal = dbc.Modal([dbc.ModalHeader(dbc.ModalTitle("Welcome house hunter!")),
                    dbc.ModalBody(
                        [
-                       html.P("Bargain Bungalow helps you by a curated list of house listings from São Paulo posted on the biggest real state search engine."),
-                       html.P('🤑 It helps you find good deals'),
-                       html.P('🧐 Removes fraudsters from the house listings')
+                           html.P(
+                               "Bargain Bungalow helps you by a curated list of house listings from São Paulo posted on the biggest real state search engine."),
+                           html.P('🤑 It helps you find good deals'),
+                           html.P('🧐 Removes fraudsters from the house listings')
                        ]
-                       )],
+                   )],
                   id="modal", size="lg", is_open=True, backdrop=True, fade=True, centered=True)
 
 # App layout
 app.layout = dbc.Container(children=[
-    dbc.Row([
-        dbc.Col([
-            html.H1("Bargain Bungalow")
-        ])
-    ]),
-    dbc.Row(
-        [
-            dbc.Col(controls, md=3),
-            dbc.Col(mapbox_scatter_chart, md=9)
-        ], className='mb-5'
-    ),
-    modal,
+                                    dbc.Row([
+                                        dbc.Col([
+                                            html.H1("Bargain Bungalow")
+                                        ])
+                                    ]),
+                                    dbc.Row(
+                                        [
+                                            dbc.Col(controls, width=3),
+                                            dbc.Col(mapbox_scatter_chart, width=9)
+                                        ], className='mb-5'
+                                    ),
+                                    modal,
 ], fluid=True
 )
 
@@ -336,6 +340,7 @@ def generate_histogram_chart(location_type, neighborhood, bedrooms, bathrooms):
     fig.update_yaxes(showgrid=False, visible=False, showticklabels=False)
     fig.update_layout(
         margin=dict(l=0, r=0, t=0, b=0),
+        height=320,
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)'
     )
