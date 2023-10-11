@@ -206,14 +206,10 @@ def generate_mapbox_chart(location_type, neighborhood, bedrooms, bathrooms, pric
     if location_type:
         results_copy = results_copy.query("location_type == @location_type")
 
-    price_per_area_colorbar = results_copy['price_per_area']
+    price_per_area_colorbar = [*results_copy['price_per_area']]
 
     if price_per_area:
         results_copy = results_copy[results_copy['price_per_area'].between(price_per_area[0], price_per_area[1])]
-
-    size = 1 / results_copy['price_per_area']
-
-    approximate_listings = results_copy[results_copy.loc[:, 'precision'] == 'approximate']
 
     custom_data = np.stack((results_copy['link'], results_copy['price'], results_copy['price_per_area'],
                             results_copy['condo_fee'], results_copy['total_area_m2'], results_copy['floor']),
@@ -226,6 +222,9 @@ def generate_mapbox_chart(location_type, neighborhood, bedrooms, bathrooms, pric
                       'Usable Area: %{customdata[4]} m<sup>2</sup> <br>' +
                       'Floor: %{customdata[5]}')
 
+    size = 1 / results_copy['price_per_area']
+
+    # Initializing Figure
     fig = go.Figure()
 
     fig.add_trace(
@@ -243,12 +242,14 @@ def generate_mapbox_chart(location_type, neighborhood, bedrooms, bathrooms, pric
                 symbol="circle",
                 sizeref=0.00001,
                 colorscale='RdYlGn_r',
-                color=price_per_area_colorbar,
-                cmin=price_per_area_colorbar.min(),
-                cmax=price_per_area_colorbar.max()
+                color=results_copy['price_per_area'],
+                cmin=min(price_per_area_colorbar),
+                cmax=max(price_per_area_colorbar)
             ),
         )
     )
+
+    approximate_listings = results_copy[results_copy.loc[:, 'precision'] == 'approximate']
 
     fig.add_trace(
         go.Scattermapbox(
