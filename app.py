@@ -17,7 +17,8 @@ app = Dash(external_stylesheets=[dbc.themes.SLATE])
 server = app.server
 
 mapbox_scatter_chart = dbc.Card([dcc.Graph(figure={}, id="mapbox_scatter_chart", className="h-100")], className="h-100")
-histogram_chart = dcc.Graph(figure={}, id="histogram_chart")
+
+histogram_chart = dcc.Graph(figure={}, config={'displayModeBar': False}, id="histogram_chart")
 
 controls = \
     dbc.Card([
@@ -92,18 +93,26 @@ modal = dbc.Modal([dbc.ModalHeader(dbc.ModalTitle("Welcome house hunter!")),
 
 # App layout
 app.layout = dbc.Container(children=[
-                                    dbc.Row([
-                                        dbc.Col([
-                                            html.H1("Bargain Bungalow")
-                                        ])
-                                    ]),
-                                    dbc.Row(
-                                        [
-                                            dbc.Col(controls, width=3),
-                                            dbc.Col(mapbox_scatter_chart, width=9)
-                                        ], className='mb-5'
-                                    ),
-                                    modal,
+    dbc.Row([
+        dbc.Col([
+            html.H1("Bargain Bungalow")
+        ])
+    ], justify="center"),
+    dbc.Row(
+        [
+            dbc.Col(controls, width=3),
+            dbc.Col(mapbox_scatter_chart, width=9)
+        ], className='mb-1'
+    ),
+    dbc.Row(
+        [
+            dbc.Col([
+                html.P(["Meet the creator ",
+                        html.A(["Pedro Figueiredo"], href="https://www.linkedin.com/in/pedro-figueiredo-77377872/")
+                        ], className="position-absolute bottom-0 start-50 translate-middle-y mb-0"),
+            ], align="center",  width=4)
+        ], justify="center"),
+    modal,
 ], fluid=True
 )
 
