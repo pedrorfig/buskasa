@@ -25,6 +25,16 @@ controls = \
         html.H4("Filters", className='card-header'),
         html.Ul([
             html.Li([
+                html.H5("Business Type", className='card-title'),
+                dcc.Dropdown(
+                    id="business_type",
+                    options=results['business_type'].unique(),
+                    value='SALE',
+                    clearable=False,
+                    multi=False,
+                    style={'color': 'black'}
+                )], className='list-group-item'),
+            html.Li([
                 html.H5("Neighborhood", className='card-title'),
                 dcc.Dropdown(
                     id="neighborhood",
@@ -49,16 +59,6 @@ controls = \
                 dcc.Dropdown(
                     id="bedrooms",
                     options=sorted(results['bedrooms'].unique()),
-                    value=None,
-                    clearable=True,
-                    multi=True,
-                    style={'color': 'black'},
-                )], className='list-group-item'),
-            html.Li([
-                html.H5("Number of Bathrooms", className='card-title'),
-                dcc.Dropdown(
-                    id="bathrooms",
-                    options=sorted(results['bathrooms'].unique()),
                     value=None,
                     clearable=True,
                     multi=True,
@@ -110,7 +110,7 @@ app.layout = dbc.Container(children=[
                 html.P(["Meet the creator ",
                         html.A(["Pedro Figueiredo"], href="https://www.linkedin.com/in/pedro-figueiredo-77377872/")
                         ], className="position-absolute bottom-0 start-50 translate-middle-y mb-0"),
-            ], align="center",  width=4)
+            ], align="center", width=4)
         ], justify="center"),
     modal,
 ], fluid=True
@@ -118,19 +118,18 @@ app.layout = dbc.Container(children=[
 
 
 @app.callback(
-
     Output("bedrooms", "options"),
     Input('neighborhood', 'value'),
-    Input('bathrooms', 'value'),
+    Input('business_type', 'value'),
     Input('price_per_area', 'value'),
     Input('location_type', 'value')
 )
-def chained_callback_bedrooms(neighborhood, bathrooms, price_per_area, location_type):
+def chained_callback_bedrooms(neighborhood, business_type, price_per_area, location_type):
     dff = copy.deepcopy(results)
     if neighborhood:
         dff = dff.query("neighborhood == @neighborhood")
-    if bathrooms:
-        dff = dff.query("bathrooms == @bathrooms")
+    if business_type:
+        dff = dff.query("business_type == @business_type")
     if price_per_area:
         dff = dff[dff['price_per_area'].between(price_per_area[0], price_per_area[1])]
     if location_type:
@@ -139,13 +138,13 @@ def chained_callback_bedrooms(neighborhood, bathrooms, price_per_area, location_
 
 
 @app.callback(
-    Output("bathrooms", "options"),
+    Output("business_type", "options"),
     Input('neighborhood', 'value'),
     Input('bedrooms', 'value'),
     Input('price_per_area', 'value'),
     Input('location_type', 'value')
 )
-def chained_callback_bathrooms(neighborhood, bedrooms, price_per_area, location_type):
+def chained_callback_business_type(neighborhood, bedrooms, price_per_area, location_type):
     dff = copy.deepcopy(results)
     if neighborhood:
         dff = dff.query("neighborhood == @neighborhood")
@@ -155,24 +154,24 @@ def chained_callback_bathrooms(neighborhood, bedrooms, price_per_area, location_
         dff = dff[dff['price_per_area'].between(price_per_area[0], price_per_area[1])]
     if location_type:
         dff = dff.query("location_type == @location_type")
-    return sorted(dff["bathrooms"].unique())
+    return sorted(dff["business_type"].unique())
 
 
 @app.callback(
     Output("price_per_area", "value"),
     Input('neighborhood', 'value'),
     Input('bedrooms', 'value'),
-    Input('bathrooms', 'value'),
+    Input('business_type', 'value'),
     Input('location_type', 'value')
 )
-def chained_callback_price_per_area(neighborhood, bedrooms, bathrooms, location_type):
+def chained_callback_price_per_area(neighborhood, bedrooms, business_type, location_type):
     dff = copy.deepcopy(results)
     if neighborhood:
         dff = dff.query("neighborhood == @neighborhood")
     if bedrooms:
         dff = dff.query("bedrooms == @bedrooms")
-    if bathrooms:
-        dff = dff.query("bathrooms == @bathrooms")
+    if business_type:
+        dff = dff.query("business_type == @business_type")
     if location_type:
         dff = dff.query("location_type == @location_type")
     return [dff["price_per_area"].min(), dff["price_per_area"].max()]
@@ -183,10 +182,10 @@ def chained_callback_price_per_area(neighborhood, bedrooms, bathrooms, location_
     Input('location_type', 'value'),
     Input("neighborhood", "value"),
     Input("bedrooms", "value"),
-    Input("bathrooms", "value"),
+    Input("business_type", "value"),
     Input('price_per_area', 'value')
 )
-def generate_mapbox_chart(location_type, neighborhood, bedrooms, bathrooms, price_per_area, mapbox_token=mapbox_token):
+def generate_mapbox_chart(location_type, neighborhood, bedrooms, business_type, price_per_area, mapbox_token=mapbox_token):
     """
    Generate a scatterplot on a mapbox map based on the selected filters.
 
@@ -194,7 +193,7 @@ def generate_mapbox_chart(location_type, neighborhood, bedrooms, bathrooms, pric
         location_type:
         neighborhood (str): The selected neighborhood.
         bedrooms (int): The selected number of bedrooms.
-        bathrooms (int): The selected number of bathrooms.
+        business_type (int): The selected number of business_type.
         price_per_area (list): Whether to filter by price per area.
         mapbox_token (str, optional): The Mapbox access token. Defaults to mapbox_token.
 
@@ -209,8 +208,8 @@ def generate_mapbox_chart(location_type, neighborhood, bedrooms, bathrooms, pric
     if bedrooms:
         results_copy = results_copy.query("bedrooms == @bedrooms")
 
-    if bathrooms:
-        results_copy = results_copy.query("bathrooms == @bathrooms")
+    if business_type:
+        results_copy = results_copy.query("business_type == @business_type")
 
     if location_type:
         results_copy = results_copy.query("location_type == @location_type")
@@ -249,7 +248,7 @@ def generate_mapbox_chart(location_type, neighborhood, bedrooms, bathrooms, pric
                 size=size,
                 sizemin=8,
                 symbol="circle",
-                sizeref=0.00001,
+                # sizeref=0.00001,
                 colorscale='RdYlGn_r',
                 color=results_copy['price_per_area'],
                 cmin=min(price_per_area_colorbar),
@@ -307,9 +306,9 @@ def generate_mapbox_chart(location_type, neighborhood, bedrooms, bathrooms, pric
     Input('location_type', 'value'),
     Input("neighborhood", "value"),
     Input("bedrooms", "value"),
-    Input("bathrooms", "value")
+    Input("business_type", "value")
 )
-def generate_histogram_chart(location_type, neighborhood, bedrooms, bathrooms):
+def generate_histogram_chart(location_type, neighborhood, bedrooms, business_type):
     """
    Generate a histogram on price per area values
 
@@ -317,7 +316,7 @@ def generate_histogram_chart(location_type, neighborhood, bedrooms, bathrooms):
         location_type:
         neighborhood (str): The selected neighborhood.
         bedrooms (int): The selected number of bedrooms.
-        bathrooms (int): The selected number of bathrooms.
+        business_type (int): The selected number of business_type.
     Returns:
         plotly.graph_objects.Figure: The generated scatterplot figure.
     """
@@ -329,8 +328,8 @@ def generate_histogram_chart(location_type, neighborhood, bedrooms, bathrooms):
     if bedrooms:
         results_copy = results_copy.query("bedrooms == @bedrooms")
 
-    if bathrooms:
-        results_copy = results_copy.query("bathrooms == @bathrooms")
+    if business_type:
+        results_copy = results_copy.query("business_type == @business_type")
 
     if location_type:
         results_copy = results_copy.query("location_type == @location_type")

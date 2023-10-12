@@ -10,9 +10,10 @@ from scipy.stats import stats
 from etl_modules import extract, transform
 
 class ZapSearch:
-    def __init__(self, neighborhood):
+    def __init__(self, neighborhood, business_type):
         self._engine = extract.create_db_engine()
         self.neighborhood = neighborhood
+        self.business_type = business_type
         self.zap_pages = []
         self.neighborhood_listings = None
         self.neighborhood_zip_codes = None
@@ -63,20 +64,6 @@ class ZapSearch:
 
             self.listings_to_add = page_listings
 
-    # def remove_outliers(self, feature='price_per_area'):
-    #     """
-    #     Removing outlier on assigned feature
-    #
-    #     Args:
-    #         feature:
-    #         data_with_outliers:
-    #     """
-    #     print("Removing outliers on listing prices")
-    #     page_listings = self.listings_to_add
-    #     if not page_listings.empty:
-    #         z = np.abs(stats.zscore(page_listings[feature]))
-    #         page_listings_without_outlier = page_listings[z < 3]
-    #         self.listings_to_add = page_listings_without_outlier
     def remove_outliers(self):
         """
         Removing outlier on assigned feature
@@ -94,7 +81,10 @@ class ZapSearch:
                         percentile_cont(0.80) within group (order by price_per_area asc) as q1,
                         percentile_cont(0.20) within group (order by price_per_area asc) as q3
                         from listings
-                        where neighborhood = '{self.neighborhood}')
+                        where 
+                        neighborhood = '{self.neighborhood}'
+                        and
+                        business_type = '{self.business_type}')
                     SELECT
                         q1-(q3-q1)*1.5 as max,
                         q3+(q3-q1)*1.5 as min
@@ -102,7 +92,7 @@ class ZapSearch:
                     """,
                     con=conn)
         page_listings = self.listings_to_add
-        if not page_listings.empty and not max_min.empty:
+        if not page_listings.empty and not max_min.isna().all(axis=1)[0]:
             page_listings_without_outlier = page_listings[page_listings['price_per_area'].between(max_min['min'][0], max_min['max'][0])]
             self.listings_to_add = page_listings_without_outlier
         else:
@@ -301,9 +291,6 @@ class ZapItem:
         self.listing_date = self.get_listing_date()
         self.new_listing = self.is_new_listing()
         self.description = self.get_listing_title()
-        # Getting cost data
-        self.price = self.get_listing_price(listing)
-        self.condo_fee = self.get_condo_fee(listing)
         # Getting house attributes
         self.bedrooms = self.get_number_of_bedrooms()
         self.bathrooms = self.get_number_of_bathrooms()
@@ -311,6 +298,10 @@ class ZapItem:
         self.floor = self.get_floor_number()
         self.construction_year = self.get_construction_year()
         self.total_area_m2 = self.get_usable_area()
+        self.business_type = self._zap_page.business_type
+        # Getting cost data
+        self.price = self.get_listing_price()
+        self.condo_fee = self.get_condo_fee(listing)
         self.price_per_area = self.get_price_per_area()
         # Getting location data
         self.country = self.get_listing_country()
@@ -392,9 +383,17 @@ class ZapItem:
         return int(self._listing_data['listing']['pricingInfos'][0].get('monthlyCondoFee', 0)) if len(
             listing['listing']['pricingInfos']) > 0 else 0
 
-    def get_listing_price(self, listing):
-        return int(self._listing_data['listing']['pricingInfos'][0].get('price', None)) if len(
-            listing['listing']['pricingInfos']) > 0 else 0
+    def get_listing_price(self):
+        if self.business_type == 'SALE':
+            price = int(self._listing_data['listing']['pricingInfos'][0].get('price', None)) if len(
+                self._listing_data['listing']['pricingInfos']) > 0 else 0
+        else:
+            try:
+                price = int(self._listing_data['listing']['pricingInfos'][0].get('rentalInfo', {}).get('monthlyRentalTotalPrice', None))
+            except TypeError:
+                price = int(self._listing_data['listing']['pricingInfos'][1].get('rentalInfo', {}).get('monthlyRentalTotalPrice', None))
+
+        return price
 
     def get_listing_title(self):
         return self._listing_data['listing']['title']
