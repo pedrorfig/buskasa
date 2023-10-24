@@ -117,6 +117,7 @@ app.layout = dbc.Container(children=[
 ], fluid=True
 )
 
+
 @app.callback(
     Output("bedrooms", "options"),
     Input('neighborhood', 'value'),
@@ -125,6 +126,17 @@ app.layout = dbc.Container(children=[
     Input('location_type', 'value')
 )
 def chained_callback_bedrooms(neighborhood, business_type, price_per_area, location_type):
+    """
+
+    Args:
+        neighborhood:
+        business_type:
+        price_per_area:
+        location_type:
+
+    Returns:
+
+    """
     dff = copy.deepcopy(results)
     if neighborhood:
         dff = dff.query("neighborhood == @neighborhood")
@@ -136,6 +148,7 @@ def chained_callback_bedrooms(neighborhood, business_type, price_per_area, locat
         dff = dff.query("location_type == @location_type")
     return sorted(dff["bedrooms"].unique())
 
+
 @app.callback(
     Output("price_per_area", "value"),
     Output("price_per_area", "min"),
@@ -146,6 +159,17 @@ def chained_callback_bedrooms(neighborhood, business_type, price_per_area, locat
     Input('location_type', 'value')
 )
 def chained_callback_price_per_area(neighborhood, bedrooms, business_type, location_type):
+    """
+
+    Args:
+        neighborhood:
+        bedrooms:
+        business_type:
+        location_type:
+
+    Returns:
+
+    """
     dff = copy.deepcopy(results)
     if neighborhood:
         dff = dff.query("neighborhood == @neighborhood")
@@ -155,7 +179,9 @@ def chained_callback_price_per_area(neighborhood, bedrooms, business_type, locat
         dff = dff.query("business_type == @business_type")
     if location_type:
         dff = dff.query("location_type == @location_type")
-    return [dff["price_per_area"].min(), dff["price_per_area"].max()], dff["price_per_area"].min(), dff["price_per_area"].max()
+    return [dff["price_per_area"].min(), dff["price_per_area"].max()], dff["price_per_area"].min(), dff[
+        "price_per_area"].max()
+
 
 @app.callback(
     Output("mapbox_scatter_chart", "figure"),
@@ -165,7 +191,8 @@ def chained_callback_price_per_area(neighborhood, bedrooms, business_type, locat
     Input("business_type", "value"),
     Input('price_per_area', 'value')
 )
-def generate_mapbox_chart(location_type, neighborhood, bedrooms, business_type, price_per_area, mapbox_token=mapbox_token):
+def generate_mapbox_chart(location_type, neighborhood, bedrooms, business_type, price_per_area,
+                          mapbox_token=mapbox_token):
     """
    Generate a scatterplot on a mapbox map based on the selected filters.
 
@@ -337,6 +364,7 @@ def generate_histogram_chart(location_type, neighborhood, bedrooms, business_typ
         paper_bgcolor='rgba(0,0,0,0)'
     )
     return fig
+
 
 if __name__ == "__main__":
     app.run_server(debug=True)
