@@ -80,6 +80,7 @@ controls = \
             ], className='list-group-item')
         ], className='list-group list-group-flush')
     ])
+
 modal = dbc.Modal([dbc.ModalHeader(dbc.ModalTitle("Welcome house hunter!")),
                    dbc.ModalBody(
                        [
@@ -116,7 +117,6 @@ app.layout = dbc.Container(children=[
 ], fluid=True
 )
 
-
 @app.callback(
     Output("bedrooms", "options"),
     Input('neighborhood', 'value'),
@@ -136,29 +136,10 @@ def chained_callback_bedrooms(neighborhood, business_type, price_per_area, locat
         dff = dff.query("location_type == @location_type")
     return sorted(dff["bedrooms"].unique())
 
-
-@app.callback(
-    Output("business_type", "options"),
-    Input('neighborhood', 'value'),
-    Input('bedrooms', 'value'),
-    Input('price_per_area', 'value'),
-    Input('location_type', 'value')
-)
-def chained_callback_business_type(neighborhood, bedrooms, price_per_area, location_type):
-    dff = copy.deepcopy(results)
-    if neighborhood:
-        dff = dff.query("neighborhood == @neighborhood")
-    if bedrooms:
-        dff = dff.query("bedrooms == @bedrooms")
-    if price_per_area:
-        dff = dff[dff['price_per_area'].between(price_per_area[0], price_per_area[1])]
-    if location_type:
-        dff = dff.query("location_type == @location_type")
-    return sorted(dff["business_type"].unique())
-
-
 @app.callback(
     Output("price_per_area", "value"),
+    Output("price_per_area", "min"),
+    Output("price_per_area", "max"),
     Input('neighborhood', 'value'),
     Input('bedrooms', 'value'),
     Input('business_type', 'value'),
@@ -174,8 +155,7 @@ def chained_callback_price_per_area(neighborhood, bedrooms, business_type, locat
         dff = dff.query("business_type == @business_type")
     if location_type:
         dff = dff.query("location_type == @location_type")
-    return [dff["price_per_area"].min(), dff["price_per_area"].max()]
-
+    return [dff["price_per_area"].min(), dff["price_per_area"].max()], dff["price_per_area"].min(), dff["price_per_area"].max()
 
 @app.callback(
     Output("mapbox_scatter_chart", "figure"),
@@ -202,17 +182,17 @@ def generate_mapbox_chart(location_type, neighborhood, bedrooms, business_type, 
     """
     results_copy = copy.deepcopy(results)
 
-    if neighborhood:
-        results_copy = results_copy.query("neighborhood == @neighborhood")
-
-    if bedrooms:
-        results_copy = results_copy.query("bedrooms == @bedrooms")
-
     if business_type:
         results_copy = results_copy.query("business_type == @business_type")
 
+    if neighborhood:
+        results_copy = results_copy.query("neighborhood == @neighborhood")
+
     if location_type:
         results_copy = results_copy.query("location_type == @location_type")
+
+    if bedrooms:
+        results_copy = results_copy.query("bedrooms == @bedrooms")
 
     price_per_area_colorbar = [*results_copy['price_per_area']]
 
@@ -322,17 +302,17 @@ def generate_histogram_chart(location_type, neighborhood, bedrooms, business_typ
     """
     results_copy = copy.deepcopy(results)
 
-    if neighborhood:
-        results_copy = results_copy.query("neighborhood == @neighborhood")
-
-    if bedrooms:
-        results_copy = results_copy.query("bedrooms == @bedrooms")
-
     if business_type:
         results_copy = results_copy.query("business_type == @business_type")
 
+    if neighborhood:
+        results_copy = results_copy.query("neighborhood == @neighborhood")
+
     if location_type:
         results_copy = results_copy.query("location_type == @location_type")
+
+    if bedrooms:
+        results_copy = results_copy.query("bedrooms == @bedrooms")
 
     fig = go.Figure()
     hist, bins = np.histogram(results_copy['price_per_area'], bins='auto')
@@ -340,22 +320,23 @@ def generate_histogram_chart(location_type, neighborhood, bedrooms, business_typ
         go.Histogram(
             x=results_copy['price_per_area'],
             xbins={'size': bins[1] - bins[0]},
-            marker={'colorscale': 'RdYlGn_r', 'color': bins,
-                    'cmin': bins.min(), 'cmax': results_copy['price_per_area'].max()
+            marker={'colorscale': 'RdYlGn_r',
+                    'color': bins,
+                    'cmin': bins.min(),
+                    'cmax': bins.max()
                     }
         )
     )
 
     fig.update_yaxes(showgrid=False, visible=False, showticklabels=False)
+
     fig.update_layout(
         margin=dict(l=0, r=0, t=0, b=0),
         height=320,
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)'
     )
-
     return fig
-
 
 if __name__ == "__main__":
     app.run_server(debug=True)
