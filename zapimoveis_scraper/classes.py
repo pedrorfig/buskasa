@@ -389,9 +389,9 @@ class ZapItem:
                 self._listing_data['listing']['pricingInfos']) > 0 else 0
         else:
             try:
-                price = int(self._listing_data['listing']['pricingInfos'][0].get('rentalInfo', {}).get('monthlyRentalTotalPrice', None))
+                price = int(self._listing_data['listing']['pricingInfos'][0].get('rentalInfo', {}).get('monthlyRentalTotalPrice', 0))
             except TypeError:
-                price = int(self._listing_data['listing']['pricingInfos'][1].get('rentalInfo', {}).get('monthlyRentalTotalPrice', None))
+                price = int(self._listing_data['listing']['pricingInfos'][1].get('rentalInfo', {}).get('monthlyRentalTotalPrice', 0))
 
         return price
 

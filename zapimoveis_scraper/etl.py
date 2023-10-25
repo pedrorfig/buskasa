@@ -8,9 +8,9 @@ state = 'São Paulo'
 business_type = 'RENTAL'
 usage_type = 'RESIDENTIAL'
 unit_type = 'APARTMENT'
-min_area = 100
-min_price = 10000
-max_price = 10500
+min_area = 60
+min_price = 0
+max_price = 15000
 # neighborhoods = ['Pinheiros', 'Vila Madalena']
 neighborhoods = ['Pinheiros', 'Vila Madalena','Bela Vista', 'Vila Mariana', 'Jardim Paulista', 'Jardins',
                  'Jardim Europa', 'Consolação', 'Cerqueira César', 'Higienópolis', 'Itaim Bibi', 'Ibirapuera',
