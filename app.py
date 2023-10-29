@@ -65,6 +65,20 @@ controls = \
                     style={'color': 'black'},
                 )], className='list-group-item'),
             html.Li([
+                html.H5(r'Total Price (R$)', className='card-title'),
+                dcc.Slider(
+                    id="price",
+                    value=int(results['price'].max()),
+                    min=results['price'].min(),
+                    max=results['price'].max(),
+                    step=10,
+                    marks=None,
+                    updatemode='mouseup',
+                    tooltip={"placement": "bottom", "always_visible": True},
+                    className='px-1'
+                )
+            ], className='list-group-item'),
+            html.Li([
                 html.H5(r'Price per Area (R$/m²)', className='card-title'),
                 histogram_chart,
                 dcc.RangeSlider(
@@ -118,6 +132,7 @@ app.layout = dbc.Container(children=[
     modal,
 ], fluid=True
 )
+
 
 @app.callback(
     Output("neighborhood", "options"),
@@ -190,15 +205,16 @@ def chained_callback_bedrooms(neighborhood, business_type, location_type):
 
 
 @app.callback(
-    [Output("price_per_area", "value"),
-     Output("price_per_area", "min"),
-     Output("price_per_area", "max")],
+    [Output("price", "value"),
+     Output("price", "min"),
+     Output("price", "max")
+     ],
     [Input('neighborhood', 'value'),
      Input('bedrooms', 'value'),
      Input('business_type', 'value'),
      Input('location_type', 'value')]
 )
-def chained_callback_price_per_area(neighborhood, bedrooms, business_type, location_type):
+def chained_callback_price(neighborhood, bedrooms, business_type, location_type):
     """
 
     Args:
@@ -220,9 +236,50 @@ def chained_callback_price_per_area(neighborhood, bedrooms, business_type, locat
     if bedrooms:
         dff = dff.query("bedrooms == @bedrooms")
 
+    min_price_per_area = int(dff["price"].min())
+    max_price_per_area = int(dff["price"].max())
+
+    return max_price_per_area, min_price_per_area, max_price_per_area
+
+
+@app.callback(
+    [Output("price_per_area", "value"),
+     Output("price_per_area", "min"),
+     Output("price_per_area", "max")],
+    [Input('neighborhood', 'value'),
+     Input('bedrooms', 'value'),
+     Input('business_type', 'value'),
+     Input('location_type', 'value'),
+     Input('price', 'value')
+     ]
+)
+def chained_callback_price_per_area(neighborhood, bedrooms, business_type, location_type, price):
+    """
+
+    Args:
+        neighborhood:
+        bedrooms:
+        business_type:
+        location_type:
+
+    Returns:
+
+    """
+    dff = copy.deepcopy(results)
+    if business_type:
+        dff = dff.query("business_type == @business_type")
+    if neighborhood:
+        dff = dff.query("neighborhood == @neighborhood")
+    if location_type:
+        dff = dff.query("location_type == @location_type")
+    if bedrooms:
+        dff = dff.query("bedrooms == @bedrooms")
+    if price:
+        dff = dff.query("price <= @price")
+
     min_price_per_area = int(dff["price_per_area"].min())
     max_price_per_area = int(dff["price_per_area"].max())
-    print(min_price_per_area, max_price_per_area)
+
     return [min_price_per_area, max_price_per_area], min_price_per_area, max_price_per_area
 
 
@@ -251,9 +308,6 @@ def generate_mapbox_chart(location_type, neighborhood, bedrooms, business_type, 
         plotly.graph_objects.Figure: The generated scatterplot figure.
     """
     results_copy = copy.deepcopy(results)
-
-    print(price_per_area[0], price_per_area[1])
-    print(price_per_area)
 
     if business_type:
         results_copy = results_copy.query("business_type == @business_type")
@@ -358,9 +412,10 @@ def generate_mapbox_chart(location_type, neighborhood, bedrooms, business_type, 
     Input('location_type', 'value'),
     Input("neighborhood", "value"),
     Input("bedrooms", "value"),
-    Input("business_type", "value")
+    Input("business_type", "value"),
+    Input("price", "value")
 )
-def generate_histogram_chart(location_type, neighborhood, bedrooms, business_type):
+def generate_histogram_chart(location_type, neighborhood, bedrooms, business_type, price):
     """
    Generate a histogram on price per area values
 
@@ -373,6 +428,7 @@ def generate_histogram_chart(location_type, neighborhood, bedrooms, business_typ
         plotly.graph_objects.Figure: The generated scatterplot figure.
     """
     results_copy = copy.deepcopy(results)
+    print(price)
 
     if business_type:
         results_copy = results_copy.query("business_type == @business_type")
@@ -382,6 +438,8 @@ def generate_histogram_chart(location_type, neighborhood, bedrooms, business_typ
         results_copy = results_copy.query("location_type == @location_type")
     if bedrooms:
         results_copy = results_copy.query("bedrooms == @bedrooms")
+    if price:
+        results_copy = results_copy.query("price <= @price")
 
     fig = go.Figure()
     hist, bins = np.histogram(results_copy['price_per_area'], bins='auto')

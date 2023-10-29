@@ -9,6 +9,7 @@ import requests as r
 from scipy.stats import stats
 from etl_modules import extract, transform
 
+
 class ZapSearch:
     def __init__(self, neighborhood, business_type):
         self._engine = extract.create_db_engine()
@@ -36,6 +37,7 @@ class ZapSearch:
             zip_codes = pd.concat([zip_codes, zap_page.zip_code_df])
         zip_codes = zip_codes.drop_duplicates()
         self.zip_codes_to_add = zip_codes
+
     def concat_listings(self):
         listings = self.listings_to_add
         for zap_page in self.zap_pages:
@@ -43,8 +45,10 @@ class ZapSearch:
             listings = pd.concat([listings, zap_page.zap_page_listings])
         listings = listings.drop_duplicates(subset='listing_id')
         self.listings_to_add = listings
+
     def save_zap_pages(self, zap_page):
         self.zap_pages.append(zap_page)
+
     def remove_fraudsters(self):
         """
         Remove possible fraudsters from house listings
@@ -90,10 +94,11 @@ class ZapSearch:
                         q3+(q3-q1)*1.5 as min
                     from stats
                     """,
-                    con=conn)
+                con=conn)
         page_listings = self.listings_to_add
         if not page_listings.empty and not max_min.isna().all(axis=1)[0]:
-            page_listings_without_outlier = page_listings[page_listings['price_per_area'].between(max_min['min'][0], max_min['max'][0])]
+            page_listings_without_outlier = page_listings[
+                page_listings['price_per_area'].between(max_min['min'][0], max_min['max'][0])]
             self.listings_to_add = page_listings_without_outlier
         else:
             self.listings_to_add = page_listings
@@ -116,7 +121,8 @@ class ZapSearch:
         page_listings = self.listings_to_add
         if not page_listings.empty:
             with self._engine.connect() as conn:
-                page_listings.to_sql(name='listings', con=conn, if_exists='append', index=False, index_label='listing_id')
+                page_listings.to_sql(name='listings', con=conn, if_exists='append', index=False,
+                                     index_label='listing_id')
 
     def get_existing_zip_codes(self):
         """
@@ -128,15 +134,18 @@ class ZapSearch:
         with engine.connect() as conn:
             data = pd.read_sql(f'SELECT * from dim_zip_code', con=conn, index_col='zip_code')
         self.existing_zip_codes = data
+
     def close_engine(self):
         self._engine.dispose()
+
 
 class ZapPage:
     """
     Zap Imoveis page object
     """
 
-    def __init__(self, business_type, state, city, neighborhood, usage_type, unit_type, min_area, min_price, max_price, batch_id, zap_search):
+    def __init__(self, business_type, state, city, neighborhood, usage_type, unit_type, min_area, min_price, max_price,
+                 batch_id, zap_search):
 
         self.batch_id = batch_id
         self.business_type = business_type
@@ -249,22 +258,19 @@ class ZapPage:
         zip_code_df = pd.DataFrame.from_dict(self.zip_code_to_add, columns=['complement'], orient='index')
         self.zip_code_df = zip_code_df
 
-
-
     def create_zap_items(self):
+        """
+
+        """
         for listing in self.listings:
             listing_id = listing.get('listing').get('sourceId')
             if listing_id not in self.zap_search.existing_listing_ids:
                 item = ZapItem(listing, self)
                 self.add_zap_item(item)
 
-
-
-
     def add_zap_item(self, zap_item):
 
         self.zap_items_to_add.append(zap_item)
-
 
     def convert_zap_page_listing_to_df(self):
         """
@@ -274,7 +280,6 @@ class ZapPage:
         page_listings = transform.convert_to_dataframe(items)
         page_listings = page_listings.drop_duplicates(subset='listing_id')
         self.zap_page_listings = page_listings
-
 
 
 class ZapItem:
@@ -389,9 +394,11 @@ class ZapItem:
                 self._listing_data['listing']['pricingInfos']) > 0 else 0
         else:
             try:
-                price = int(self._listing_data['listing']['pricingInfos'][0].get('rentalInfo', {}).get('monthlyRentalTotalPrice', 0))
+                price = int(self._listing_data['listing']['pricingInfos'][0].get('rentalInfo', {}).get(
+                    'monthlyRentalTotalPrice', 0))
             except TypeError:
-                price = int(self._listing_data['listing']['pricingInfos'][1].get('rentalInfo', {}).get('monthlyRentalTotalPrice', 0))
+                price = int(self._listing_data['listing']['pricingInfos'][1].get('rentalInfo', {}).get(
+                    'monthlyRentalTotalPrice', 0))
 
         return price
 
