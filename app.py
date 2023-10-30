@@ -68,10 +68,10 @@ controls = \
                 html.H5(r'Total Price (R$)', className='card-title'),
                 dcc.Slider(
                     id="price",
-                    value=int(results['price'].max()),
+                    value=results['price'].max(),
                     min=results['price'].min(),
                     max=results['price'].max(),
-                    step=10,
+                    step=1000,
                     marks=None,
                     updatemode='mouseup',
                     tooltip={"placement": "bottom", "always_visible": True},
@@ -236,10 +236,10 @@ def chained_callback_price(neighborhood, bedrooms, business_type, location_type)
     if bedrooms:
         dff = dff.query("bedrooms == @bedrooms")
 
-    min_price_per_area = int(dff["price"].min())
-    max_price_per_area = int(dff["price"].max())
+    min_price = int(dff["price"].min())
+    max_price = int(dff["price"].max())
 
-    return max_price_per_area, min_price_per_area, max_price_per_area
+    return max_price, min_price, max_price
 
 
 @app.callback(
@@ -257,6 +257,7 @@ def chained_callback_price_per_area(neighborhood, bedrooms, business_type, locat
     """
 
     Args:
+        price:
         neighborhood:
         bedrooms:
         business_type:
@@ -289,9 +290,10 @@ def chained_callback_price_per_area(neighborhood, bedrooms, business_type, locat
     Input("neighborhood", "value"),
     Input("bedrooms", "value"),
     Input("business_type", "value"),
-    Input('price_per_area', 'value')
+    Input('price_per_area', 'value'),
+    Input('price', 'value')
 )
-def generate_mapbox_chart(location_type, neighborhood, bedrooms, business_type, price_per_area,
+def generate_mapbox_chart(location_type, neighborhood, bedrooms, business_type, price_per_area, price,
                           mapbox_token=mapbox_token):
     """
    Generate a scatterplot on a mapbox map based on the selected filters.
@@ -325,6 +327,9 @@ def generate_mapbox_chart(location_type, neighborhood, bedrooms, business_type, 
 
     if price_per_area:
         results_copy = results_copy[results_copy['price_per_area'].between(price_per_area[0], price_per_area[1])]
+
+    if price:
+        results_copy = results_copy.query("price <= @price")
 
     custom_data = np.stack((results_copy['link'], results_copy['price'], results_copy['price_per_area'],
                             results_copy['condo_fee'], results_copy['total_area_m2'], results_copy['floor']),
@@ -428,7 +433,6 @@ def generate_histogram_chart(location_type, neighborhood, bedrooms, business_typ
         plotly.graph_objects.Figure: The generated scatterplot figure.
     """
     results_copy = copy.deepcopy(results)
-    print(price)
 
     if business_type:
         results_copy = results_copy.query("business_type == @business_type")
