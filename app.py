@@ -119,14 +119,14 @@ app.layout = dbc.Container(children=[
         [
             dbc.Col(controls, width=3),
             dbc.Col(mapbox_scatter_chart, width=9)
-        ], className='mb-1'
+        ], className='mb-5'
     ),
     dbc.Row(
         [
             dbc.Col([
                 html.P(["Meet the creator ",
                         html.A(["Pedro Figueiredo"], href="https://www.linkedin.com/in/pedro-figueiredo-77377872/")
-                        ], className="position-absolute bottom-0 start-50 translate-middle-y mb-0"),
+                        ], className="bottom-0 start-50 translate-middle-y mb-1"),
             ], align="center", width=4)
         ], justify="center"),
     modal,
@@ -425,7 +425,8 @@ def generate_histogram_chart(location_type, neighborhood, bedrooms, business_typ
    Generate a histogram on price per area values
 
     Args:
-        location_type:
+        price (int): maximum listing value
+        location_type (str): type of location e.g. street/avenue
         neighborhood (str): The selected neighborhood.
         bedrooms (int): The selected number of bedrooms.
         business_type (int): The selected number of business_type.
@@ -463,12 +464,11 @@ def generate_histogram_chart(location_type, neighborhood, bedrooms, business_typ
 
     fig.update_layout(
         margin=dict(l=0, r=0, t=0, b=0),
-        height=320,
+        height=260,
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)'
     )
     return fig
-
 
 if __name__ == "__main__":
     app.run_server(debug=True)
