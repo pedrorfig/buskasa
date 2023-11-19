@@ -16,7 +16,7 @@ results = extract.read_listings_sql_table()
 app = Dash(external_stylesheets=[dbc.themes.SLATE])
 server = app.server
 
-mapbox_scatter_chart = dbc.Card([dcc.Graph(figure={}, id="mapbox_scatter_chart", className="h-100")], className="h-100")
+mapbox_scatter_chart = dcc.Graph(figure={}, id="mapbox_scatter_chart", className="h-100")
 
 histogram_chart = dcc.Graph(figure={}, config={'displayModeBar': False}, id="histogram_chart")
 
@@ -119,20 +119,19 @@ app.layout = dbc.Container(children=[
         [
             dbc.Col(controls, width=3),
             dbc.Col(mapbox_scatter_chart, width=9)
-        ], className='mb-5'
+        ], className='mb-2'
     ),
     dbc.Row(
         [
             dbc.Col([
                 html.P(["Meet the creator ",
                         html.A(["Pedro Figueiredo"], href="https://www.linkedin.com/in/pedro-figueiredo-77377872/")
-                        ], className="bottom-0 start-50 translate-middle-y mb-1"),
-            ], align="center", width=4)
+                        ]),
+            ], align="center", width="auto")
         ], justify="center"),
     modal,
 ], fluid=True
 )
-
 
 @app.callback(
     Output("neighborhood", "options"),
@@ -464,7 +463,6 @@ def generate_histogram_chart(location_type, neighborhood, bedrooms, business_typ
 
     fig.update_layout(
         margin=dict(l=0, r=0, t=0, b=0),
-        height=260,
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)'
     )
