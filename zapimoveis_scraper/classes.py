@@ -6,27 +6,47 @@ import requests
 from geopy import Nominatim
 from datetime import datetime, timedelta
 import requests as r
+import sqlalchemy
 from scipy.stats import stats
-from etl_modules import extract, transform
+from etl_modules import extract, transform, save
 
 
 class ZapSearch:
-    def __init__(self, neighborhood, business_type):
+    def __init__(self, state, city, neighborhood, unit_type, usage_type, business_type, max_price, min_area, min_price):
         self._engine = extract.create_db_engine()
+        self.state = state
+        self.city = city
         self.neighborhood = neighborhood
         self.business_type = business_type
+        self.unit_type = unit_type
+        self.usage_type = usage_type
+        self.max_price = max_price
+        self.min_price = min_price
+        self.min_area = min_area
         self.zap_pages = []
-        self.neighborhood_listings = None
-        self.neighborhood_zip_codes = None
+        self.listings_not_found = []
         self.zip_codes_to_add = None
         self.listings_to_add = None
         self.existing_zip_codes = None
         self.existing_listing_ids = None
 
     def get_existing_ids(self):
+        """
+        Get existing listing ids for the specified conditions
+        """
         engine = self._engine
         with engine.connect() as conn:
-            ids = pd.read_sql('SELECT DISTINCT listing_id from listings', con=conn)
+            ids = pd.read_sql(
+                rf"""SELECT DISTINCT listing_id
+                        from listings
+                        where
+                        city='{self.city}' and
+                        neighborhood ilike '%%{self.neighborhood}%%' and
+                        business_type='{self.business_type}' and
+                        price between {self.min_price} and {self.max_price} and
+                        business_type = '{self.business_type}' and
+                        total_area_m2 >= {self.min_area}
+                        """, con=conn)
             ids_list = [*ids['listing_id']]
         self.existing_listing_ids = ids_list
 
@@ -48,6 +68,8 @@ class ZapSearch:
 
     def save_zap_pages(self, zap_page):
         self.zap_pages.append(zap_page)
+    def save_listings_to_check(self, listings):
+        self.listings_not_found.extend(listings)
 
     def remove_fraudsters(self):
         """
@@ -118,6 +140,7 @@ class ZapSearch:
 
         """
         print("Saving house listings")
+        # Retrieve listing to be saved in the database
         page_listings = self.listings_to_add
         if not page_listings.empty:
             with self._engine.connect() as conn:
@@ -160,6 +183,7 @@ class ZapPage:
         self.zap_search = zap_search
         self.zip_code_to_add = {}
         self.zap_items_to_add = []
+        self.listings_to_check = []
         self.zap_page_listings = None
         self.existing_listing_ids = None
         self.existing_zip_codes = None
@@ -264,9 +288,13 @@ class ZapPage:
         """
         for listing in self.listings:
             listing_id = listing.get('listing').get('sourceId')
+            self.add_listings_to_check(listing_id)
             if listing_id not in self.zap_search.existing_listing_ids:
                 item = ZapItem(listing, self)
                 self.add_zap_item(item)
+
+    def add_listings_to_check(self, listing_id):
+        self.listings_to_check.append(listing_id)
 
     def add_zap_item(self, zap_item):
 

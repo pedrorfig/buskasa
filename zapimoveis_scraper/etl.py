@@ -8,18 +8,33 @@ state = 'São Paulo'
 business_type = 'SALE'
 usage_type = 'RESIDENTIAL'
 unit_type = 'APARTMENT'
-min_area = 60
-min_price = 100000
-max_price = 2000000
-# neighborhoods = ['Pinheiros', 'Vila Madalena']
+min_area = 100
+min_price = 990000
+max_price = 1000000
 neighborhoods = ['Pinheiros', 'Vila Madalena','Bela Vista', 'Vila Mariana', 'Jardim Paulista', 'Jardins',
                  'Jardim Europa', 'Consolação', 'Cerqueira César', 'Higienópolis', 'Itaim Bibi', 'Ibirapuera',
                  'Vila Nova Conceição', 'Vila Olímpia', 'Sumaré', 'Perdizes', 'Pacaembu']
 def extract(business_type, city, max_price, min_area, min_price, neighborhood, state, unit_type, usage_type):
+    """
+
+    Args:
+        business_type:
+        city:
+        max_price:
+        min_area:
+        min_price:
+        neighborhood:
+        state:
+        unit_type:
+        usage_type:
+
+    Returns:
+
+    """
     page = 0
     print(f"Getting listings from neighborhood {neighborhood}")
     # Initialize a ZapSearch item that consists of searching a whole neighborhood
-    zap_search = ZapSearch(neighborhood, business_type)
+    zap_search = ZapSearch(state, city, neighborhood, unit_type, usage_type, business_type, max_price, min_area, min_price)
     # Get existing listing ids from a neighborhood
     zap_search.get_existing_ids()
     # Get existing zip codes from a neighborhood
@@ -40,12 +55,21 @@ def extract(business_type, city, max_price, min_area, min_price, neighborhood, s
         zap_page.create_zap_items()
         # Save items to ZapSearch item
         zap_search.save_zap_pages(zap_page)
+        # Save list of all listings scrapped
+        zap_search.save_listings_to_check(zap_page.listings_to_check)
         page += 1
 
     return zap_search
 def transform(zap_search):
-    # Convert output to standard format before saving
+    """
 
+    Args:
+        zap_search:
+
+    Returns:
+
+    """
+    # Convert output to standard format before saving
     zap_search.concat_zip_codes()
     zap_search.concat_listings()
     # Treating listings
@@ -54,6 +78,11 @@ def transform(zap_search):
     return zap_search
 
 def save(zap_search):
+    """
+
+    Args:
+        zap_search:
+    """
     # Save results to db
     zap_search.save_listings_to_db()
     zap_search.save_zip_codes_to_db()
