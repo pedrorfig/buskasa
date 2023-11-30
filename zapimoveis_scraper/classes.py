@@ -6,8 +6,6 @@ import requests
 from geopy import Nominatim
 from datetime import datetime, timedelta
 import requests as r
-import sqlalchemy
-from scipy.stats import stats
 from etl_modules import extract, transform, save
 
 
@@ -24,7 +22,7 @@ class ZapSearch:
         self.min_price = min_price
         self.min_area = min_area
         self.zap_pages = []
-        self.listings_not_found = []
+        self.all_listing_from_search = []
         self.zip_codes_to_add = None
         self.listings_to_add = None
         self.existing_zip_codes = None
@@ -37,26 +35,28 @@ class ZapSearch:
         engine = self._engine
         with engine.connect() as conn:
             ids = pd.read_sql(
-                rf"""SELECT DISTINCT listing_id
-                        from listings
-                        where
-                        city='{self.city}' and
-                        neighborhood ilike '%%{self.neighborhood}%%' and
-                        business_type='{self.business_type}' and
-                        price between {self.min_price} and {self.max_price} and
-                        business_type = '{self.business_type}' and
-                        total_area_m2 >= {self.min_area}
+                rf"""
+                SELECT DISTINCT listing_id
+                from listings
+                where
+                    city='{self.city}' and
+                    neighborhood ilike '%%{self.neighborhood}%%' and
+                    business_type='{self.business_type}' and
+                    price between {self.min_price} and {self.max_price} and
+                    business_type = '{self.business_type}' and
+                    total_area_m2 >= {self.min_area}
                         """, con=conn)
             ids_list = [*ids['listing_id']]
         self.existing_listing_ids = ids_list
 
     def concat_zip_codes(self):
         zip_codes = self.zip_codes_to_add
-        for zap_page in self.zap_pages:
-            zap_page.convert_zap_page_zip_code_to_df()
-            zip_codes = pd.concat([zip_codes, zap_page.zip_code_df])
-        zip_codes = zip_codes.drop_duplicates()
-        self.zip_codes_to_add = zip_codes
+        if self.zap_pages:
+            for zap_page in self.zap_pages:
+                zap_page.convert_zap_page_zip_code_to_df()
+                zip_codes = pd.concat([zip_codes, zap_page.zip_code_df])
+            zip_codes = zip_codes.drop_duplicates()
+            self.zip_codes_to_add = zip_codes
 
     def concat_listings(self):
         listings = self.listings_to_add
@@ -69,7 +69,7 @@ class ZapSearch:
     def save_zap_pages(self, zap_page):
         self.zap_pages.append(zap_page)
     def save_listings_to_check(self, listings):
-        self.listings_not_found.extend(listings)
+        self.all_listing_from_search.extend(listings)
 
     def remove_fraudsters(self):
         """
@@ -82,9 +82,11 @@ class ZapSearch:
         """
         print("Removing fraudsters")
         page_listings = self.listings_to_add
+        # Listing users known to be fraudsters
+        known_fraudsters = ["Camila Damaceno Bispo", "Imóveis São Caetano"]
         if not page_listings.empty:
             # Removing known fraudster
-            page_listings = page_listings[page_listings['advertizer'] != "Camila Damaceno Bispo"]
+            page_listings = page_listings[~page_listings['advertizer'].isin(known_fraudsters)]
             # Removing fraudsters by primary phone location inconsistency
             page_listings = page_listings[page_listings['primary_phone'].str.startswith('11')]
 
@@ -143,9 +145,9 @@ class ZapSearch:
         # Retrieve listing to be saved in the database
         page_listings = self.listings_to_add
         if not page_listings.empty:
-            with self._engine.connect() as conn:
-                page_listings.to_sql(name='listings', con=conn, if_exists='append', index=False,
-                                     index_label='listing_id')
+            engine = self._engine
+            with engine.begin() as conn:
+                save.upsert_df(df=page_listings, table_name='listings', connection=conn)
 
     def get_existing_zip_codes(self):
         """
@@ -259,12 +261,9 @@ class ZapPage:
             data (JSON string): Response content from a Zap Imoveis search result
         """
 
-        listings = self.page_data.get('search', {}).get('result', {}).get('listings', 'Not a listing')
-        if listings != 'Not a listing':
+        listings = self.page_data.get('search', {}).get('result', {}).get('listings', None)
+        if listings is not None:
             self.listings = listings
-            return listings
-        else:
-            return None
 
     def add_zip_code(self, zip_code, complement):
         """
@@ -456,7 +455,7 @@ class ZapItem:
 
         try:
             deliver_date = self._listing_data['listing']['deliveredAt']
-            deliver_year = deliver_date[:4]
+            deliver_year = int(deliver_date[:4])
         except KeyError:
             deliver_year = -1
         return deliver_year

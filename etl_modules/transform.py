@@ -8,14 +8,10 @@ def convert_to_dataframe(data):
     # Iterate through your objects
     obj_data = []
     for obj in data:
-        # Create a dictionary to hold the attributes of the current object
-
         # Get all attributes of the current object using vars()
         object_dict = vars(obj)
-
         # Append the dictionary to the data list
         obj_data.append(object_dict)
-
     # Create a DataFrame from the list of dictionaries
     df = pd.DataFrame(obj_data)
     cols_to_drop = []

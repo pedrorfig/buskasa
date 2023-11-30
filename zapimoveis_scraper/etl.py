@@ -9,11 +9,12 @@ business_type = 'SALE'
 usage_type = 'RESIDENTIAL'
 unit_type = 'APARTMENT'
 min_area = 100
-min_price = 990000
+min_price = 500000
 max_price = 1000000
-neighborhoods = ['Pinheiros', 'Vila Madalena','Bela Vista', 'Vila Mariana', 'Jardim Paulista', 'Jardins',
-                 'Jardim Europa', 'Consolação', 'Cerqueira César', 'Higienópolis', 'Itaim Bibi', 'Ibirapuera',
-                 'Vila Nova Conceição', 'Vila Olímpia', 'Sumaré', 'Perdizes', 'Pacaembu']
+# neighborhoods = ['Pinheiros', 'Vila Madalena', 'Bela Vista', 'Vila Mariana', 'Jardim Paulista', 'Jardins',
+#                  'Jardim Europa', 'Consolação', 'Cerqueira César', 'Higienópolis', 'Itaim Bibi', 'Ibirapuera',
+#                  'Vila Nova Conceição', 'Vila Olímpia', 'Sumaré', 'Perdizes', 'Pacaembu']
+neighborhoods = ['Pinheiros']
 def extract(business_type, city, max_price, min_area, min_price, neighborhood, state, unit_type, usage_type):
     """
 
@@ -47,9 +48,9 @@ def extract(business_type, city, max_price, min_area, min_price, neighborhood, s
                            max_price, page, zap_search)
         # Get response for API call on a page
         zap_page.get_page()
-        # Get listings from a ZapPage
-        listings = zap_page.get_listings()
-        if not listings:
+        # Get listings from a ZapPage until there are no
+        zap_page.get_listings()
+        if check_if_search_ended(zap_page):
             break
         # Create ZapItem from all items in a page
         zap_page.create_zap_items()
@@ -60,6 +61,13 @@ def extract(business_type, city, max_price, min_area, min_price, neighborhood, s
         page += 1
 
     return zap_search
+
+
+def check_if_search_ended(zap_page):
+    return zap_page.page_data.get('page').get('uriPagination').get('from') > zap_page.page_data.get('page').get(
+        'uriPagination').get('totalListingCounter')
+
+
 def transform(zap_search):
     """
 
@@ -88,11 +96,6 @@ def save(zap_search):
     zap_search.save_zip_codes_to_db()
     # Close engine
     zap_search.close_engine()
-
-
-
-
-
 
 def search(business_type: str, state: str, city: str, neighborhoods: list, usage_type: str, unit_type: str,
            min_area: int, min_price: int, max_price: int):
