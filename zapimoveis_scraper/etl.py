@@ -1,22 +1,28 @@
+
+# ETL pipeline to extract listings from ZAP Imóveis website, process them and save to the database
 from zapimoveis_scraper.classes import ZapPage, ZapSearch
 from dotenv import load_dotenv
 
+# Load credential values
 load_dotenv()
 
+# Define which variables will be used for the search
 city = 'São Paulo'
 state = 'São Paulo'
 business_type = 'SALE'
 usage_type = 'RESIDENTIAL'
 unit_type = 'APARTMENT'
-min_area = 100
+min_area = 80
 min_price = 500000
-max_price = 1000000
-# neighborhoods = ['Pinheiros', 'Vila Madalena', 'Bela Vista', 'Vila Mariana', 'Jardim Paulista', 'Jardins',
-#                  'Jardim Europa', 'Consolação', 'Cerqueira César', 'Higienópolis', 'Itaim Bibi', 'Ibirapuera',
-#                  'Vila Nova Conceição', 'Vila Olímpia', 'Sumaré', 'Perdizes', 'Pacaembu']
-neighborhoods = ['Pinheiros']
+max_price = 1500000
+neighborhoods = ['Vila Madalena', 'Bela Vista', 'Vila Mariana', 'Jardim Paulista', 'Jardins',
+                 'Jardim Europa', 'Consolação', 'Cerqueira César', 'Higienópolis', 'Itaim Bibi', 'Ibirapuera',
+                 'Vila Nova Conceição', 'Vila Olímpia', 'Sumaré', 'Perdizes', 'Pacaembu']
+# neighborhoods = ['Pinheiros']
+
 def extract(business_type, city, max_price, min_area, min_price, neighborhood, state, unit_type, usage_type):
     """
+    Perform web-scrapping from Zapimoveis
 
     Args:
         business_type:
@@ -32,8 +38,9 @@ def extract(business_type, city, max_price, min_area, min_price, neighborhood, s
     Returns:
 
     """
-    page = 0
     print(f"Getting listings from neighborhood {neighborhood}")
+    # Start from page_number 0
+    page_number = 0
     # Initialize a ZapSearch item that consists of searching a whole neighborhood
     zap_search = ZapSearch(state, city, neighborhood, unit_type, usage_type, business_type, max_price, min_area, min_price)
     # Get existing listing ids from a neighborhood
@@ -42,30 +49,31 @@ def extract(business_type, city, max_price, min_area, min_price, neighborhood, s
     zap_search.get_existing_zip_codes()
     # Iterate through all pages on a neighborhood
     while True:
-        print(f"Page #{page} on {neighborhood}")
-        # Initialize a ZapPage object with data for each page searched
-        zap_page = ZapPage(business_type, state, city, neighborhood, usage_type, unit_type, min_area, min_price,
-                           max_price, page, zap_search)
-        # Get response for API call on a page
+        print(f"Page #{page_number} on {neighborhood}")
+        # Initialize a ZapPage object with data for each page_number searched
+        zap_page = ZapPage(page_number, zap_search)
+        # Get response for API call on a page_number
         zap_page.get_page()
-        # Get listings from a ZapPage until there are no
+        # Get all listings from a ZapPage
         zap_page.get_listings()
+        # If there number of listings reached the total, leave the loop
         if check_if_search_ended(zap_page):
             break
-        # Create ZapItem from all items in a page
+        # Create ZapItem object for each item in a page
         zap_page.create_zap_items()
-        # Save items to ZapSearch item
-        zap_search.save_zap_pages(zap_page)
+        # Save items to ZapSearch object
+        zap_search.append_zap_pages(zap_page)
         # Save list of all listings scrapped
         zap_search.save_listings_to_check(zap_page.listings_to_check)
-        page += 1
+        # Go to next page
+        page_number += 1
 
     return zap_search
 
 
 def check_if_search_ended(zap_page):
-    return zap_page.page_data.get('page').get('uriPagination').get('from') > zap_page.page_data.get('page').get(
-        'uriPagination').get('totalListingCounter')
+    return zap_page.page_data.get('page', {}).get('uriPagination', {}).get('from', 1) > zap_page.page_data.get('page', {}).get(
+        'uriPagination', {}).get('totalListingCounter', 0)
 
 
 def transform(zap_search):
@@ -83,6 +91,9 @@ def transform(zap_search):
     # Treating listings
     zap_search.remove_fraudsters()
     zap_search.remove_outliers()
+    # Delete listings that are not available
+    zap_search.remove_listings_deleted()
+
     return zap_search
 
 def save(zap_search):

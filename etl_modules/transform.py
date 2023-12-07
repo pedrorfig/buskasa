@@ -1,4 +1,7 @@
 import pandas as pd
+import sqlalchemy
+
+
 def convert_to_dataframe(data):
     """
     Simple function to convert the data from objects to a pandas DataFrame
@@ -20,3 +23,11 @@ def convert_to_dataframe(data):
             cols_to_drop.append(col)
     df = df.drop(columns=cols_to_drop)
     return df
+
+
+def filter_first_quartile(listings):
+    listings['good_deal'] = listings['price_per_area'] < \
+                            listings.groupby(by=['business_type', 'state', 'city', 'neighborhood'])[
+                                'price_per_area'].transform(lambda x: x.quantile(0.25))
+    listings = listings.loc[listings['good_deal'] == True]
+    return listings

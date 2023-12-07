@@ -40,7 +40,7 @@ def upsert_df(df: pd.DataFrame, table_name: str, connection: sqlalchemy.engine.C
         [f'"{i}"' for i in headers]
     )  # index1, index2, ..., column 1, col2, ...
 
-    # col1 = exluded.col1, col2=excluded.col2
+    # col1 = excluded.col1, col2=excluded.col2
     update_column_stmt = ", ".join([f'"{col}" = EXCLUDED."{col}"' for col in columns])
 
     # For the ON CONFLICT clause, postgres requires that the columns have unique constraint
