@@ -4,7 +4,7 @@ from dash import Dash, dcc, html, Input, Output, State
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 from dotenv import load_dotenv
-from etl_modules import extract
+from etl_modules import extract, transform
 import os
 
 load_dotenv()
@@ -12,6 +12,8 @@ load_dotenv()
 mapbox_token = os.environ['MAPBOX_TOKEN']
 
 results = extract.read_listings_sql_table()
+
+results = transform.filter_first_quartile(results)
 
 app = Dash(external_stylesheets=[dbc.themes.SLATE])
 server = app.server

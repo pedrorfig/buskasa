@@ -1,5 +1,5 @@
 import pandas as pd
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from datetime import date
 import os
 import socket
@@ -80,3 +80,28 @@ def is_running_locally():
     """
     hostname = socket.gethostname()
     return hostname == "localhost" or hostname == "127.0.0.1" or hostname == 'SAOX1Y6-58781'
+
+def get_listings_urls(listing_ids, engine):
+
+    query = \
+        f"""
+        SELECT url
+        from listings
+        where listing_id in {tuple(listing_ids)} 
+        """
+    with engine.connect() as conn:
+        urls = pd.read_sql(query, con=conn).squeeze()
+
+    return urls
+def delete_listings_from_db(unavailable_ids, engine):
+
+    query = \
+        text(
+            f"""
+            DELETE FROM listings
+            WHERE listing_id IN {tuple(unavailable_ids)}
+            """)
+    with engine.connect() as conn:
+        conn.execute(query)
+        conn.commit()
+    return

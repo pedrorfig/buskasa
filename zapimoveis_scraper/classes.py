@@ -45,7 +45,7 @@ class ZapSearch:
             # Checking for existing listing_ids on the database according to the specified filters
             ids = pd.read_sql(
                 rf"""
-                SELECT listing_id
+                SELECT DISTINCT listing_id
                 from listings
                 where
                     city='{self.city}' and
@@ -448,7 +448,8 @@ class ZapItem:
         self.location_type = self.get_location_type()
         self.address = self.get_complete_address()
         self.precision = None
-        self.latitude, self.longitude = self.get_latitude_longitude()
+        self.latitude = self.get_latitude()
+        self.longitude = self.get_longitude()
         # Getting reference data
         self.url = self.create_listing_url()
         self.link = self.create_html_link()
@@ -644,7 +645,7 @@ class ZapItem:
         """
         zip_code = self.zip_code
         existing_zip_codes = self._zap_page.zap_search.existing_zip_codes
-        random_limited_numbers = str(round(random.uniform(0, 100)))
+        random_limited_numbers = str(round(random.uniform(0, 1000)))
         if zip_code not in ["", "00000000"]:
             try:
                 if zip_code not in existing_zip_codes.index:
@@ -676,24 +677,26 @@ class ZapItem:
         street_complement = zip_data.get('result').get('complement')
         return street_complement
 
-    def get_latitude_longitude(self):
+    def get_latitude(self):
         """
         Get latitude, if not available calculate it based on the street address
         """
 
-
-        latitude = self._listing_data.get('listing', {}).get('address', {}).get('point', {}).get('lat', np.nan)
-        longitude = self._listing_data.get('listing', {}).get('address', {}).get('point', {}).get('lon', np.nan)
-        if not (np.isnan(latitude) or np.isnan(longitude)):
+        try:
+            lat = self._listing_data['listing']['address']['point']['lat']
             self.precision = 'exact'
-        else:
-            locator = Nominatim(user_agent='zap_scraper')
-            location = locator.geocode(self.address)
-            if location:
-                latitude = location.latitude
-                longitude = location.latitude
-            self.precision = 'approximate'
-        return latitude, longitude
+        except KeyError:
+            if self.street_number == "" or self.street_address == "":
+                return np.nan
+            else:
+                try:
+                    locator = Nominatim(user_agent='zap_scraper')
+                    location = locator.geocode(self.address)
+                    lat = location.latitude
+                    self.precision = 'approximate'
+                except:
+                    lat = np.nan
+        return lat
 
     def get_longitude(self):
         """
