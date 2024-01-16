@@ -11,14 +11,15 @@ city = 'São Paulo'
 state = 'São Paulo'
 business_type = 'SALE'
 usage_type = 'RESIDENTIAL'
-unit_type = 'APARTMENT'
+unit_type = 'APARTMENT,HOME'
 min_area = 80
-min_price = 500000
+min_price = 600000
 max_price = 1500000
-neighborhoods = ['Vila Madalena', 'Bela Vista', 'Vila Mariana', 'Jardim Paulista', 'Jardins',
-                 'Jardim Europa', 'Consolação', 'Cerqueira César', 'Higienópolis', 'Itaim Bibi', 'Ibirapuera',
-                 'Vila Nova Conceição', 'Vila Olímpia', 'Sumaré', 'Perdizes', 'Pacaembu']
-# neighborhoods = ['Pinheiros']
+
+neighborhoods = ['Moema', 'Bela Vista', 'Consolação', 'Vila Olímpia', 'Sumaré', 'Sumarezinho',  'Perdizes', 'Pacaembu', 'Vila Madalena',
+                 'Vila Mariana', 'Jardim Paulista', 'Ibirapuera', 'Jardins', 'Itaim Bibi', 'Pinheiros', 'Paraíso',
+                 'Jardim Europa', 'Consolação', 'Cerqueira César', 'Higienópolis', 'Vila Nova Conceição']
+# neighborhoods = ['Bela Vista']
 
 def extract(business_type, city, max_price, min_area, min_price, neighborhood, state, unit_type, usage_type):
     """
@@ -56,8 +57,8 @@ def extract(business_type, city, max_price, min_area, min_price, neighborhood, s
         zap_page.get_page()
         # Get all listings from a ZapPage
         zap_page.get_listings()
-        # If there number of listings reached the total, leave the loop
-        if check_if_search_ended(zap_page):
+        # If there number of listings reached the total, finish the search
+        if zap_page.check_if_search_ended():
             break
         # Create ZapItem object for each item in a page
         zap_page.create_zap_items()
@@ -69,11 +70,6 @@ def extract(business_type, city, max_price, min_area, min_price, neighborhood, s
         page_number += 1
 
     return zap_search
-
-
-def check_if_search_ended(zap_page):
-    return zap_page.page_data.get('page', {}).get('uriPagination', {}).get('from', 1) > zap_page.page_data.get('page', {}).get(
-        'uriPagination', {}).get('totalListingCounter', 0)
 
 
 def transform(zap_search):
@@ -92,7 +88,7 @@ def transform(zap_search):
     zap_search.remove_fraudsters()
     zap_search.remove_outliers()
     # Delete listings that are not available
-    zap_search.remove_listings_deleted()
+    # zap_search.remove_listings_deleted()
 
     return zap_search
 

@@ -95,13 +95,20 @@ def get_listings_urls(listing_ids, engine):
     return urls
 def delete_listings_from_db(unavailable_ids, engine):
 
+    if len(unavailable_ids) > 1:
+        unavailable_ids = tuple(unavailable_ids)
+    elif len(unavailable_ids) == 1:
+        unavailable_ids = f"('{unavailable_ids[0]}')"
+    else:
+        return f'No unavailable ids found'
     query = \
         text(
             f"""
             DELETE FROM listings
-            WHERE listing_id IN {tuple(unavailable_ids)}
+            WHERE listing_id IN {unavailable_ids}
             """)
     with engine.connect() as conn:
         conn.execute(query)
         conn.commit()
     return
+

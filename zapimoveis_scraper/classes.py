@@ -8,10 +8,12 @@ from datetime import datetime, timedelta
 import requests as r
 from etl_modules import extract, transform, save
 
+
 class ZapSearch:
     """
     Object containing attributes for a search query on a complete neighborhood
     """
+
     def __init__(self, state, city, neighborhood, unit_type, usage_type, business_type, max_price, min_area, min_price):
         # Create SQLalchemy engine for connections with DB
         self._engine = extract.create_db_engine()
@@ -25,6 +27,7 @@ class ZapSearch:
         self.max_price = max_price
         self.min_price = min_price
         self.min_area = min_area
+
         # Placeholder to save results from pages
         self.zap_pages = []
         # Save all listings from search to check if any was deleted on the web, so it is also deleted on the DB
@@ -33,8 +36,10 @@ class ZapSearch:
         self.existing_zip_codes = None
         self.zip_codes_to_add = None
         # Placeholder for saving ZIP codes that aren't currently on the DB
+        self.listing_ids_to_remove = None
         self.listings_to_add = None
         self.existing_listing_ids_in_db = None
+
 
     def get_existing_ids(self):
         """
@@ -45,12 +50,12 @@ class ZapSearch:
             # Checking for existing listing_ids on the database according to the specified filters
             ids = pd.read_sql(
                 rf"""
-                SELECT DISTINCT listing_id
+                SELECT listing_id
                 from listings
                 where
                     city='{self.city}' and
-                    neighborhood ilike '%%{self.neighborhood}%%' and
-                    business_type='{self.business_type}' and
+                    neighborhood = '{self.neighborhood}' and
+                    business_type = '{self.business_type}' and
                     total_area_m2 >= {self.min_area} and
                     price between {self.min_price} and {self.max_price}
                         """, con=conn)
@@ -106,16 +111,21 @@ class ZapSearch:
 
         """
         print("Removing fraudsters")
-        page_listings = self.listings_to_add
+        listings = self.listings_to_add
         # Listing users known to be fraudsters
         known_fraudsters = ["Camila Damaceno Bispo", "Imóveis São Caetano"]
-        if not page_listings.empty:
+        if not listings.empty:
             # Removing known fraudster
-            page_listings = page_listings[~page_listings['advertizer'].isin(known_fraudsters)]
+            listings_from_known_fraudsters = listings[listings['advertizer'].isin(known_fraudsters)]['listing_id']
             # Removing fraudsters by primary phone location inconsistency
-            page_listings = page_listings[page_listings['primary_phone'].str.startswith('11')]
+            listings_from_phone_fraudsters = listings[~listings['primary_phone'].str.startswith('11')]['listing_id']
+            # Populating series of listings to be removed
+            listing_ids_to_remove = pd.concat([listings_from_known_fraudsters, listings_from_phone_fraudsters])
+            self.listing_ids_to_remove = listing_ids_to_remove.to_list()
+            # Remove listings
+            cleaned_listings = listings.loc[~listings['listing_id'].isin(listing_ids_to_remove), :]
 
-            self.listings_to_add = page_listings
+            self.listings_to_add = cleaned_listings
 
     def remove_outliers(self):
         """
@@ -125,6 +135,7 @@ class ZapSearch:
             feature:
             data_with_outliers:
         """
+        # TODO: Change outlier calculation for boxplot
         print("Removing outliers on listing prices")
         engine = self._engine
         with engine.connect() as conn:
@@ -138,72 +149,40 @@ class ZapSearch:
                     """,
                 con=conn)
         search_listings = self.listings_to_add
-        if not search_listings.empty or not listings_on_db.empty:
+        if not search_listings.empty and not listings_on_db.empty:
             all_listings = pd.concat([listings_on_db, search_listings])
-            q_low = all_listings["price_per_area"].quantile(0.01)
-            q_hi = all_listings["price_per_area"].quantile(0.99)
-            page_listings_without_outlier = search_listings[(search_listings["price_per_area"] < q_hi) & (search_listings["price_per_area"] > q_low)]
-            self.listings_to_add = page_listings_without_outlier
+            # Calculate interquartile range
+            q_low = all_listings["price_per_area"].quantile(0.25)
+            q_hi = all_listings["price_per_area"].quantile(0.75)
+            inter_q_range = q_hi - q_low
+            # Calculate outlier thresholds to remove anything above or below the limits assigned
+            threshold_high = q_hi + inter_q_range*1.5
+            threshold_low = q_low - inter_q_range*1.5
+            outlier_listings = search_listings[
+                (search_listings["price_per_area"] > threshold_high) & (search_listings["price_per_area"] < threshold_low)]['listing_id']
+            # Removing price_per_area outlier listings
+            cleaned_listings = search_listings.loc[~search_listings['listing_id'].isin(outlier_listings), :]
+            self.listings_to_add = cleaned_listings
+            # Saving listings removed
+            listing_ids_to_remove = self.listing_ids_to_remove
+            listing_ids_to_remove.extend(outlier_listings.to_list())
         else:
             self.listings_to_add = search_listings
 
-    # def remove_outliers(self):
-    #     """
-    #     Removing outlier on assigned feature
-    #
-    #     Args:
-    #         feature:
-    #         data_with_outliers:
-    #     """
-    #     print("Removing outliers on listing prices")
-    #     engine = self._engine
-    #     with engine.connect() as conn:
-    #         max_min = pd.read_sql(
-    #             f"""with stats as
-    #                     (SELECT
-    #                     percentile_cont(0.80) within group (order by price_per_area asc) as q1,
-    #                     percentile_cont(0.20) within group (order by price_per_area asc) as q3
-    #                     from listings
-    #                     where
-    #                     neighborhood = '{self.neighborhood}'
-    #                     and
-    #                     business_type = '{self.business_type}')
-    #                 SELECT
-    #                     q1-(q3-q1)*1.5 as max,
-    #                     q3+(q3-q1)*1.5 as min
-    #                 from stats
-    #                 """,
-    #             con=conn)
-    #     page_listings = self.listings_to_add
-    #     if not page_listings.empty and not max_min.isna().all(axis=1)[0]:
-    #         page_listings_without_outlier = page_listings[
-    #             page_listings['price_per_area'].between(max_min['min'][0], max_min['max'][0])]
-    #         self.listings_to_add = page_listings_without_outlier
-    #     else:
-    #         self.listings_to_add = page_listings
-
     def remove_listings_deleted(self):
 
+        # TODO: Change deletion before update based on update date
         print('Removing deleted listings')
-        headers = self.get_request_headers()
         listings_in_db = self.existing_listing_ids_in_db
         listings_in_search = self.all_listing_from_search
-        # Check listings that are in the DB, but are not in the search, these are all that could have been deleted
-        # possibly_deleted_listings = pd.Series(tuple(listings_in_db))
-        possibly_deleted_listings = pd.Series(tuple(set(listings_in_db) - set(listings_in_search)))
-        # Check URLs of the possibly deleted listings and check their status code
-        possibly_deleted_listings_urls = extract.get_listings_urls(possibly_deleted_listings, self._engine)
-        def check_url(url, headers):
-            try:
-                response = requests.get(url, headers=headers)
-                return response.status_code != 200
-            except requests.RequestException:
-                return False
-        # Get unavailable listing_ids
-        unavailable_index = possibly_deleted_listings_urls.apply(lambda url: check_url(url, headers))
-        unavailable_ids = possibly_deleted_listings.loc[unavailable_index]
-        # Delete unavailable ids from db
-        extract.delete_listings_from_db(unavailable_ids, self._engine)
+        listings_to_remove = self.listing_ids_to_remove
+        if listings_in_search and listings_to_remove:
+            # Removing listings that are not going to be uploaded to DB before comparing
+            cleaned_listings = set(listings_in_search) - set(listings_to_remove)
+            # Check listings that are in the DB, but are not in the search, these are all that could have been deleted
+            deleted_listings = pd.Series(tuple(set(listings_in_db) - set(cleaned_listings)))
+            # Delete unavailable ids from db
+            extract.delete_listings_from_db(deleted_listings, self._engine)
         return
 
     def get_request_headers(self):
@@ -212,7 +191,7 @@ class ZapSearch:
         Returns:
 
         """
-        parameters = {
+        headers = {
             'Accept': '*/*',
             'Accept-Language': 'en-US,en;q=0.9,pt-BR;q=0.8,pt;q=0.7',
             'Authorization': 'Bearer undefined',
@@ -231,7 +210,7 @@ class ZapSearch:
             'x-domain': '.zapimoveis.com.br',
         }
 
-        return parameters
+        return headers
 
     def save_zip_codes_to_db(self):
         """
@@ -249,11 +228,11 @@ class ZapSearch:
         """
         print("Saving listings to database")
         # Retrieve listing to be saved in the database
-        page_listings = self.listings_to_add
-        if not page_listings.empty:
+        listings = self.listings_to_add
+        if not listings.empty:
             engine = self._engine
             with engine.begin() as conn:
-                save.upsert_df(df=page_listings, table_name='listings', connection=conn)
+                save.upsert_df(df=listings, table_name='listings', connection=conn)
 
     def get_existing_zip_codes(self):
         """
@@ -304,25 +283,7 @@ class ZapPage:
         """
         number_of_listings = 100
         initial_listing = number_of_listings * self.page_number
-
-        headers = {
-            'Accept': '*/*',
-            'Accept-Language': 'en-US,en;q=0.9,pt-BR;q=0.8,pt;q=0.7',
-            'Authorization': 'Bearer undefined',
-            'Connection': 'keep-alive',
-            'DNT': '1',
-            'Origin': 'https://www.zapimoveis.com.br',
-            'Referer': 'https://www.zapimoveis.com.br/',
-            'Sec-Fetch-Dest': 'empty',
-            'Sec-Fetch-Mode': 'cors',
-            'Sec-Fetch-Site': 'same-site',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
-            'X-DeviceId': '0d645541-36ea-45b4-9c59-deb2d736595c',
-            'sec-ch-ua': '"Chromium";v="116", "Not)A;Brand";v="24", "Google Chrome";v="116"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"Windows"',
-            'x-domain': '.zapimoveis.com.br',
-        }
+        headers = self.zap_search.get_request_headers()
         params = {
             'user': '0d645541-36ea-45b4-9c59-deb2d736595c',
             'portal': 'ZAP',
@@ -330,6 +291,7 @@ class ZapPage:
             'developmentsSize': '0',
             'superPremiumSize': '0',
             'business': self.business_type,
+            'sort': f"pricingInfos.price ASC sortFilter:pricingInfos.businessType='{self.business_type}'",
             'parentId': 'null',
             'listingType': 'USED',
             'unitTypesV3': self.unit_type,
@@ -343,7 +305,8 @@ class ZapPage:
             'page': '1',
             'from': initial_listing,
             'size': number_of_listings,
-            'usageTypes': self.usage_type
+            'usageTypes': self.usage_type,
+            'levels': 'NEIGHBORHOOD'
         }
         response = requests.get('https://glue-api.zapimoveis.com.br/v2/listings', params=params, headers=headers)
         page_data = response.json()
@@ -367,6 +330,10 @@ class ZapPage:
         """
         self.zip_code_to_add[zip_code] = complement
 
+    def check_if_search_ended(self):
+        return self.page_data.get('page', {}).get('uriPagination', {}).get('from', 1) > self.page_data.get(
+            'page', {}).get('uriPagination', {}).get('totalListingCounter', 0)
+
     def convert_zap_page_zip_code_to_df(self):
         """
         Convert zip code dict to df
@@ -379,9 +346,8 @@ class ZapPage:
         Create new zap items only for lthos listings ids that aren't already in the DB
         """
         for listing in self.listings:
-            listing_id = listing.get('listing').get('sourceId')
+            listing_id = listing.get('listing').get('id')
             self.append_listings_to_check(listing_id)
-            # TODO check for listing_id and price, as tuple
             if listing_id not in self.zap_search.existing_listing_ids_in_db:
                 item = ZapItem(listing, self)
                 self.add_zap_item(item)
@@ -408,7 +374,6 @@ class ZapPage:
         """
         items = self.zap_items_to_add
         page_listings = transform.convert_to_dataframe(items)
-        page_listings = page_listings.drop_duplicates(subset='listing_id')
         self.zap_page_listings = page_listings
 
 
@@ -416,6 +381,7 @@ class ZapItem:
     """
     Zap Imoveis listing object
     """
+
     def __init__(self, listing, zap_page):
         # Getting ZapPage object
         self._zap_page = zap_page
@@ -433,10 +399,6 @@ class ZapItem:
         self.construction_year = self.get_construction_year()
         self.total_area_m2 = self.get_usable_area()
         self.business_type = self._zap_page.business_type
-        # Getting cost data
-        self.price = self.get_listing_price()
-        self.condo_fee = self.get_condo_fee()
-        self.price_per_area = self.calculate_price_per_area()
         # Getting location data
         self.country = self.get_listing_country()
         self.state = self.get_state_acronym()
@@ -448,14 +410,28 @@ class ZapItem:
         self.location_type = self.get_location_type()
         self.address = self.get_complete_address()
         self.precision = None
-        self.latitude = self.get_latitude()
-        self.longitude = self.get_longitude()
+        # Getting cost data
+        self.price = self.get_listing_price()
+        self.condo_fee = self.get_condo_fee()
+        self.price_per_area = self.calculate_price_per_area()
+        # self.good_deal = self.is_good_deal()
+        self.latitude, self.longitude = self.get_longitude_latitude()
         # Getting reference data
         self.url = self.create_listing_url()
         self.link = self.create_html_link()
         # Advertizer info
         self.advertizer = self.get_advitizer_name()
         self.primary_phone = self.get_primary_phone()
+
+    def is_good_deal(self):
+
+        item_price_per_area = self.price_per_area
+        neighborhood_good_price_threshold = self._zap_page.zap_search.neighborhood_good_deal_price
+        if neighborhood_good_price_threshold:
+            is_listing_good_deal = item_price_per_area < neighborhood_good_price_threshold
+        else:
+            is_listing_good_deal = True
+        return is_listing_good_deal
 
     def get_primary_phone(self):
         """
@@ -504,7 +480,7 @@ class ZapItem:
         """
         Get neighborhood from listing
         """
-        return self._listing_data['link']['data']['neighborhood']
+        return self._listing_data.get('listing').get('address').get('neighborhood')
 
     def get_city(self):
         """
@@ -541,7 +517,7 @@ class ZapItem:
         """
         Get floor number from listing
         """
-        return self._listing_data.get('listing', {}).get('unitFloor', -1)
+        return self._listing_data.get('listing', {}).get('unitFloor', None)
 
     def get_number_of_parking_spaces(self):
         """
@@ -576,17 +552,14 @@ class ZapItem:
         """
         Get the listing price for properties or sale or rent
         """
-        if self.business_type == 'SALE':
-            price = int(self._listing_data['listing']['pricingInfos'][0].get('price', None)) if len(
-                self._listing_data['listing']['pricingInfos']) > 0 else 0
-        else:
-            try:
-                price = int(self._listing_data['listing']['pricingInfos'][0].get('rentalInfo', {}).get(
+        business_type = self.business_type
+        pricing_list = self._listing_data['listing']['pricingInfos']
+        for pricing in pricing_list:
+            if business_type in pricing.values() and business_type == 'SALE':
+                price = int(pricing.get('price', None))
+            elif business_type in pricing.values() and business_type == 'RENTAL':
+                price = int(pricing.get('rentalInfo', {}).get(
                     'monthlyRentalTotalPrice', 0))
-            except TypeError:
-                price = int(self._listing_data['listing']['pricingInfos'][1].get('rentalInfo', {}).get(
-                    'monthlyRentalTotalPrice', 0))
-
         return price
 
     def get_listing_title(self):
@@ -605,7 +578,7 @@ class ZapItem:
         """
         Get the id of the listing
         """
-        return self._listing_data.get('listing').get('sourceId')
+        return self._listing_data.get('listing').get('id')
 
     def get_location_type(self):
         """
@@ -631,13 +604,12 @@ class ZapItem:
         """
         Get the construction year of the listing, if it is not available fill with -1
         """
-
-        try:
-            deliver_date = self._listing_data['listing']['deliveredAt']
-            deliver_year = int(deliver_date[:4])
-        except KeyError:
-            deliver_year = -1
-        return deliver_year
+        deliver_date = self._listing_data.get('listing', {}).get('deliveredAt', 0)
+        if deliver_date:
+            delivery_year = int(deliver_date[:4])
+        else:
+            delivery_year = 0
+        return delivery_year
 
     def get_random_street_number_from_zipcode(self):
         """
@@ -653,7 +625,7 @@ class ZapItem:
                     self._zap_page.add_zip_code(zip_code, street_complement)
                 else:
                     street_complement = existing_zip_codes.loc[self.zip_code, 'complement']
-                street_complement_numbers = re.findall(r'\d+', street_complement)
+                street_complement_numbers = re.findall("\d+", street_complement)
                 if street_complement_numbers:
                     num_max = int(max(street_complement_numbers))
                     num_min = int(min(street_complement_numbers))
@@ -674,47 +646,30 @@ class ZapItem:
         """
         response = r.get(f'https://brasilaberto.com/api/v1/zipcode/{zip_code}.json')
         zip_data = response.json()
-        street_complement = zip_data.get('result').get('complement')
+        street_complement = zip_data.get('result').get('complement', '')
         return street_complement
 
-    def get_latitude(self):
+    def get_longitude_latitude(self):
         """
         Get latitude, if not available calculate it based on the street address
         """
 
-        try:
-            lat = self._listing_data['listing']['address']['point']['lat']
+        latitude = self._listing_data.get('listing', {}).get('displayAddressGeolocation', {}).get('lat', np.nan)
+        longitude = self._listing_data.get('listing', {}).get('displayAddressGeolocation', {}).get('lon', np.nan)
+        if not (np.isnan(latitude) or np.isnan(longitude)):
             self.precision = 'exact'
-        except KeyError:
-            if self.street_number == "" or self.street_address == "":
-                return np.nan
-            else:
-                try:
-                    locator = Nominatim(user_agent='zap_scraper')
-                    location = locator.geocode(self.address)
-                    lat = location.latitude
-                    self.precision = 'approximate'
-                except:
-                    lat = np.nan
-        return lat
-
-    def get_longitude(self):
-        """
-        Get longitude, if not available calculate it based on the street address
-        """
-        try:
-            lon = self._listing_data['listing']['address']['point']['lon']
-        except KeyError:
-            if self.street_number == "" or self.street_address == "":
-                return np.nan
-            else:
-                try:
-                    locator = Nominatim(user_agent='zap_scraper')
-                    location = locator.geocode(self.address)
-                    lon = location.longitude
-                except:
-                    lon = np.nan
-        return lon
+        # elif self.good_deal:
+        #     locator = Nominatim(user_agent='zap_scraper')
+        #     try:
+        #         location = locator.geocode(self.address)
+        #         latitude = location.latitude
+        #         longitude = location.longitude
+        #         self.precision = 'approximate'
+        #     except:
+        #         pass
+        else:
+            self.precision = 'approximate'
+        return latitude, longitude
 
     def is_new_listing(self):
         """
