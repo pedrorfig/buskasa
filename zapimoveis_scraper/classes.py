@@ -3,11 +3,9 @@ import re
 import numpy as np
 import pandas as pd
 import requests
-from geopy import Nominatim
 from datetime import datetime, timedelta
 import requests as r
 from etl_modules import extract, transform, save
-
 
 class ZapSearch:
     """
@@ -62,6 +60,7 @@ class ZapSearch:
             ids_list = [*ids['listing_id']]
         self.existing_listing_ids_in_db = ids_list
 
+
     def concat_zip_codes(self):
         """
         Concatenate zip codes from all pages searched
@@ -113,20 +112,41 @@ class ZapSearch:
         print("Removing fraudsters")
         listings = self.listings_to_add
         # Listing users known to be fraudsters
-        known_fraudsters = ["Camila Damaceno Bispo", "Imóveis São Caetano"]
+        known_fraudsters = ["Camila Damaceno Bispo", "Lucas Antônio", "Imóveis São Caetano", "São Caetano Imóveis", "Alex Matheus  Moura"]
         if not listings.empty:
-            # Removing known fraudster
+            # Known fraudster
             listings_from_known_fraudsters = listings[listings['advertizer'].isin(known_fraudsters)]['listing_id']
-            # Removing fraudsters by primary phone location inconsistency
+            # Fraudsters by primary phone location inconsistency
             listings_from_phone_fraudsters = listings[~listings['primary_phone'].str.startswith('11')]['listing_id']
+            # Total area typos
+            listings_with_total_area_typos = listings[listings['total_area_m2']>=500]['listing_id']
             # Populating series of listings to be removed
-            listing_ids_to_remove = pd.concat([listings_from_known_fraudsters, listings_from_phone_fraudsters])
+            listing_ids_to_remove = pd.concat([listings_from_known_fraudsters, listings_from_phone_fraudsters, listings_with_total_area_typos])
             self.listing_ids_to_remove = listing_ids_to_remove.to_list()
             # Remove listings
             cleaned_listings = listings.loc[~listings['listing_id'].isin(listing_ids_to_remove), :]
 
             self.listings_to_add = cleaned_listings
 
+    def calculate_price_per_area_first_quartile(self):
+        engine = self._engine
+        with engine.connect() as conn:
+            listings_on_db = pd.read_sql(
+                f"""SELECT *
+                        from listings
+                        where
+                        city = '{self.city}' and
+                        neighborhood = '{self.neighborhood}' and
+                        business_type = '{self.business_type}'
+                    """,
+                con=conn)
+        search_listings = self.listings_to_add
+        if not search_listings.empty and not listings_on_db.empty:
+            all_listings = pd.concat([listings_on_db, search_listings])
+            # Calculate interquartile range
+            q_low = all_listings["price_per_area"].quantile(0.25)
+            self.neighborhood_price_per_area_first_quartile = q_low
+            self.listings_to_add['price_per_area_in_first_quartile'] = self.listings_to_add['price_per_area'] <= q_low
     def remove_outliers(self):
         """
         Removing outlier on assigned feature
@@ -388,9 +408,11 @@ class ZapItem:
         # Getting listing data
         self._listing_data = listing
         self.listing_id = self.get_listing_id()
-        self.listing_date = self.get_listing_date()
-        self.new_listing = self.is_new_listing()
         self.description = self.get_listing_title()
+        # Getting time related info
+        self.listing_date = self.get_listing_date()
+        self.updated_at = self.get_update_date()
+        self.new_listing = self.is_new_listing()
         # Getting house attributes
         self.bedrooms = self.get_number_of_bedrooms()
         self.bathrooms = self.get_number_of_bathrooms()
@@ -414,7 +436,6 @@ class ZapItem:
         self.price = self.get_listing_price()
         self.condo_fee = self.get_condo_fee()
         self.price_per_area = self.calculate_price_per_area()
-        # self.good_deal = self.is_good_deal()
         self.latitude, self.longitude = self.get_longitude_latitude()
         # Getting reference data
         self.url = self.create_listing_url()
@@ -573,6 +594,9 @@ class ZapItem:
         Get the date when the listing was created
         """
         return datetime.fromisoformat(self._listing_data['listing']['createdAt'].replace('Z', '+00:00')).date()
+
+    def get_update_date(self):
+        return datetime.date(pd.to_datetime(self._listing_data['listing']['updatedAt']))
 
     def get_listing_id(self):
         """

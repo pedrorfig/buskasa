@@ -16,9 +16,10 @@ min_area = 80
 min_price = 600000
 max_price = 1500000
 
-neighborhoods = ['Moema', 'Bela Vista', 'Consolação', 'Vila Olímpia', 'Sumaré', 'Sumarezinho',  'Perdizes', 'Pacaembu', 'Vila Madalena',
-                 'Vila Mariana', 'Jardim Paulista', 'Ibirapuera', 'Jardins', 'Itaim Bibi', 'Pinheiros', 'Paraíso',
-                 'Jardim Europa', 'Consolação', 'Cerqueira César', 'Higienópolis', 'Vila Nova Conceição']
+neighborhoods = ['Bela Vista', 'Consolação','Consolação', 'Cerqueira César', 'Higienópolis',
+                 'Vila Mariana', 'Jardim Paulista', 'Ibirapuera', 'Jardins', 'Itaim Bibi',
+                 'Pinheiros', 'Paraíso',  'Vila Olímpia', 'Sumaré', 'Sumarezinho',  'Perdizes',
+                 'Pacaembu', 'Vila Madalena', 'Moema','Jardim Europa', 'Vila Nova Conceição']
 # neighborhoods = ['Bela Vista']
 
 def extract(business_type, city, max_price, min_area, min_price, neighborhood, state, unit_type, usage_type):
@@ -87,6 +88,8 @@ def transform(zap_search):
     # Treating listings
     zap_search.remove_fraudsters()
     zap_search.remove_outliers()
+    # highlight good deals
+    zap_search.calculate_price_per_area_first_quartile()
     # Delete listings that are not available
     # zap_search.remove_listings_deleted()
 
