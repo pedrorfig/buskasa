@@ -45,6 +45,8 @@ def extract(business_type, city, max_price, min_area, min_price, neighborhood, s
     page_number = 0
     # Initialize a ZapSearch item that consists of searching a whole neighborhood
     zap_search = ZapSearch(state, city, neighborhood, unit_type, usage_type, business_type, max_price, min_area, min_price)
+    # Delete listings that are not available
+    zap_search.remove_listings_deleted()
     # Get existing listing ids from a neighborhood
     zap_search.get_existing_ids()
     # Get existing zip codes from a neighborhood
@@ -90,8 +92,6 @@ def transform(zap_search):
     zap_search.remove_outliers()
     # highlight good deals
     zap_search.calculate_price_per_area_first_quartile()
-    # Delete listings that are not available
-    # zap_search.remove_listings_deleted()
 
     return zap_search
 

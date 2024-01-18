@@ -112,7 +112,8 @@ class ZapSearch:
         print("Removing fraudsters")
         listings = self.listings_to_add
         # Listing users known to be fraudsters
-        known_fraudsters = ["Camila Damaceno Bispo", "Lucas Antônio", "Imóveis São Caetano", "São Caetano Imóveis", "Alex Matheus  Moura"]
+        known_fraudsters = ["Camila Damaceno Bispo", "Lucas Antônio", "Imóveis São Caetano", "São Caetano Imóveis",
+                            "Alex Matheus  Moura", "Claudia Cristina Ribeiro de Almeida"]
         if not listings.empty:
             # Known fraudster
             listings_from_known_fraudsters = listings[listings['advertizer'].isin(known_fraudsters)]['listing_id']
@@ -190,19 +191,22 @@ class ZapSearch:
             self.listings_to_add = search_listings
 
     def remove_listings_deleted(self):
-
-        # TODO: Change deletion before update based on update date
+        """
+        Remove listings that haven't been updated for more than a week
+        """
         print('Removing deleted listings')
-        listings_in_db = self.existing_listing_ids_in_db
-        listings_in_search = self.all_listing_from_search
-        listings_to_remove = self.listing_ids_to_remove
-        if listings_in_search and listings_to_remove:
-            # Removing listings that are not going to be uploaded to DB before comparing
-            cleaned_listings = set(listings_in_search) - set(listings_to_remove)
-            # Check listings that are in the DB, but are not in the search, these are all that could have been deleted
-            deleted_listings = pd.Series(tuple(set(listings_in_db) - set(cleaned_listings)))
+        engine = self._engine
+        with engine.connect() as conn:
+            old_listings = pd.read_sql(
+                f"""SELECT listing_id
+                        from listings
+                        where
+                        updated_at < current_date - 7
+                    """,
+                con=conn).squeeze().to_list()
+        if old_listings:
             # Delete unavailable ids from db
-            extract.delete_listings_from_db(deleted_listings, self._engine)
+            extract.delete_listings_from_db(old_listings, self._engine)
         return
 
     def get_request_headers(self):
