@@ -13,8 +13,6 @@ mapbox_token = os.environ['MAPBOX_TOKEN']
 
 results = extract.read_listings_sql_table()
 
-results = transform.filter_first_quartile(results)
-
 app = Dash(external_stylesheets=[dbc.themes.SLATE])
 server = app.server
 

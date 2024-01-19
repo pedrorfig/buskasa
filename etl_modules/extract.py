@@ -68,7 +68,12 @@ def read_listings_sql_table():
     """
     engine = create_db_engine()
     with engine.connect() as conn:
-        search_results = pd.read_sql('SELECT * from listings', con=conn, index_col='listing_id')
+        search_results = pd.read_sql(
+            """
+            SELECT *
+            from listings
+            where price_per_area_in_first_quartile = TRUE """,
+            con=conn, index_col='listing_id')
     engine.dispose()
     return search_results
 

@@ -16,7 +16,7 @@ min_area = 80
 min_price = 600000
 max_price = 1500000
 
-neighborhoods = ['Bela Vista', 'Consolação','Consolação', 'Cerqueira César', 'Higienópolis',
+neighborhoods = ['Bela Vista','Consolação', 'Cerqueira César', 'Higienópolis',
                  'Vila Mariana', 'Jardim Paulista', 'Ibirapuera', 'Jardins', 'Itaim Bibi',
                  'Pinheiros', 'Paraíso',  'Vila Olímpia', 'Sumaré', 'Sumarezinho',  'Perdizes',
                  'Pacaembu', 'Vila Madalena', 'Moema','Jardim Europa', 'Vila Nova Conceição']
