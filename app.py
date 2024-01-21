@@ -5,6 +5,7 @@ import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 from dotenv import load_dotenv
 from etl_modules import extract, transform
+import datetime
 import os
 
 load_dotenv()
@@ -366,20 +367,19 @@ def generate_mapbox_chart(location_type, neighborhood, bedrooms, business_type, 
             ),
         )
     )
-
-    approximate_listings = results_copy[results_copy.loc[:, 'precision'] == 'approximate']
+    new_listings = results_copy[results_copy.loc[:, 'listing_date'] >= (datetime.datetime.today() - datetime.timedelta(days=7)).date()]
 
     fig.add_trace(
         go.Scattermapbox(
-            lat=approximate_listings['latitude'],
-            lon=approximate_listings['longitude'],
+            lat=new_listings['latitude'],
+            lon=new_listings['longitude'],
             mode='markers',
             name='',
             customdata=custom_data,
             hovertemplate=hover_template,
             showlegend=False,
             marker=go.scattermapbox.Marker(
-                symbol="triangle",
+                symbol="star",
                 size=8
             ),
         )
