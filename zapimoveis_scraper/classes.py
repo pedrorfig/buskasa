@@ -142,9 +142,9 @@ class ZapSearch:
                     """,
                 con=conn)
         search_listings = self.listings_to_add
-        if not search_listings.empty and not listings_on_db.empty:
+        if not search_listings.empty:
             all_listings = pd.concat([listings_on_db, search_listings])
-            # Calculate interquartile range
+            # Calculate inter-quartile range
             q_low = all_listings["price_per_area"].quantile(0.25)
             self.neighborhood_price_per_area_first_quartile = q_low
             self.listings_to_add['price_per_area_in_first_quartile'] = self.listings_to_add['price_per_area'] <= q_low
@@ -203,8 +203,13 @@ class ZapSearch:
                         where
                         updated_at < current_date - 7
                     """,
-                con=conn).squeeze().to_list()
-        if old_listings:
+                con=conn)
+        if not old_listings.empty:
+            old_listings = old_listings.squeeze()
+            if type(old_listings) == str:
+                old_listings = [old_listings]
+            else:
+                old_listings = old_listings.to_list()
             # Delete unavailable ids from db
             extract.delete_listings_from_db(old_listings, self._engine)
         return

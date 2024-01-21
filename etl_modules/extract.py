@@ -39,27 +39,6 @@ def create_db_engine(user=os.environ['DB_USER'], password=os.environ['DB_PASS'],
 
     return engine
 
-def check_if_update_needed(test: bool):
-    """
-    Check if the data was already updated in the current day
-    Args:
-        test:
-
-    Returns:
-
-    """
-    if test:
-        return True
-    today_date = date.today().strftime('%Y-%m-%d')
-    engine = create_db_engine()
-    with engine.connect() as conn:
-        update_table = pd.read_sql('SELECT * from update_date', con=conn)
-        last_date = update_table['update_date'][0]
-    engine.dispose()
-    if today_date == last_date:
-        return False
-    else:
-        return True
 def read_listings_sql_table():
     """
     Read house listings from db table
