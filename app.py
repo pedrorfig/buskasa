@@ -207,9 +207,10 @@ def chained_callback_bedrooms(neighborhood, business_type, location_type):
     [Input('neighborhood', 'value'),
      Input('bedrooms', 'value'),
      Input('business_type', 'value'),
-     Input('location_type', 'value')]
+     Input('location_type', 'value'),
+     Input('price', 'value')]
 )
-def chained_callback_price(neighborhood, bedrooms, business_type, location_type):
+def chained_callback_price(neighborhood, bedrooms, business_type, location_type, current_price):
     """
 
     Args:
@@ -233,8 +234,12 @@ def chained_callback_price(neighborhood, bedrooms, business_type, location_type)
 
     min_price = int(dff["price"].min())
     max_price = int(dff["price"].max())
+    if current_price < max_price:
+        price_value = current_price
+    else:
+        price_value = max_price
 
-    return max_price, min_price, max_price
+    return price_value, min_price, max_price
 
 
 @app.callback(
@@ -245,13 +250,15 @@ def chained_callback_price(neighborhood, bedrooms, business_type, location_type)
      Input('bedrooms', 'value'),
      Input('business_type', 'value'),
      Input('location_type', 'value'),
-     Input('price', 'value')
+     Input('price', 'value'),
+     Input('price_per_area', 'value')
      ]
 )
-def chained_callback_price_per_area(neighborhood, bedrooms, business_type, location_type, price):
+def chained_callback_price_per_area(neighborhood, bedrooms, business_type, location_type, price, current_price_per_area):
     """
 
     Args:
+        current_price_per_area:
         price:
         neighborhood:
         bedrooms:
@@ -261,6 +268,9 @@ def chained_callback_price_per_area(neighborhood, bedrooms, business_type, locat
     Returns:
 
     """
+    current_max_price_per_area = current_price_per_area[1]
+    current_min_price_per_area = current_price_per_area[0]
+
     dff = copy.deepcopy(results)
     if business_type:
         dff = dff.query("business_type == @business_type")
@@ -275,8 +285,14 @@ def chained_callback_price_per_area(neighborhood, bedrooms, business_type, locat
 
     min_price_per_area = int(dff["price_per_area"].min())
     max_price_per_area = int(dff["price_per_area"].max())
+    min_price_per_area_value = min_price_per_area
+    max_price_per_area_value = max_price_per_area
+    if current_max_price_per_area < max_price_per_area:
+        max_price_per_area_value = current_max_price_per_area
+    if current_min_price_per_area > min_price_per_area:
+        min_price_per_area_value = current_min_price_per_area
 
-    return [min_price_per_area, max_price_per_area], min_price_per_area, max_price_per_area
+    return [min_price_per_area_value, max_price_per_area_value], min_price_per_area, max_price_per_area
 
 
 @app.callback(
