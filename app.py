@@ -14,7 +14,7 @@ mapbox_token = os.environ['MAPBOX_TOKEN']
 
 results = extract.read_listings_sql_table()
 
-app = Dash(external_stylesheets=[dbc.themes.SLATE])
+app = Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server
 
 mapbox_scatter_chart = dcc.Graph(figure={}, id="mapbox_scatter_chart", className="h-100")
@@ -33,7 +33,6 @@ controls = \
                     value='SALE',
                     clearable=False,
                     multi=False,
-                    style={'color': 'black'}
                 )], className='list-group-item'),
             html.Li([
                 html.H5("Neighborhood", className='card-title'),
@@ -43,7 +42,6 @@ controls = \
                     value=None,
                     clearable=True,
                     multi=True,
-                    style={'color': 'black'}
                 )], className='list-group-item'),
             html.Li([
                 html.H5("Location Type", className='card-title'),
@@ -53,7 +51,6 @@ controls = \
                     value=None,
                     clearable=True,
                     multi=True,
-                    style={'color': 'black'}
                 )], className='list-group-item'),
             html.Li([
                 html.H5("Number of Bedrooms", className='card-title'),
@@ -63,7 +60,6 @@ controls = \
                     value=None,
                     clearable=True,
                     multi=True,
-                    style={'color': 'black'},
                 )], className='list-group-item'),
             html.Li([
                 html.H5(r'Total Price (R$)', className='card-title'),
@@ -87,7 +83,7 @@ controls = \
                     value=[int(results['price_per_area'].min()), int(results['price_per_area'].max())],
                     min=results['price_per_area'].min(),
                     max=results['price_per_area'].max(),
-                    step=0.1,
+                    step=1,
                     marks=None,
                     allowCross=False,
                     updatemode='mouseup',
@@ -95,7 +91,7 @@ controls = \
                     className='px-1'
                 )
             ], className='list-group-item')
-        ], className='list-group list-group-flush')
+        ], className='list-group')
     ])
 
 modal = dbc.Modal([dbc.ModalHeader(dbc.ModalTitle("Welcome house hunter!")),
@@ -120,8 +116,7 @@ app.layout = dbc.Container(children=[
         [
             dbc.Col(controls, width=3),
             dbc.Col(mapbox_scatter_chart, width=9)
-        ], className='mb-2'
-    ),
+        ]),
     dbc.Row(
         [
             dbc.Col([
@@ -360,13 +355,14 @@ def generate_mapbox_chart(location_type, neighborhood, bedrooms, business_type, 
                 size=size,
                 sizemin=8,
                 symbol="circle",
-                colorscale='RdYlGn_r',
+                colorscale='RdYlBu_r',
                 color=results_copy['price_per_area'],
                 cmin=min(price_per_area_colorbar),
                 cmax=max(price_per_area_colorbar)
             ),
         )
     )
+
     new_listings = results_copy[results_copy.loc[:, 'listing_date'] >= (datetime.datetime.today() - datetime.timedelta(days=7)).date()]
 
     fig.add_trace(
@@ -389,14 +385,14 @@ def generate_mapbox_chart(location_type, neighborhood, bedrooms, business_type, 
         hovermode='closest',
         hoverdistance=50,
         hoverlabel=dict(
-            bgcolor="white",
+            # bgcolor="white",
             font_size=16,
             font_family="Rockwell"
         ),
         margin=dict(l=0, r=0, t=0, b=0),
         legend={'bgcolor': 'rgba(0,0,0,0)'},
         mapbox=dict(
-            style='dark',
+            style='streets',
             accesstoken=mapbox_token,
             bearing=0,
             center=dict(
@@ -451,7 +447,7 @@ def generate_histogram_chart(location_type, neighborhood, bedrooms, business_typ
         go.Histogram(
             x=results_copy['price_per_area'],
             xbins={'size': bins[1] - bins[0]},
-            marker={'colorscale': 'RdYlGn_r',
+            marker={'colorscale': 'RdYlBu_r',
                     'color': bins,
                     'cmin': bins.min(),
                     'cmax': bins.max()
