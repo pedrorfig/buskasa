@@ -143,7 +143,7 @@ class ZapSearch:
                 con=conn)
         search_listings = self.listings_to_add
         if not search_listings.empty:
-            all_listings = pd.concat([listings_on_db, search_listings])
+            all_listings = pd.concat([search_listings, listings_on_db])
             # Calculate inter-quartile range
             q_low = all_listings["price_per_area"].quantile(0.25)
             self.neighborhood_price_per_area_first_quartile = q_low

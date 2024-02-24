@@ -21,22 +21,21 @@ neighborhoods = ['Ibirapuera', 'Jardins', 'Itaim Bibi', 'Alto de Pinheiros', 'Ca
                  'Pacaembu', 'Vila Madalena', 'Moema','Jardim Europa', 'Vila Nova Conceição',
                  'Bela Vista', 'Consolação', 'Cerqueira César', 'Higienópolis',
                  'Vila Mariana', 'Jardim Paulista']
-# neighborhoods = ['Bela Vista']
 
 def extract(business_type, city, max_price, min_area, min_price, neighborhood, state, unit_type, usage_type):
     """
     Perform web-scrapping from Zapimoveis
 
     Args:
-        business_type:
-        city:
-        max_price:
-        min_area:
-        min_price:
-        neighborhood:
-        state:
-        unit_type:
-        usage_type:
+        business_type (str): Type of business, SALE or RENT
+        city (str): City to scrape from
+        max_price (int): Max price to scrape
+        min_area (int): Min area to scrape
+        min_price (int): Min listing price to scrape
+        neighborhood (str): Neighborhood to scrape
+        state (str): State to scrape
+        unit_type (str): Type of construction, APARTMENT or HOME
+        usage_type (str): Type of usage, RESIDENTIAL
 
     Returns:
 
@@ -78,12 +77,11 @@ def extract(business_type, city, max_price, min_area, min_price, neighborhood, s
 
 def transform(zap_search):
     """
-
+    Clean and filter which listings will be shown in the app
     Args:
-        zap_search:
-
+        zap_search (ZapSearch): A ZapSearch object to be processed
     Returns:
-
+        zap_search (ZapSearch): A cleaned and filtered ZapSearch object
     """
     # Convert output to standard format before saving
     zap_search.concat_zip_codes()
@@ -98,9 +96,9 @@ def transform(zap_search):
 
 def save(zap_search):
     """
-
+    Save the ZapSearch listings to database
     Args:
-        zap_search:
+        zap_search (ZapSearch): A ZapSearch object to be saved
     """
     # Save results to db
     zap_search.save_listings_to_db()
@@ -111,17 +109,17 @@ def save(zap_search):
 def search(business_type: str, state: str, city: str, neighborhoods: list, usage_type: str, unit_type: str,
            min_area: int, min_price: int, max_price: int):
     """
-
+    Perform a search on ZapImvoeis based on filters, scraping listings, processing them and saving the output to a database
     Args:
-        business_type:
-        state:
-        city:
-        neighborhoods:
-        usage_type:
-        unit_type:
-        min_area:
-        max_price:
-    Returns:
+        business_type (str): Type of business, SALE or RENT
+        city (str): City to scrape from
+        max_price (int): Max price to scrape
+        min_area (int): Min area to scrape
+        min_price (int): Min listing price to scrape
+        neighborhoods (list): Neighborhoods to scrape
+        state (str): State to scrape
+        unit_type (str): Type of construction, APARTMENT or HOME
+        usage_type (str): Type of usage, RESIDENTIAL
 
     """
     for neighborhood in neighborhoods:

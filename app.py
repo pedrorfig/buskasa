@@ -15,6 +15,7 @@ mapbox_token = os.environ['MAPBOX_TOKEN']
 results = extract.read_listings_sql_table()
 
 app = Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
+# This is for gunicorn
 server = app.server
 
 mapbox_scatter_chart = dcc.Graph(figure={}, id="mapbox_scatter_chart", className="h-100")
