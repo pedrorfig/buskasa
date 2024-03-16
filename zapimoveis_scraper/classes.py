@@ -1,3 +1,4 @@
+import os
 import random
 import re
 import numpy as np
@@ -677,7 +678,7 @@ class ZapItem:
         Args:
             zip_code (int): Zip code for location
         """
-        response = r.get(f'https://brasilaberto.com/api/v1/zipcode/{zip_code}.json')
+        response = r.get(f'https://api.brasilaberto.com/v1/zipcode/{zip_code}.json', headers={'Bearer':os.environ['BRASIL_ABERTO_API_KEY']})
         zip_data = response.json()
         street_complement = zip_data.get('result').get('complement', '')
         return street_complement

@@ -19,18 +19,16 @@ def create_db_engine(user=os.environ['DB_USER'], password=os.environ['DB_PASS'],
     Returns:
         SQLAlchemy engine object
     Notes:
-        Check https://github.com/Bain/ekpi-priorities/ README for setup
-        instructions
-    """
+     """
 
     assert isinstance(port, int), "Port must be numeric"
     assert user is not None, 'Username is empty'
     assert password is not None, 'Password is empty'
 
     if is_running_locally():
-        db_uri = f'postgresql+psycopg2://{user}:{password}@dpg-ck7ghkvq54js73fbrei0-a.oregon-postgres.render.com/house_listings'
+        db_uri = f'postgresql+psycopg2://{user}:{password}@aws-0-sa-east-1.pooler.supabase.com:{port}/postgres'
     else:
-        db_uri = f'postgresql+psycopg2://{user}:{password}@dpg-ck7ghkvq54js73fbrei0-a/house_listings'
+        db_uri = f'postgresql+psycopg2://{user}:{password}@aws-0-sa-east-1.pooler.supabase.com:{port}/postgres'
     engine = create_engine(db_uri, future=True, pool_size=10,
                            max_overflow=2,
                            pool_recycle=300,
