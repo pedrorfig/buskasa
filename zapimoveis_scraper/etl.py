@@ -11,16 +11,16 @@ city = 'São Paulo'
 state = 'São Paulo'
 business_type = 'SALE'
 usage_type = 'RESIDENTIAL'
-unit_type = 'APARTMENT,HOME'
+unit_type = 'APARTMENT'
 min_area = 80
 min_price = 600000
-max_price = 1500000
+max_price = 1200000
 
-neighborhoods = ['Ibirapuera', 'Jardins', 'Itaim Bibi', 'Alto de Pinheiros', 'Campo Belo',
-                 'Pinheiros', 'Paraíso',  'Vila Olímpia', 'Sumaré', 'Sumarezinho',  'Perdizes',
+neighborhoods = ['Paraíso','Ibirapuera', 'Jardins',  'Alto de Pinheiros', 'Campo Belo',
+                 'Pinheiros',  'Vila Olímpia', 'Sumaré', 'Sumarezinho',  'Perdizes',
                  'Pacaembu', 'Vila Madalena', 'Moema','Jardim Europa', 'Vila Nova Conceição',
                  'Bela Vista', 'Consolação', 'Cerqueira César', 'Higienópolis',
-                 'Vila Mariana', 'Jardim Paulista']
+                 'Vila Mariana', 'Jardim Paulista', 'Itaim Bibi']
 
 def extract(business_type, city, max_price, min_area, min_price, neighborhood, state, unit_type, usage_type):
     """
