@@ -29,11 +29,7 @@ def create_db_engine(user=os.environ['DB_USER'], password=os.environ['DB_PASS'],
         db_uri = f'postgresql+psycopg2://{user}:{password}@aws-0-sa-east-1.pooler.supabase.com:{port}/postgres'
     else:
         db_uri = f'postgresql+psycopg2://{user}:{password}@aws-0-sa-east-1.pooler.supabase.com:{port}/postgres'
-    engine = create_engine(db_uri, future=True, pool_size=10,
-                           max_overflow=2,
-                           pool_recycle=300,
-                           pool_pre_ping=True,
-                           pool_use_lifo=True)
+    engine = create_engine(db_uri, future=True)
 
     return engine
 
