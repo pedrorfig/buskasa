@@ -33,10 +33,10 @@ class ZapSearch:
         self.all_listing_from_search = []
         # Placeholder for saving ZIP codes that aren't currently on the DB
         self.existing_zip_codes = None
-        self.zip_codes_to_add = None
+        self.zip_codes_to_add = pd.DataFrame()
         # Placeholder for saving ZIP codes that aren't currently on the DB
-        self.listing_ids_to_remove = None
-        self.listings_to_add = None
+        self.listing_ids_to_remove = []
+        self.listings_to_add = pd.DataFrame()
         self.existing_listing_ids_in_db = None
 
 
@@ -78,7 +78,7 @@ class ZapSearch:
         """
         Concatenate listings from all pages searched
         """
-        listings = self.listings_to_add
+        listings = pd.DataFrame()
         for zap_page in self.zap_pages:
             zap_page.convert_zap_page_listing_to_df()
             listings = pd.concat([listings, zap_page.zap_page_listings])
@@ -492,7 +492,7 @@ class ZapItem:
         """
         Create complete address for a listing
         """
-        return ", ".join([self.street_address + " " + self.street_number, self.neighborhood,
+        return ", ".join([self.street_address + " " + str(self.street_number), self.neighborhood,
                           self.zip_code, self.city, self.state, self.country])
 
     def get_street_address(self):
@@ -585,6 +585,7 @@ class ZapItem:
         """
         business_type = self.business_type
         pricing_list = self._listing_data['listing']['pricingInfos']
+        price = 0
         for pricing in pricing_list:
             if business_type in pricing.values() and business_type == 'SALE':
                 price = int(pricing.get('price', None))
@@ -649,27 +650,45 @@ class ZapItem:
         """
         Assign random street number to the property,if this data wasn't available yet
         """
+        # Get ZIP Code for listing
         zip_code = self.zip_code
+        # Get existing ZIP codes on database
         existing_zip_codes = self._zap_page.zap_search.existing_zip_codes
-        random_limited_numbers = str(round(random.uniform(0, 1000)))
+        # Initiate random number
+        random_number = 1
         if zip_code not in ["", "00000000"]:
             try:
+                # If ZIP code not available, download street complement from Brasil Aberto API
                 if zip_code not in existing_zip_codes.index:
                     street_complement = self.download_street_complement(zip_code)
+                    # And add it to the the database
                     self._zap_page.add_zip_code(zip_code, street_complement)
+                # If available, then retrieve from database
                 else:
                     street_complement = existing_zip_codes.loc[self.zip_code, 'complement']
-                street_complement_numbers = re.findall("\d+", street_complement)
+                # Get street numbers contained on stree complement
+                street_complement_numbers = [*map(int, re.findall(r"\d+", street_complement))]
                 if street_complement_numbers:
-                    num_max = int(max(street_complement_numbers))
-                    num_min = int(min(street_complement_numbers))
-                    random_number = str(round(random.uniform(num_min, num_max)))
+                    # If there are two values, randomly assing one between max and min values
+                    if max(street_complement_numbers) - min(street_complement_numbers) > 10:
+                        num_max = int(max(street_complement_numbers))
+                        num_min = int(min(street_complement_numbers))
+                        random_number = str(round(random.uniform(num_min, num_max)))
+                    # If has one or more values and the word "fim" on it, them we have the minimum possible street number                    
+                    elif len(street_complement_numbers)>=1 and "fim" in street_complement:
+                        num_min = int(min(street_complement_numbers))
+                        random_number = str(round(random.uniform(num_min, num_min+100)))
+                    # If has one or more values and the word "até" on it, them we have the maximum possible street number                    
+                    elif len(street_complement_numbers)>=1 and "até" in street_complement:
+                        num_max = int(max(street_complement_numbers))
+                        random_number = str(round(random.uniform(1, num_max)))
                 else:
-                    random_number = random_limited_numbers
-            except ConnectionError:
-                random_number = random_limited_numbers
-        else:
-            random_number = ""
+                    # Creating a random street number
+                    random_number = 1
+            # If there is an error with connection or data type street number will be 1 
+            except (ConnectionError, TypeError) as error:
+                print(f"Found error: {error}")
+                random_number = 1
         return random_number
 
     def download_street_complement(self, zip_code):

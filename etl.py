@@ -16,11 +16,11 @@ min_area = 80
 min_price = 600000
 max_price = 1500000
 
-neighborhoods = ['Ibirapuera', 'Jardins',  'Alto de Pinheiros', 'Campo Belo',
+neighborhoods = ['Jardim Paulista', 'Itaim Bibi', 'Ibirapuera', 'Jardins',  'Alto de Pinheiros', 'Campo Belo',
                  'Pinheiros', 'Paraíso',  'Vila Olímpia', 'Sumaré', 'Sumarezinho',  'Perdizes',
                  'Pacaembu', 'Vila Madalena', 'Moema','Jardim Europa', 'Vila Nova Conceição',
                  'Bela Vista', 'Consolação', 'Cerqueira César', 'Higienópolis',
-                 'Vila Mariana', 'Jardim Paulista', 'Itaim Bibi']
+                 'Vila Mariana']
 
 def extract(business_type, city, max_price, min_area, min_price, neighborhood, state, unit_type, usage_type):
     """
