@@ -11,6 +11,12 @@ load_dotenv()
 
 mapbox_token = os.environ["MAPBOX_TOKEN"]
 
+def format_page():
+    st.set_page_config(layout="wide",
+                       page_icon="🏘️",
+                       page_title='Bargain Bungalow')
+
+format_page()
 
 @st.cache_data
 def load_data():
@@ -18,16 +24,21 @@ def load_data():
     return results
 
 
+
 # Create a text element and let the reader know the data is loading.
-data_load_state = st.text("Loading data...")
+# data_load_state = st.text("Loading data...")
 # Load 10,000 rows of data into the dataframe.
 data = load_data()
 raw_data = data.copy()
 # Notify the reader that the data was successfully loaded.
-data_load_state.text("Done! (using cached data)")
+# data_load_state.text("Done! (using cached data)")
 
+st.header("Bargain Bungalow")
+st.markdown("Helps you find the best house deals in São Paulo")
 
 with st.sidebar:
+    st.subheader(":black[Filters]")
+    # st.markdown()
     neighborhood = st.multiselect(
         'Neighborhood',
         options=data['neighborhood'].unique(),
@@ -44,30 +55,31 @@ with st.sidebar:
         options=sorted(data['bedrooms'].unique()),
         placeholder='Select number of bedrooms')
     price = st.slider(
-        'Range of Price',
+        'Total Price',
         max_value=data['price'].max(),
         min_value=data['price'].min(),
-        step=100)
+        value=data['price'].max(),
+        step=1000,
+        format='R$ %d')
     price_per_area = st.slider(
-        'Price per area slider',
-        value=[data['price_per_area'].min(), data['price_per_area'].max()]
+        'Price per Area',
+        min_value= int(data['price_per_area'].min()),
+        max_value= int(data['price_per_area'].max()),
+        step=10,
+        value=int(data['price_per_area'].max()),
+        format='R$/m² %d'
     )
 
 if neighborhood:
     data = data.query("neighborhood in @neighborhood")
-# if location_type:
-#     data = data.query("location_type in @location_type")
-# if number_bedrooms:
-#     data = data.query("bedrooms in @number_bedrooms")
+if location_type:
+    data = data.query("location_type in @location_type")
+if number_bedrooms:
+    data = data.query("bedrooms in @number_bedrooms")
 if price:
     data = data.query("price <= @price")
 if price_per_area:
-    st.write(price_per_area)
-    data = data.query("price_per_area <= @price_per_area[1]")
-
-if st.checkbox("Show raw data"):
-    st.subheader("Raw data")
-    st.write(data)
+    data = data.query("price_per_area <= @price_per_area")
 
 
 price_per_area_colorbar = [*raw_data["price_per_area"]]
@@ -160,3 +172,7 @@ fig.update_layout(
 )
 
 st.plotly_chart(fig, use_container_width=True)
+
+if st.checkbox("Show raw data"):
+    st.subheader("Raw data")
+    st.write(data)
