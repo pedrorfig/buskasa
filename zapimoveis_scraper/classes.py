@@ -13,7 +13,7 @@ class ZapSearch:
     Object containing attributes for a search query on a complete neighborhood
     """
 
-    def __init__(self, state, city, neighborhood, unit_type, usage_type, business_type, max_price, min_area, min_price):
+    def __init__(self, state: str, city: str, neighborhood: str, unit_type: str, usage_type: str, business_type: str, max_price: int, min_price: int, min_area: int ):
         # Create SQLalchemy engine for connections with DB
         self._engine = extract.create_db_engine()
         # Define filters used on the search
@@ -115,11 +115,14 @@ class ZapSearch:
         # Listing users known to be fraudsters
         known_fraudsters = ["Camila Damaceno Bispo", "Lucas Antônio", "Imóveis São Caetano", "São Caetano Imóveis",
                             "Alex Matheus  Moura", "Claudia Cristina Ribeiro de Almeida"]
+        listings_from_known_fraudsters = pd.Series()
+        listings_from_phone_fraudsters = pd.Series()
+        listings_with_total_area_typos = pd.Series()
         if not listings.empty:
             # Known fraudster
             listings_from_known_fraudsters = listings[listings['advertizer'].isin(known_fraudsters)]['listing_id']
             # Fraudsters by primary phone location inconsistency
-            listings_from_phone_fraudsters = listings[~listings['primary_phone'].str.startswith('11')]['listing_id']
+            # listings_from_phone_fraudsters = listings[~listings['primary_phone'].str.startswith('11')]['listing_id']
             # Total area typos
             listings_with_total_area_typos = listings[listings['total_area_m2']>=500]['listing_id']
             # Populating series of listings to be removed
@@ -190,6 +193,7 @@ class ZapSearch:
             listing_ids_to_remove.extend(outlier_listings.to_list())
         else:
             self.listings_to_add = search_listings
+        return 'Outliers removed'
 
     def remove_listings_deleted(self):
         """
@@ -311,8 +315,8 @@ class ZapPage:
         Returns:
 
         """
-        number_of_listings = 100
-        initial_listing = number_of_listings * self.page_number
+        number_of_listings_per_page = 100
+        initial_listing = number_of_listings_per_page * self.page_number
         headers = self.zap_search.get_request_headers()
         params = {
             'user': '0d645541-36ea-45b4-9c59-deb2d736595c',
@@ -334,7 +338,7 @@ class ZapPage:
             'addressNeighborhood': self.neighborhood,
             'page': '1',
             'from': initial_listing,
-            'size': number_of_listings,
+            'size': number_of_listings_per_page,
             'usageTypes': self.usage_type,
             'levels': 'NEIGHBORHOOD'
         }
@@ -344,12 +348,14 @@ class ZapPage:
 
     def get_listings(self):
         """
-        Get only listings from a ZapImoveis page response
+        Get only listings from a ZapImoveis page API response
+        
         """
 
         listings = self.page_data.get('search', {}).get('result', {}).get('listings', None)
         if listings is not None:
             self.listings = listings
+        
 
     def add_zip_code(self, zip_code, complement):
         """

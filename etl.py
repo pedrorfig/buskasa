@@ -1,4 +1,3 @@
-
 # ETL pipeline to extract listings from ZAP Imóveis website, process them and save to the database
 from zapimoveis_scraper.classes import ZapPage, ZapSearch
 from dotenv import load_dotenv
@@ -7,22 +6,62 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Define which variables will be used for the search
-city = 'São Paulo'
-state = 'São Paulo'
-business_type = 'SALE'
-usage_type = 'RESIDENTIAL'
-unit_type = 'APARTMENT'
+city = "São Paulo"
+state = "São Paulo"
+business_type = "SALE"
+usage_type = "RESIDENTIAL"
+unit_type = "APARTMENT"
 min_area = 80
-min_price = 600000
+min_price = 500000
 max_price = 1500000
 
-neighborhoods = ['Jardim Paulista', 'Itaim Bibi', 'Ibirapuera', 'Jardins',  'Alto de Pinheiros', 'Campo Belo',
-                 'Pinheiros', 'Paraíso',  'Vila Olímpia', 'Sumaré', 'Sumarezinho',  'Perdizes',
-                 'Pacaembu', 'Vila Madalena', 'Moema','Jardim Europa', 'Vila Nova Conceição',
-                 'Bela Vista', 'Consolação', 'Cerqueira César', 'Higienópolis',
-                 'Vila Mariana']
+neighborhoods = [
+    "Perdizes",
+    "Consolação",
+    "Bela Vista",
+    "Cerqueira César",
+    "Higienópolis",
+    "Vila Mariana",
+    "Jardim Paulista",
+    "Jardins",
+    "Pinheiros",
+    "Itaim Bibi",
+    "Paraíso",
+    "Vila Madalena",
+    "Ibirapuera",
+    "Alto de Pinheiros",
+    "Campo Belo",
+    "Vila Olímpia",
+    "Sumaré",
+    "Sumarezinho",
+    "Pacaembu",
+    "Moema",
+    "Jardim Europa",
+    "Vila Nova Conceição",
+]
 
-def extract(business_type, city, max_price, min_area, min_price, neighborhood, state, unit_type, usage_type):
+# city = "Fortaleza"
+# state = "Ceará"
+# business_type = "SALE"
+# usage_type = "RESIDENTIAL"
+# unit_type = "APARTMENT"
+# min_area = 1
+# min_price = 1
+# max_price = 15000000
+# neighborhoods = ["Mucuripe", "Meireles"]
+
+
+def extract(
+    business_type,
+    city,
+    max_price,
+    min_area,
+    min_price,
+    neighborhood,
+    state,
+    unit_type,
+    usage_type,
+):
     """
     Perform web-scrapping from Zapimoveis
 
@@ -44,7 +83,17 @@ def extract(business_type, city, max_price, min_area, min_price, neighborhood, s
     # Start from page_number 0
     page_number = 0
     # Initialize a ZapSearch item that consists of searching a whole neighborhood
-    zap_search = ZapSearch(state, city, neighborhood, unit_type, usage_type, business_type, max_price, min_area, min_price)
+    zap_search = ZapSearch(
+        state,
+        city,
+        neighborhood,
+        unit_type,
+        usage_type,
+        business_type,
+        max_price,
+        min_price,
+        min_area,
+    )
     # Delete listings that are not available
     zap_search.remove_listings_deleted()
     # Get existing listing ids from a neighborhood
@@ -94,6 +143,7 @@ def transform(zap_search):
 
     return zap_search
 
+
 def save(zap_search):
     """
     Save the ZapSearch listings to database
@@ -106,8 +156,18 @@ def save(zap_search):
     # Close engine
     zap_search.close_engine()
 
-def search(business_type: str, state: str, city: str, neighborhoods: list, usage_type: str, unit_type: str,
-           min_area: int, min_price: int, max_price: int):
+
+def search(
+    business_type: str,
+    state: str,
+    city: str,
+    neighborhoods: list,
+    usage_type: str,
+    unit_type: str,
+    min_area: int,
+    min_price: int,
+    max_price: int,
+):
     """
     Perform a search on ZapImvoeis based on filters, scraping listings, processing them and saving the output to a database
     Args:
@@ -123,11 +183,31 @@ def search(business_type: str, state: str, city: str, neighborhoods: list, usage
 
     """
     for neighborhood in neighborhoods:
-        zap_search = extract(business_type, city, max_price, min_area, min_price, neighborhood, state, unit_type,
-                           usage_type)
+        zap_search = extract(
+            business_type,
+            city,
+            max_price,
+            min_area,
+            min_price,
+            neighborhood,
+            state,
+            unit_type,
+            usage_type,
+        )
         zap_search = transform(zap_search)
         save(zap_search)
 
-if __name__ == '__main__':
-    #  run EKD's algorithm to the list of given episodes
-    search(business_type, state, city, neighborhoods, usage_type, unit_type, min_area, min_price, max_price)
+
+if __name__ == "__main__":
+
+    search(
+        business_type,
+        state,
+        city,
+        neighborhoods,
+        usage_type,
+        unit_type,
+        min_area,
+        min_price,
+        max_price,
+    )
