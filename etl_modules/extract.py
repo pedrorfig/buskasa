@@ -45,7 +45,7 @@ def read_listings_sql_table():
             """
             SELECT *
             from listings
-            where price_per_area_in_first_quartile = TRUE """,
+            """,
             con=conn, index_col='listing_id')
     engine.dispose()
     return search_results
