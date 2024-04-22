@@ -391,7 +391,10 @@ class ZapPage:
         self.zap_page_listings = None
         self.existing_listing_ids_in_db = None
         self.existing_zip_codes = None
-
+    
+    @backoff.on_exception(backoff.expo,
+                    requests.exceptions.RequestException,
+                    max_tries=8)
     def get_page(self):
         """
         Get results from a house search at Zap Imoveis
