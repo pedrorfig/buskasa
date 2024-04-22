@@ -1,13 +1,13 @@
 # ETL pipeline to extract listings from ZAP Imóveis website, process them and save to the database
 from zapimoveis_scraper.classes import ZapPage, ZapSearch
 from dotenv import load_dotenv
+from etl_modules import extract
+import sys
 
 # Load credential values
 load_dotenv()
 
 # Define which variables will be used for the search
-city = "São Paulo"
-state = "São Paulo"
 business_type = "SALE"
 usage_type = "RESIDENTIAL"
 unit_type = "APARTMENT"
@@ -23,10 +23,10 @@ neighborhoods = [
     "Higienópolis",
     "Vila Mariana",
     "Jardim Paulista",
+    "Paraíso",
     "Jardins",
     "Pinheiros",
     "Itaim Bibi",
-    "Paraíso",
     "Vila Madalena",
     "Ibirapuera",
     "Alto de Pinheiros",
@@ -51,7 +51,7 @@ neighborhoods = [
 # neighborhoods = ["Mucuripe", "Meireles"]
 
 
-def extract(
+def extract_listings(
     business_type,
     city,
     max_price,
@@ -183,7 +183,7 @@ def search(
 
     """
     for neighborhood in neighborhoods:
-        zap_search = extract(
+        zap_search = extract_listings(
             business_type,
             city,
             max_price,
@@ -199,6 +199,34 @@ def search(
 
 
 if __name__ == "__main__":
+    
+    search_arguments = sys.argv[1:]
+
+    state = search_arguments[0]
+    city = search_arguments[1]
+    neighborhoods = [""]
+    
+    if len(search_arguments) == 2:
+        print(
+            f"Running for all neighborhoods in {state} - {city}"
+        )
+        neighborhoods = extract.get_neighborhoods_from_city_and_state(state, city)
+    elif len(search_arguments) == 3:
+        print(
+            f"Running for {search_arguments[2]} in {state} - {city}"
+        )
+        neighborhoods = search_arguments[2].split(",")
+    elif len(search_arguments) < 2:
+        print(
+            "Please provide at least the following arguments: state, city"
+        )
+        sys.exit(1)
+    else:
+        print(
+            "Please provide at most the following arguments: state, city, neighborhoods"
+        )
+        sys.exit(1)
+
 
     search(
         business_type,
