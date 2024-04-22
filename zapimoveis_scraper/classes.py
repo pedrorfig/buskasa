@@ -1,14 +1,13 @@
 import os
 import random
 import re
+import backoff
 import numpy as np
 import pandas as pd
 import requests
 from datetime import datetime, timedelta
 import requests as r
 from etl_modules import extract, transform, save
-from sqlalchemy import text
-
 
 class ZapSearch:
     """
@@ -584,6 +583,7 @@ class ZapItem:
     def create_html_link(self):
         """
         Create HTML link to listing
+    
         """
         return f'<a href="{self.url}">{self.description}</a>'
 
@@ -836,7 +836,10 @@ class ZapItem:
                 print(f"Found error: {error}")
                 random_number = 1
         return random_number
-
+    
+    @backoff.on_exception(backoff.expo,
+                      requests.exceptions.RequestException,
+                      max_tries=8)
     def download_street_complement(self, zip_code):
         """
         Get street complement from BrasilAberto.com API
