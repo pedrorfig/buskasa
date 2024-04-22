@@ -4,6 +4,7 @@ import plotly.graph_objects as go
 from dotenv import load_dotenv
 from etl_modules import extract
 import datetime
+import textwrap
 import os
 
 
@@ -22,8 +23,8 @@ format_page()
 @st.cache_data
 def load_data():
     results = extract.read_listings_sql_table()
-    results = results.sort_values('price_per_area', ascending=False)
-    
+    results = results.sort_values("price_per_area", ascending=False)
+
     return results
 
 
@@ -31,17 +32,17 @@ def load_data():
 # data_load_state = st.text("Loading data...")
 # Load 10,000 rows of data into the dataframe.
 data = load_data()
-city_data = data.copy()
 # Notify the reader that the data was successfully loaded.
 # data_load_state.text("Done! (using cached data)")
 
 st.header("Bargain Bungalow")
-st.markdown("Helps you find the best house deals in São Paulo")
+st.markdown("Helps you find the best real estate deals in São Paulo")
 
 
 def create_price_per_area_distribution_histogram(data):
     fig = go.Figure()
     _, bins = np.histogram(data["price_per_area"], bins="auto")
+
     fig.add_trace(
         go.Histogram(
             x=data["price_per_area"],
@@ -88,7 +89,7 @@ def remove_whitespace():
 remove_whitespace()
 
 
-def create_side_bar_with_filters(data, create_price_per_area_distribution_histogram):
+def create_side_bar_with_filters(data):
     with st.sidebar:
         st.subheader(":black[Filters]")
 
@@ -96,13 +97,21 @@ def create_side_bar_with_filters(data, create_price_per_area_distribution_histog
         best_deals = st.checkbox(
             label="Best Deals", value=True, label_visibility="collapsed"
         )
+
+        if best_deals:
+            data = data.query(f"price_per_area_in_first_quartile == @best_deals")
+
         st.markdown("City")
         city = st.selectbox(
             "city",
             options=data["city"].unique(),
             placeholder="Select a city",
+            index=0,
             label_visibility="collapsed",
         )
+
+        data = data.query(f"city == @city")
+        city_data = data.copy()
 
         st.divider()
 
@@ -114,16 +123,22 @@ def create_side_bar_with_filters(data, create_price_per_area_distribution_histog
             label_visibility="collapsed",
         )
 
+        if neighborhood:
+            data = data.query("neighborhood in @neighborhood")
+
         st.divider()
 
         st.markdown("Location Type")
         location_type = st.selectbox(
             "Location Type",
             options=data["location_type"].unique(),
-            placeholder="Select a Location Type",
+            placeholder="Select a location type",
             index=None,
             label_visibility="collapsed",
         )
+
+        if location_type:
+            data = data.query("location_type in @location_type")
 
         st.divider()
         st.markdown("Number of Bedrooms")
@@ -131,18 +146,16 @@ def create_side_bar_with_filters(data, create_price_per_area_distribution_histog
         number_bedrooms = st.multiselect(
             "Number of Bedrooms",
             options=sorted(data["bedrooms"].unique()),
-            placeholder="Select number of bedrooms",
+            placeholder="Select # bedrooms",
             label_visibility="collapsed",
         )
+
+        if number_bedrooms:
+            data = data.query("bedrooms in @number_bedrooms")
 
         st.divider()
 
         st.markdown("Price per area")
-
-        if city:
-            city_data = data.query("city in @city")
-        else:
-            city_data = data.copy()
 
         create_price_per_area_distribution_histogram(city_data)
 
@@ -150,69 +163,43 @@ def create_side_bar_with_filters(data, create_price_per_area_distribution_histog
             "Price per Area",
             min_value=int(city_data["price_per_area"].min()),
             max_value=int(city_data["price_per_area"].max()),
-            step=10,
+            step=100,
             value=int(city_data["price_per_area"].max()),
             format="R$/m² %d",
             label_visibility="collapsed",
         )
 
+        if price_per_area:
+            data = data.query("price_per_area <= @price_per_area")
+
         st.divider()
         st.markdown("Price")
         price = st.slider(
             "Price",
-            max_value=city_data["price"].max(),
-            min_value=city_data["price"].min(),
-            value=city_data["price"].max(),
-            step=1000,
+            max_value=data["price"].max(),
+            min_value=data["price"].min(),
+            value=data["price"].max(),
+            step=100000,
             format="R$ %d",
             label_visibility="collapsed",
         )
 
-    return (
-        best_deals,
-        city,
-        neighborhood,
-        location_type,
-        number_bedrooms,
-        price,
-        price_per_area,
-    )
+        if price:
+            data = data.query("price <= @price")
+        
+        if st.button("Reset cache", type="primary"):
+            st.cache_data.clear()
+
+    return (city_data, data)
 
 
-(
-    best_deals,
-    city,
-    neighborhood,
-    location_type,
-    number_bedrooms,
-    price,
-    price_per_area,
-) = create_side_bar_with_filters(data, create_price_per_area_distribution_histogram)
-
-
-if best_deals:
-    data = data.query(f"price_per_area_in_first_quartile == {best_deals}")
-else:
-    data = data.query(
-        f"price_per_area_in_first_quartile == False or price_per_area_in_first_quartile == True"
-    )
-if city:
-    data = data.query("city in @city")
-    city_data = data.copy()
-if neighborhood:
-    data = data.query("neighborhood in @neighborhood")
-if location_type:
-    data = data.query("location_type in @location_type")
-if number_bedrooms:
-    data = data.query("bedrooms in @number_bedrooms")
-if price:
-    data = data.query("price <= @price")
-if price_per_area:
-    data = data.query("price_per_area <= @price_per_area")
+(city_data, data) = create_side_bar_with_filters(data)
 
 
 def create_listings_map(mapbox_token, data, city_data):
-    price_per_area_colorbar = [*city_data["price_per_area"]]
+
+    def customwrap(s, width=30):
+        return "<br>".join(textwrap.wrap(s, width=width))
 
     custom_data = np.stack(
         (
@@ -220,21 +207,22 @@ def create_listings_map(mapbox_token, data, city_data):
             data["price"],
             data["price_per_area"],
             data["condo_fee"],
-            data["total_area_m2"]
+            data["total_area_m2"],
         ),
         axis=1,
     )
 
     hover_template = (
-        "<b>%{customdata[0]}</b> <br>"
-        + "Price: R$%{customdata[1]:,.0f} <br>"
-        + "Price per Area: R$/m<sup>2</sup> %{customdata[2]:,.2f} <br>"
-        + "Condo Fee: R$ %{customdata[3]:,.2f} <br>"
-        + "Usable Area: %{customdata[4]} m<sup>2</sup> <br>"
+        "<b>Price   </b>               R$%{customdata[1]:,.0f}<br>"
+        + "<b>Price per Area </b> R$/m<sup>2</sup> %{customdata[2]:,.2f} <br>"
+        + "<b>Condo Fee  </b>       R$ %{customdata[3]:,.2f} <br>"
+        + "<b>Usable Area</b>      %{customdata[4]} m<sup>2</sup> <br>"
+        + "<b>%{customdata[0]}</b> <br>"
         + "<extra></extra>"
     )
 
-    marker_size = (1/data["price_per_area"])     
+    marker_size = 1 / data["price_per_area"]
+    price_per_area_colorbar = [*city_data["price_per_area"]]
 
     # Initializing Figure
     fig = go.Figure()
@@ -254,7 +242,7 @@ def create_listings_map(mapbox_token, data, city_data):
                 colorscale="Jet",
                 color=data["price_per_area"],
                 cmin=min(price_per_area_colorbar),
-                cmax=max(price_per_area_colorbar)
+                cmax=max(price_per_area_colorbar),
             ),
         )
     )
@@ -270,7 +258,11 @@ def create_listings_map(mapbox_token, data, city_data):
             lon=new_listings["longitude"],
             mode="markers",
             marker=go.scattermapbox.Marker(
-                symbol="circle", size=5, allowoverlap=True, cauto=False, color="brown"
+                symbol="circle",
+                size=5,
+                allowoverlap=True,
+                # cauto=False,
+                color="darkorchid",
             ),
             name="New listings",
             hoverinfo="skip",
@@ -280,11 +272,8 @@ def create_listings_map(mapbox_token, data, city_data):
     fig.update_layout(
         hovermode="closest",
         hoverdistance=30,
-        hoverlabel_align = 'left',
-        hoverlabel=dict(
-            font_size=12,
-            font_family="Rockwell",
-        ),
+        hoverlabel_align="left",
+        hoverlabel=dict(font_size=12, font_family="Aptos", bordercolor="silver"),
         # width=1500,
         height=800,
         margin=dict(l=0, r=0, t=0, b=0),
@@ -294,8 +283,8 @@ def create_listings_map(mapbox_token, data, city_data):
             y=0.99,
             xanchor="left",
             x=0.01,
-            bgcolor="rgba(219, 219, 219, 1)",
-            # itemsizing="constant",
+            bgcolor="ghostwhite",
+            itemsizing="constant",
         ),
         mapbox=dict(
             style="streets",
