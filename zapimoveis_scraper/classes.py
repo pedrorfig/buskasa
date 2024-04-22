@@ -138,7 +138,7 @@ class ZapSearch:
         Returns:
 
         """
-        print("Removing fraudsters")
+        print("\tRemoving fraudsters")
         listings = self.listings_to_add
         # Listing users known to be fraudsters
         known_fraudsters = [
@@ -226,7 +226,7 @@ class ZapSearch:
             data_with_outliers:
         """
         # TODO: Change outlier calculation for boxplot
-        print("Removing outliers on listing prices")
+        print("\tRemoving outliers on listing prices")
         engine = self._engine
         with engine.connect() as conn:
             filter_conditions = {
@@ -244,7 +244,6 @@ class ZapSearch:
                         neighborhood = %(neighborhood)s and
                         business_type = %(business_type)s
                     """
-
             listings_on_db = pd.read_sql(
                 listings_on_db_sql_statement, con=conn, params=filter_conditions
             )
@@ -278,7 +277,7 @@ class ZapSearch:
         """
         Remove listings that haven't been updated for more than a week
         """
-        print("Removing deleted listings")
+        print("\tRemoving deleted listings")
         engine = self._engine
         with engine.connect() as conn:
             old_listings = pd.read_sql(
@@ -328,7 +327,7 @@ class ZapSearch:
 
     def save_zip_codes_to_db(self):
         """ """
-        print("Saving ZIP codes to database")
+        print("\tSaving ZIP codes to database")
         zip_df = self.zip_codes_to_add
         if not zip_df.empty:
             with self._engine.connect() as conn:
@@ -342,7 +341,7 @@ class ZapSearch:
 
     def save_listings_to_db(self):
         """ """
-        print("Saving listings to database")
+        print("\tSaving listings to database")
         # Retrieve listing to be saved in the database
         listings = self.listings_to_add
         if not listings.empty:

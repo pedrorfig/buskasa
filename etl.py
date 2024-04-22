@@ -102,7 +102,7 @@ def extract_listings(
     zap_search.get_existing_zip_codes()
     # Iterate through all pages on a neighborhood
     while True:
-        print(f"Page #{page_number} on {neighborhood}")
+        print(f"\tPage #{page_number} on {neighborhood}")
         # Initialize a ZapPage object with data for each page_number searched
         zap_page = ZapPage(page_number, zap_search)
         # Get response for API call on a page_number

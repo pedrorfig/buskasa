@@ -37,3 +37,4 @@ pip-log.txt
 .env
 
 settings.json
+.vscode/launch.json
