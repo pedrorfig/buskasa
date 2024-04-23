@@ -1,4 +1,5 @@
-# ETL pipeline to extract listings from ZAP Imóveis website, process them and save to the database
+# ETL pipeline to extract listings from ZAP Imóveis website,
+# process them and save to the database
 from zapimoveis_scraper.classes import ZapPage, ZapSearch
 from dotenv import load_dotenv
 from etl_modules import extract
@@ -14,41 +15,6 @@ unit_type = "APARTMENT"
 min_area = 80
 min_price = 500000
 max_price = 1500000
-
-neighborhoods = [
-    "Perdizes",
-    "Consolação",
-    "Bela Vista",
-    "Cerqueira César",
-    "Higienópolis",
-    "Vila Mariana",
-    "Jardim Paulista",
-    "Paraíso",
-    "Jardins",
-    "Pinheiros",
-    "Itaim Bibi",
-    "Vila Madalena",
-    "Ibirapuera",
-    "Alto de Pinheiros",
-    "Campo Belo",
-    "Vila Olímpia",
-    "Sumaré",
-    "Sumarezinho",
-    "Pacaembu",
-    "Moema",
-    "Jardim Europa",
-    "Vila Nova Conceição",
-]
-
-# city = "Fortaleza"
-# state = "Ceará"
-# business_type = "SALE"
-# usage_type = "RESIDENTIAL"
-# unit_type = "APARTMENT"
-# min_area = 1
-# min_price = 1
-# max_price = 15000000
-# neighborhoods = ["Mucuripe", "Meireles"]
 
 
 def extract_listings(
@@ -82,7 +48,8 @@ def extract_listings(
     print(f"Getting listings from neighborhood {neighborhood}")
     # Start from page_number 0
     page_number = 0
-    # Initialize a ZapSearch item that consists of searching a whole neighborhood
+    # Initialize a ZapSearch item that
+    # consists of searching a whole neighborhood
     zap_search = ZapSearch(
         state,
         city,
@@ -109,15 +76,15 @@ def extract_listings(
         zap_page.get_page()
         # Get all listings from a ZapPage
         zap_page.get_listings()
-        # If there number of listings reached the total, finish the search
-        if zap_page.check_if_search_ended():
-            break
         # Create ZapItem object for each item in a page
         zap_page.create_zap_items()
         # Save items to ZapSearch object
         zap_search.append_zap_pages(zap_page)
         # Save list of all listings scrapped
         zap_search.save_listings_to_check(zap_page.listings_to_check)
+        # If there number of listings reached the total, finish the search
+        if zap_page.check_if_search_ended():
+            break
         # Go to next page
         page_number += 1
 
@@ -169,7 +136,8 @@ def search(
     max_price: int,
 ):
     """
-    Perform a search on ZapImvoeis based on filters, scraping listings, processing them and saving the output to a database
+    Perform a search on ZapImvoeis based on filters, scraping listings,
+    processing them and saving the output to a database
     Args:
         business_type (str): Type of business, SALE or RENT
         city (str): City to scrape from
@@ -198,35 +166,41 @@ def search(
         save(zap_search)
 
 
-if __name__ == "__main__":
-    
+def get_search_parameters():
+    """
+    Get the search parameters from the command line
+    Returns:
+        neighborhoods (list): Neighborhoods to scrape
+        state (str): State to scrape
+        city (str): City to scrape
+    """
     search_arguments = sys.argv[1:]
-
     state = search_arguments[0]
     city = search_arguments[1]
     neighborhoods = [""]
-    
+
     if len(search_arguments) == 2:
-        print(
-            f"Running for all neighborhoods in {state} - {city}"
-        )
-        neighborhoods = extract.get_neighborhoods_from_city_and_state(state, city)
+        print(f"Running for all neighborhoods in {state} - {city}")
+        neighborhoods = \
+            extract.get_neighborhoods_from_city_and_state(state, city)
     elif len(search_arguments) == 3:
-        print(
-            f"Running for {search_arguments[2]} in {state} - {city}"
-        )
+        print(f"Running for {search_arguments[2]} in {state} - {city}")
         neighborhoods = search_arguments[2].split(",")
     elif len(search_arguments) < 2:
-        print(
-            "Please provide at least the following arguments: state, city"
-        )
+        print("Please provide at least the following arguments: state, city")
         sys.exit(1)
     else:
         print(
-            "Please provide at most the following arguments: state, city, neighborhoods"
+            """Please provide at most the
+            following arguments:state, city, neighborhoods"""
         )
         sys.exit(1)
+    return state, city, neighborhoods
 
+
+if __name__ == "__main__":
+
+    state, city, neighborhoods = get_search_parameters()
 
     search(
         business_type,
