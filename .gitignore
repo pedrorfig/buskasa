@@ -8,6 +8,7 @@ MANIFEST
 .idea/
 venv/
 
+
 # Packages
 *.egg
 *.egg-info
@@ -31,11 +32,12 @@ pip-log.txt
 #Translations
 *.mo
 
-#Mr Developer
-.mr.developer.cfg
+#secrets
 !/.env
 .env
+secrets.toml
 
+#other stuff
 settings.json
 .vscode/launch.json
 notebooks/checking_anvisa_api.ipynb
