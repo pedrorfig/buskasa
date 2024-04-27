@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 import requests as r
 from etl_modules import extract, transform, save
 
+
 class ZapSearch:
     """
     Object containing attributes for a search query on a complete neighborhood
@@ -38,10 +39,12 @@ class ZapSearch:
         self.max_price = max_price
         self.min_price = min_price
         self.min_area = min_area
+        self.number_of_listings_per_page = 100
 
         # Placeholder to save results from pages
         self.zap_pages = []
-        # Save all listings from search to check if any was deleted on the web, so it is also deleted on the DB
+        # Save all listings from search to check if any was deleted on the web,
+        # so it is also deleted on the DB
         self.all_listing_from_search = []
         # Placeholder for saving ZIP codes that aren't currently on the DB
         self.existing_zip_codes = None
@@ -65,7 +68,8 @@ class ZapSearch:
             "max_price": self.max_price,
         }
         with engine.connect() as conn:
-            # Checking for existing listing_ids on the database according to the specified filters
+            # Checking for existing listing_ids on the database
+            # according to specified filters
             filter_conditions = {
                 "neighborhood": self.neighborhood,
                 "city": self.city,
@@ -74,7 +78,7 @@ class ZapSearch:
                 "min_price": self.min_price,
                 "max_price": self.max_price,
             }
-            listing_id_sql_statement = rf"""
+            listing_id_sql_statement = r"""
                 SELECT listing_id
                 from listings
                 where
@@ -123,7 +127,8 @@ class ZapSearch:
 
     def save_listings_to_check(self, listings):
         """
-        Save all avaialble listings on a ZapPage, event those already on the database
+        Save all avaialble listings on a ZapPage,
+        event those already on the database
         Args:
             listings (list): listings to save
         """
@@ -158,11 +163,11 @@ class ZapSearch:
                 listings["advertizer"].isin(known_fraudsters)
             ]["listing_id"]
             # Fraudsters by primary phone location inconsistency
-            # listings_from_phone_fraudsters = listings[~listings['primary_phone'].str.startswith('11')]['listing_id']
+            # listings_from_phone_fraudsters = \
+            # listings[~listings['primary_phone'].str.startswith('11')]['listing_id']
             # Total area typos
-            listings_with_total_area_typos = listings[listings["total_area_m2"] >= 500][
-                "listing_id"
-            ]
+            listings_with_total_area_typos = \
+                listings[listings["total_area_m2"] >= 500]["listing_id"]
             # Populating series of listings to be removed
             listing_ids_to_remove = pd.concat(
                 [
@@ -190,7 +195,7 @@ class ZapSearch:
                 "min_price": self.min_price,
                 "max_price": self.max_price,
             }
-            listingd_on_db_sql_statement = f"""SELECT *
+            listingd_on_db_sql_statement = """SELECT *
                         from listings
                     WHERE
                         city = %(city)s and
@@ -198,7 +203,8 @@ class ZapSearch:
                         business_type = %(business_type)s
                     """
             listings_on_db = pd.read_sql(
-                listingd_on_db_sql_statement, con=conn, params=filter_conditions
+                listingd_on_db_sql_statement, con=conn,
+                params=filter_conditions
             )
         search_listings = self.listings_to_add
         if (not search_listings.empty) and (not listings_on_db.empty):
@@ -237,7 +243,7 @@ class ZapSearch:
                 "min_price": self.min_price,
                 "max_price": self.max_price,
             }
-            listings_on_db_sql_statement = f"""SELECT *
+            listings_on_db_sql_statement = """SELECT *
                         from listings
                     WHERE
                         city = %(city)s and
@@ -245,7 +251,8 @@ class ZapSearch:
                         business_type = %(business_type)s
                     """
             listings_on_db = pd.read_sql(
-                listings_on_db_sql_statement, con=conn, params=filter_conditions
+                listings_on_db_sql_statement, con=conn,
+                params=filter_conditions
             )
         search_listings = self.listings_to_add
         if not search_listings.empty and not listings_on_db.empty:
@@ -254,7 +261,8 @@ class ZapSearch:
             q_low = all_listings["price_per_area"].quantile(0.25)
             q_hi = all_listings["price_per_area"].quantile(0.75)
             inter_q_range = q_hi - q_low
-            # Calculate outlier thresholds to remove anything above or below the limits assigned
+            # Calculate outlier thresholds to remove anything above
+            # or below limits assigned
             threshold_high = q_hi + inter_q_range * 1.5
             threshold_low = q_low - inter_q_range * 1.5
             outlier_listings = search_listings[
@@ -281,7 +289,7 @@ class ZapSearch:
         engine = self._engine
         with engine.connect() as conn:
             old_listings = pd.read_sql(
-                f"""SELECT listing_id
+                """SELECT listing_id
                         from listings
                         where
                         updated_at < current_date - 3
@@ -290,7 +298,7 @@ class ZapSearch:
             )
         if not old_listings.empty:
             old_listings = old_listings.squeeze()
-            if type(old_listings) == str:
+            if isinstance(old_listings, str):
                 old_listings = [old_listings]
             else:
                 old_listings = old_listings.to_list()
@@ -347,7 +355,9 @@ class ZapSearch:
         if not listings.empty:
             engine = self._engine
             with engine.begin() as conn:
-                save.upsert_df(df=listings, table_name="listings", connection=conn)
+                save.upsert_df(df=listings,
+                               table_name="listings",
+                               connection=conn)
 
     def get_existing_zip_codes(self):
         """
@@ -358,7 +368,8 @@ class ZapSearch:
         engine = self._engine
         with engine.connect() as conn:
             data = pd.read_sql(
-                f"SELECT * from dim_zip_code", con=conn, index_col="zip_code"
+                "SELECT * from dim_zip_code",
+                con=conn, index_col="zip_code"
             )
         self.existing_zip_codes = data
 
@@ -390,10 +401,11 @@ class ZapPage:
         self.zap_page_listings = None
         self.existing_listing_ids_in_db = None
         self.existing_zip_codes = None
-    
-    @backoff.on_exception(backoff.expo,
-                    requests.exceptions.RequestException,
-                    max_tries=8)
+        self.listings = []
+
+    @backoff.on_exception(
+        backoff.expo, requests.exceptions.RequestException, max_tries=8
+    )
     def get_page(self):
         """
         Get results from a house search at Zap Imoveis
@@ -401,7 +413,7 @@ class ZapPage:
         Returns:
 
         """
-        number_of_listings_per_page = 100
+        number_of_listings_per_page = self.zap_search.number_of_listings_per_page
         initial_listing = number_of_listings_per_page * self.page_number
         headers = self.zap_search.get_request_headers()
         params = {
@@ -458,11 +470,11 @@ class ZapPage:
         self.zip_code_to_add[zip_code] = complement
 
     def check_if_search_ended(self):
-        return self.page_data.get("page", {}).get("uriPagination", {}).get(
-            "from", 1
-        ) > self.page_data.get("page", {}).get("uriPagination", {}).get(
-            "totalListingCounter", 0
-        )
+        """Check if the page has less listings than the maximum allowed
+        """
+        number_of_page_listings_less_than_maximum = len(self.listings) < \
+            self.zap_search.number_of_listings_per_page
+        return number_of_page_listings_less_than_maximum
 
     def convert_zap_page_zip_code_to_df(self):
         """
@@ -585,7 +597,7 @@ class ZapItem:
     def create_html_link(self):
         """
         Create HTML link to listing
-    
+
         """
         return f'<a href="{self.url}">{self.description}</a>'
 
@@ -806,15 +818,18 @@ class ZapItem:
                     *map(int, re.findall(r"\d+", street_complement))
                 ]
                 if street_complement_numbers:
-                    # If there are two values, randomly assing one between max and min values
+                    # If there are two values,
+                    # randomly assing one between max and min values
                     if (
                         max(street_complement_numbers) - min(street_complement_numbers)
                         > 10
                     ):
                         num_max = int(max(street_complement_numbers))
                         num_min = int(min(street_complement_numbers))
-                        random_number = str(round(random.uniform(num_min, num_max)))
-                    # If has one or more values and the word "fim" on it, them we have the minimum possible street number
+                        random_number = \
+                            str(round(random.uniform(num_min, num_max)))
+                    # If has one or more values and the word "fim" on it,
+                    # them we have the minimum possible street number
                     elif (
                         len(street_complement_numbers) >= 1
                         and "fim" in street_complement
@@ -823,7 +838,8 @@ class ZapItem:
                         random_number = str(
                             round(random.uniform(num_min, num_min + 100))
                         )
-                    # If has one or more values and the word "até" on it, them we have the maximum possible street number
+                    # If has one or more values and the word "até" on it,
+                    # them we have the maximum possible street number
                     elif (
                         len(street_complement_numbers) >= 1
                         and "até" in street_complement
@@ -833,15 +849,16 @@ class ZapItem:
                 else:
                     # Creating a random street number
                     random_number = 1
-            # If there is an error with connection or data type street number will be 1
+            # If there is an error with connection
+            # or data type street number will be 1
             except (ConnectionError, TypeError) as error:
                 print(f"Found error: {error}")
                 random_number = 1
         return random_number
-    
-    @backoff.on_exception(backoff.expo,
-                      requests.exceptions.RequestException,
-                      max_tries=8)
+
+    @backoff.on_exception(
+        backoff.expo, requests.exceptions.RequestException, max_tries=10
+    )
     def download_street_complement(self, zip_code):
         """
         Get street complement from BrasilAberto.com API
