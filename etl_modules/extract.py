@@ -1,12 +1,15 @@
-import pandas as pd
-from sqlalchemy import create_engine, text
-from datetime import date
 import os
 import socket
-from dotenv import load_dotenv
+from datetime import date
+
+import pandas as pd
 import requests as r
+import streamlit as st
+from dotenv import load_dotenv
+from sqlalchemy import create_engine, text
 
 load_dotenv()
+
 
 def get_neighborhoods_from_city_and_state(state, city):
     """
@@ -18,19 +21,20 @@ def get_neighborhoods_from_city_and_state(state, city):
         headers={"Bearer": os.environ["BRASIL_ABERTO_API_KEY_PAID"]},
     )
     city_neighborhood_data = response.json()
-    neighborhoods = pd.DataFrame.from_dict(city_neighborhood_data.get("result"))[
+    neighborhoods = sorted(pd.DataFrame.from_dict(city_neighborhood_data.get("result"))[
         "name"
-    ].tolist()
+    ].tolist())
     return neighborhoods
+
 
 def get_city_id_from_city_and_state_names(state, city):
     engine = create_db_engine()
     with engine.connect() as conn:
-        # Checking for existing listing_ids on the database according to the specified filters
-        filter_conditions = {'city':city, 'state':state}
-        
+        # Checking for existing listing_ids on the database according
+        # to the specified filters
+        filter_conditions = {'city': city, 'state': state}
         city_id_dataframe = pd.read_sql(
-            rf"""
+            """
             SELECT
                 city_id
             from
@@ -78,7 +82,8 @@ def create_db_engine(
     return engine
 
 
-def read_listings_sql_table():
+@st.cache_data
+def get_best_deals_from_city(city):
     """
     Read house listings from db table
     Returns:
@@ -89,13 +94,36 @@ def read_listings_sql_table():
         search_results = pd.read_sql(
             """
             SELECT *
-            from listings
+            FROM listings
+            WHERE price_per_area_in_first_quartile = True
+            AND city = %(city)s
+            ORDER BY price_per_area DESC
             """,
             con=conn,
-            index_col="listing_id",
+            params={'city': city},
+            index_col="listing_id"
         )
     engine.dispose()
     return search_results
+
+
+def get_unique_cities_from_db():
+    """
+    Read house listings from db table
+    Returns:
+
+    """
+    engine = create_db_engine()
+    with engine.connect() as conn:
+        unique_cities = pd.read_sql(
+            """
+            SELECT DISTINCT city
+            FROM listings
+            """,
+            con=conn
+        )
+    engine.dispose()
+    return unique_cities
 
 
 def is_running_locally():
