@@ -2,7 +2,7 @@ name: Run ETL for São Paulo
 
 on:
   schedule:
-    - cron: '0 20 * * *' # At 00:00 on Monday
+    - cron: '14 20 * * *' # At 00:00 on Monday
 
 jobs:
   build:
