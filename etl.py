@@ -153,6 +153,7 @@ def get_search_parameters():
         sys.exit(1)
     return sys.argv[1], sys.argv[2], neighborhoods
 
+
 def search(
     business_type: str,
     state: str,
@@ -193,25 +194,6 @@ def search(
         )
         zap_search = transform(zap_search)
         save(zap_search)
-
-def lambda_handler(event, context):
-    """
-    Lambda handler function to be used in AWS Lambda
-    """
-    state, city, neighborhoods = get_search_parameters()
-    print(state, city, neighborhoods)
-
-    search(
-        business_type,
-        state,
-        city,
-        neighborhoods,
-        usage_type,
-        unit_type,
-        min_area,
-        min_price,
-        max_price,
-    )
 
 
 if __name__ == "__main__":
