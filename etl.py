@@ -124,6 +124,35 @@ def save(zap_search):
     zap_search.close_engine()
 
 
+def get_search_parameters():
+    """
+    Get the search parameters from the command line
+    Returns:
+        neighborhoods (list): Neighborhoods to scrape
+        state (str): State to scrape
+        city (str): City to scrape
+    """
+
+    neighborhoods = [""]
+
+    if len(sys.argv) == 3:
+        print(f"Running for all neighborhoods in {sys.argv[1]} - {sys.argv[2]}")
+        neighborhoods = \
+            extract.get_neighborhoods_from_city_and_state(sys.argv[1], sys.argv[2])
+    elif len(sys.argv) == 4:
+        print(f"Running for {sys.argv[3]} in {sys.argv[1]} - {sys.argv[2]}")
+        neighborhoods = sys.argv[3].split(",")
+    elif len(sys.argv) < 3:
+        print("Please provide at least the following arguments: state, city")
+        sys.exit(1)
+    else:
+        print(
+            """Please provide at most the
+            following arguments:state, city, neighborhoods"""
+        )
+        sys.exit(1)
+    return sys.argv[1], sys.argv[2], neighborhoods
+
 def search(
     business_type: str,
     state: str,
@@ -165,37 +194,23 @@ def search(
         zap_search = transform(zap_search)
         save(zap_search)
 
-
-def get_search_parameters():
+def lambda_handler(event, context):
     """
-    Get the search parameters from the command line
-    Returns:
-        neighborhoods (list): Neighborhoods to scrape
-        state (str): State to scrape
-        city (str): City to scrape
+    Lambda handler function to be used in AWS Lambda
     """
-    search_arguments = sys.argv[1:]
-    state = search_arguments[0]
-    city = search_arguments[1]
-    neighborhoods = [""]
+    state, city, neighborhoods = get_search_parameters()
 
-    if len(search_arguments) == 2:
-        print(f"Running for all neighborhoods in {state} - {city}")
-        neighborhoods = \
-            extract.get_neighborhoods_from_city_and_state(state, city)
-    elif len(search_arguments) == 3:
-        print(f"Running for {search_arguments[2]} in {state} - {city}")
-        neighborhoods = search_arguments[2].split(",")
-    elif len(search_arguments) < 2:
-        print("Please provide at least the following arguments: state, city")
-        sys.exit(1)
-    else:
-        print(
-            """Please provide at most the
-            following arguments:state, city, neighborhoods"""
-        )
-        sys.exit(1)
-    return state, city, neighborhoods
+    search(
+        business_type,
+        state,
+        city,
+        neighborhoods,
+        usage_type,
+        unit_type,
+        min_area,
+        min_price,
+        max_price,
+    )
 
 
 if __name__ == "__main__":
