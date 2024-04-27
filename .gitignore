@@ -38,3 +38,4 @@ pip-log.txt
 
 settings.json
 .vscode/launch.json
+notebooks/checking_anvisa_api.ipynb
