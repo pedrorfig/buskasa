@@ -199,6 +199,7 @@ def lambda_handler(event, context):
     Lambda handler function to be used in AWS Lambda
     """
     state, city, neighborhoods = get_search_parameters()
+    print(state, city, neighborhoods)
 
     search(
         business_type,
