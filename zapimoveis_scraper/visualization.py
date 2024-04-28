@@ -266,11 +266,9 @@ def create_listings_map(mapbox_token, data, city_data):
             center=dict(lat=data["latitude"].mean(),
                         lon=data["longitude"].mean()),
             pitch=0,
-            zoom=dynamic_zoom,
+            zoom=12,
         ),
     )
-
-    st.write(dynamic_zoom)
 
     st.plotly_chart(fig, use_container_width=True,
                     config={'displayModeBar': False})
