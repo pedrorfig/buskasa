@@ -1,4 +1,4 @@
-name: Run ETL for São Paulo
+name: Run ETL for main neighborhoods in São Paulo
 
 on:
   schedule:
