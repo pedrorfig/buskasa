@@ -7,6 +7,7 @@ import pandas as pd
 import requests
 from datetime import datetime, timedelta
 import requests as r
+import cloudscraper
 from etl_modules import extract, transform, save
 
 
@@ -324,7 +325,7 @@ class ZapSearch:
             "Sec-Fetch-Mode": "cors",
             "Sec-Fetch-Site": "same-site",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
-            "X-DeviceId": "0d645541-36ea-45b4-9c59-deb2d736595c",
+            # "X-DeviceId": "0d645541-36ea-45b4-9c59-deb2d736595c",
             "sec-ch-ua": '"Chromium";v="116", "Not)A;Brand";v="24", "Google Chrome";v="116"',
             "sec-ch-ua-mobile": "?0",
             "sec-ch-ua-platform": '"Windows"',
@@ -440,7 +441,8 @@ class ZapPage:
             "usageTypes": self.usage_type,
             "levels": "NEIGHBORHOOD",
         }
-        response = requests.get(
+        scraper = cloudscraper.create_scraper()
+        response = scraper.get(
             "https://glue-api.zapimoveis.com.br/v2/listings",
             params=params,
             headers=headers,
