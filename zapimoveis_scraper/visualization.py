@@ -65,7 +65,7 @@ def create_price_per_area_distribution_histogram(data):
 def create_side_bar_with_filters():
 
 
-    st.logo(r"C:\Users\58781\zapimoveis-scraper\assets\741ec0d841fdc835bd1699e8117e946d9bce84aebd71f5e28eab2b36.png")
+    st.logo(r"assets\741ec0d841fdc835bd1699e8117e946d9bce84aebd71f5e28eab2b36.png")
 
     with st.sidebar:
         # Create title for Filter sidebar
