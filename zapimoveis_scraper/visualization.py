@@ -84,7 +84,6 @@ def create_side_bar_with_filters():
 
         data = data.query("city == @city")
         city_data = data.copy()
-        st.write(city_data)
 
         with st.form("listing_filters"):
 
