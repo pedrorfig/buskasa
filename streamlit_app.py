@@ -9,14 +9,16 @@ load_dotenv()
 
 mapbox_token = os.environ["MAPBOX_TOKEN"]
 
+
 visualization.format_page()
+@st.experimental_dialog("Bem-vindo ao Bargain Bungalow", width='small')
+def welcome_message():
+    st.write("Bargain Bungalow usa AI para ajudar você a encontrar os melhores negócios imobiliários.")
+if "first_start" not in st.session_state:
+    st.session_state.first_start = False
+    welcome_message()
 
 visualization.remove_whitespace()
-
-
-st.header("Bargain Bungalow")
-st.markdown("Helps you find the best real estate deals in São Paulo")
-
 
 (city_data, data) = visualization.create_side_bar_with_filters()
 
