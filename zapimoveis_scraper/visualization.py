@@ -1,4 +1,5 @@
 # Visualization module
+import math
 import textwrap
 
 import numpy as np
@@ -56,112 +57,118 @@ def create_price_per_area_distribution_histogram(data):
         height=250,
     )
 
-    return st.plotly_chart(fig, use_container_width=True,
-                           config={'displayModeBar': False})
-    
+    return st.plotly_chart(
+        fig, use_container_width=True, config={"displayModeBar": False}
+    )
+
 
 def create_side_bar_with_filters():
+
+
+    st.logo(r"C:\Users\58781\zapimoveis-scraper\assets\741ec0d841fdc835bd1699e8117e946d9bce84aebd71f5e28eab2b36.png")
+
     with st.sidebar:
-        st.subheader(":black[Filters]")
-        
-        st.markdown("City")
+        # Create title for Filter sidebar
+        st.subheader(":black[Filtros]")
+        # Create filter for city
+        st.markdown("Cidade")
         city = st.selectbox(
             "city",
             options=extract.get_unique_cities_from_db(),
-            placeholder="Select a city",
+            placeholder="Selecione uma cidade",
             index=0,
-            label_visibility="collapsed",
+            label_visibility="collapsed"            
         )
 
         data = extract.get_best_deals_from_city(city)
 
         data = data.query("city == @city")
-
         city_data = data.copy()
+        st.write(city_data)
 
-        st.divider()
+        with st.form("listing_filters"):
 
-        st.markdown("Neighborhood")
-        neighborhood = st.multiselect(
-            "Neighborhood",
-            options=sorted(data["neighborhood"].unique()),
-            placeholder="Select a neighborhood",
-            label_visibility="collapsed",
-        )
+            # Create neighborhood filter
+            st.markdown("Bairro")
+            neighborhood = st.multiselect(
+                "Bairro",
+                options=sorted(data["neighborhood"].unique()),
+                placeholder="Selecione um bairro",
+                label_visibility="collapsed",
+            )
+            if not neighborhood:
+                neighborhood = data["neighborhood"].unique()
 
-        if neighborhood:
-            data = data.query("neighborhood in @neighborhood")
+            st.divider()
 
-        st.divider()
+            st.markdown("Localização")
+            location_type = st.selectbox(
+                "Location Type",
+                options=data["location_type"].unique(),
+                placeholder="Selecione um tipo de localização",
+                index=None,
+                label_visibility="collapsed",
+            )
 
-        st.markdown("Location Type")
-        location_type = st.selectbox(
-            "Location Type",
-            options=data["location_type"].unique(),
-            placeholder="Select a location type",
-            index=None,
-            label_visibility="collapsed",
-        )
+            st.divider()
+            st.markdown("Número de quartos")
+            number_bedrooms = st.selectbox(
+                "Number of Bedrooms",
+                options=sorted(data["bedrooms"].unique(), reverse=False),
+                placeholder="Selecione um número de quartos",
+                label_visibility="collapsed",
+                format_func=lambda x: f"{int(x)}+" if x == x else None,
+                key='number_bedrooms',
+            )
 
-        if location_type:
-            data = data.query("location_type in @location_type")
 
-        st.divider()
-        st.markdown("Number of Bedrooms")
+            st.divider()
+            st.markdown("Mostrar apenas novas ofertas?")
+            new_listing = st.toggle(label="New listings", label_visibility='collapsed', value=False, key='new_listings')
 
-        number_bedrooms = st.multiselect(
-            "Number of Bedrooms",
-            options=sorted(data["bedrooms"].unique()),
-            placeholder="Select # bedrooms",
-            label_visibility="collapsed",
-        )
+            st.divider()
+            st.markdown("Preço por Área")
+            create_price_per_area_distribution_histogram(data)
+            price_per_area = st.slider(
+                "Price per Area (R$/m²)",
+                min_value=math.floor(data["price_per_area"].min()/100)*100,
+                max_value=math.ceil(data["price_per_area"].max()/100)*100,
+                step=100,
+                value=math.ceil(data["price_per_area"].max()/100)*100,
+                format="R$/m² %d",
+                label_visibility="collapsed",
+                key='price_per_area'
+            )
 
-        if number_bedrooms:
-            data = data.query("bedrooms in @number_bedrooms")
+            st.divider()
+            st.markdown("Preço (R$)")
+            price = st.slider(
+                "Price",
+                min_value=math.floor(data["price"].min()/100000)*100000,
+                max_value=math.ceil(data["price"].max()/100000)*100000,
+                value=math.ceil(data["price"].max()/100000)*100000,
+                step=100000,
+                format="R$ %d",
+                label_visibility="collapsed",
+                key='price'
+            )
 
-        st.divider()
+            st.divider()
+            st.markdown("Área (m²)")
+            area = st.slider(
+                "Area",
+                min_value=math.floor(data["total_area_m2"].min()/50)*50,
+                max_value=math.ceil(data["total_area_m2"].max()/50)*50,
+                value=(math.floor(data["total_area_m2"].min()/50)*50, math.ceil(data["total_area_m2"].max()/50)*50),
+                step=50,
+                format="m² %d",
+                label_visibility="collapsed",
+                key='area'
+            )
+            submit = st.form_submit_button("Filtrar anúncios")
 
-        new_listings = st.toggle(label="New Listings", value=False)
-
-        if new_listings:
-            data = data.query("new_listing == @new_listings")
-
-        st.divider()
-
-        st.markdown("Price per area")
-
-        create_price_per_area_distribution_histogram(data)
-
-        price_per_area = st.slider(
-            "Price per Area",
-            min_value=data["price_per_area"].min(),
-            max_value=data["price_per_area"].max(),
-            step=100.0,
-            value=data["price_per_area"].max(),
-            format="R$/m² %d",
-            label_visibility="collapsed",
-        )
-
-        if price_per_area:
-            data = data.query("price_per_area <= @price_per_area+1")
-
-        st.divider()
-        st.markdown("Price")
-        price = st.slider(
-            "Price",
-            max_value=data["price"].max()+0.01,
-            min_value=data["price"].min()+0.001,
-            value=data["price"].max()+0.01,
-            step=100000.0,
-            format="R$ %d",
-            label_visibility="collapsed",
-        )
-
-        if price:
-            data = data.query("price <= @price")
-        
-        if st.button("Reset cache", type="primary"):
-            st.cache_data.clear()
+        if submit:
+            data = city_data.query("""(neighborhood in @neighborhood) & (new_listing == @new_listing) & (bedrooms >= @number_bedrooms) & (price_per_area <= @price_per_area) & (price <= @price) & (total_area_m2 >= @area[0]) & (total_area_m2 <= @area[1])""")
 
     return (city_data, data)
 
@@ -212,72 +219,46 @@ def create_listings_map(mapbox_token, data, city_data):
                 sizemin=6,
                 symbol="circle",
                 colorscale="Jet",
-                color=data["price_per_area"],
+                color=(data["price_per_area"]//100)*100,
                 cmin=min(price_per_area_colorbar),
                 cmax=max(price_per_area_colorbar),
             ),
         )
     )
 
-    new_listings = data[data.loc[:, "new_listing"]]
-
-    fig.add_trace(
-        go.Scattermapbox(
-            lat=new_listings["latitude"],
-            lon=new_listings["longitude"],
-            mode="markers",
-            marker=go.scattermapbox.Marker(
-                symbol="circle",
-                size=5,
-                allowoverlap=True,
-                # cauto=False,
-                color="darkorchid",
-            ),
-            name="New listings",
-            hoverinfo="skip",
-        )
-    )
-    
     dynamic_zoom = get_dynamic_zoom(data)
 
     fig.update_layout(
         hovermode="closest",
         hoverdistance=30,
         hoverlabel_align="left",
-        hoverlabel=dict(font_size=12,
-                        font_family="Aptos",
-                        bordercolor="silver"),
+        hoverlabel=dict(font_size=12, font_family="Aptos", bordercolor="silver"),
         # width=1500,
         height=800,
         margin=dict(l=0, r=0, t=0, b=0),
-        showlegend=True,
-        legend=dict(
-            yanchor="top",
-            y=0.99,
-            xanchor="left",
-            x=0.01,
-            bgcolor="ghostwhite",
-            itemsizing="constant",
-        ),
+        showlegend=False,
         mapbox=dict(
             style="streets",
             accesstoken=mapbox_token,
             bearing=0,
-            center=dict(lat=data["latitude"].mean(),
-                        lon=data["longitude"].mean()),
+            center=dict(lat=data["latitude"].mean(), lon=data["longitude"].mean()),
             pitch=0,
             zoom=12,
         ),
     )
 
-    st.plotly_chart(fig, use_container_width=True,
-                    config={'displayModeBar': False})
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 
 def get_dynamic_zoom(data):
-    standard_zoom = 500/(((data["latitude"].max() - data["latitude"].min())*(data["longitude"].max()-data["longitude"].min())))
+    standard_zoom = 500 / (
+        (
+            (data["latitude"].max() - data["latitude"].min())
+            * (data["longitude"].max() - data["longitude"].min())
+        )
+    )
     if standard_zoom > 15:
         standard_zoom = 15
     elif standard_zoom < 10:
         standard_zoom = 10
-    return standard_zoom 
+    return standard_zoom
