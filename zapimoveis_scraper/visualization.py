@@ -30,6 +30,23 @@ def remove_whitespace():
         unsafe_allow_html=True,
     )
 
+def increase_logo_size():
+    st.markdown(
+    """
+            <style>
+                div[data-testid="stSidebarHeader"] > img, div[data-testid="collapsedControl"] > img {
+                    height: 5rem;
+                    width: auto;
+                }
+                div[data-testid="stSidebarHeader"], div[data-testid="stSidebarHeader"] > *,
+                div[data-testid="collapsedControl"], div[data-testid="collapsedControl"] > * {
+                    display: flex;
+                    align-items: center;
+                }
+            </style>
+        """,
+        unsafe_allow_html=True
+    )
 
 def create_price_per_area_distribution_histogram(data):
     fig = go.Figure()
@@ -65,7 +82,7 @@ def create_price_per_area_distribution_histogram(data):
 def create_side_bar_with_filters():
 
 
-    # st.logo(r"assets\741ec0d841fdc835bd1699e8117e946d9bce84aebd71f5e28eab2b36.png")
+    st.logo(r"assets\Design sem nome.png")
 
     with st.sidebar:
         # Create title for Filter sidebar
@@ -77,7 +94,7 @@ def create_side_bar_with_filters():
             options=extract.get_unique_cities_from_db(),
             placeholder="Selecione uma cidade",
             index=0,
-            label_visibility="collapsed"            
+            label_visibility="collapsed",
         )
 
         data = extract.get_best_deals_from_city(city)
@@ -117,57 +134,66 @@ def create_side_bar_with_filters():
                 placeholder="Selecione um número de quartos",
                 label_visibility="collapsed",
                 format_func=lambda x: f"{int(x)}+" if x == x else None,
-                key='number_bedrooms',
+                key="number_bedrooms",
             )
-
 
             st.divider()
             st.markdown("Mostrar apenas novas ofertas?")
-            new_listing = st.toggle(label="New listings", label_visibility='collapsed', value=False, key='new_listings')
+            new_listing = st.toggle(
+                label="New listings",
+                label_visibility="collapsed",
+                value=False,
+                key="new_listings",
+            )
 
             st.divider()
             st.markdown("Preço por Área")
             create_price_per_area_distribution_histogram(data)
             price_per_area = st.slider(
                 "Price per Area (R$/m²)",
-                min_value=math.floor(data["price_per_area"].min()/100)*100,
-                max_value=math.ceil(data["price_per_area"].max()/100)*100,
+                min_value=math.floor(data["price_per_area"].min() / 100) * 100,
+                max_value=math.ceil(data["price_per_area"].max() / 100) * 100,
                 step=100,
-                value=math.ceil(data["price_per_area"].max()/100)*100,
+                value=math.ceil(data["price_per_area"].max() / 100) * 100,
                 format="R$/m² %d",
                 label_visibility="collapsed",
-                key='price_per_area'
+                key="price_per_area",
             )
 
             st.divider()
             st.markdown("Preço (R$)")
             price = st.slider(
                 "Price",
-                min_value=math.floor(data["price"].min()/100000)*100000,
-                max_value=math.ceil(data["price"].max()/100000)*100000,
-                value=math.ceil(data["price"].max()/100000)*100000,
+                min_value=math.floor(data["price"].min() / 100000) * 100000,
+                max_value=math.ceil(data["price"].max() / 100000) * 100000,
+                value=math.ceil(data["price"].max() / 100000) * 100000,
                 step=100000,
                 format="R$ %d",
                 label_visibility="collapsed",
-                key='price'
+                key="price",
             )
 
             st.divider()
             st.markdown("Área (m²)")
             area = st.slider(
                 "Area",
-                min_value=math.floor(data["total_area_m2"].min()/50)*50,
-                max_value=math.ceil(data["total_area_m2"].max()/50)*50,
-                value=(math.floor(data["total_area_m2"].min()/50)*50, math.ceil(data["total_area_m2"].max()/50)*50),
+                min_value=math.floor(data["total_area_m2"].min() / 50) * 50,
+                max_value=math.ceil(data["total_area_m2"].max() / 50) * 50,
+                value=(
+                    math.floor(data["total_area_m2"].min() / 50) * 50,
+                    math.ceil(data["total_area_m2"].max() / 50) * 50,
+                ),
                 step=50,
                 format="m² %d",
                 label_visibility="collapsed",
-                key='area'
+                key="area",
             )
             submit = st.form_submit_button("Filtrar anúncios")
 
         if submit:
-            data = city_data.query("""(neighborhood in @neighborhood) & (new_listing == @new_listing) & (bedrooms >= @number_bedrooms) & (price_per_area <= @price_per_area) & (price <= @price) & (total_area_m2 >= @area[0]) & (total_area_m2 <= @area[1])""")
+            data = city_data.query(
+                """(neighborhood in @neighborhood) & (new_listing == @new_listing) & (bedrooms >= @number_bedrooms) & (price_per_area <= @price_per_area) & (price <= @price) & (total_area_m2 >= @area[0]) & (total_area_m2 <= @area[1])"""
+            )
 
     return (city_data, data)
 
@@ -178,6 +204,7 @@ def customwrap(s, width=30):
 
 def create_listings_map(mapbox_token, data, city_data):
 
+    
     custom_data = np.stack(
         (
             data["link"],
@@ -218,7 +245,7 @@ def create_listings_map(mapbox_token, data, city_data):
                 sizemin=6,
                 symbol="circle",
                 colorscale="Jet",
-                color=(data["price_per_area"]//100)*100,
+                color=(data["price_per_area"] // 100) * 100,
                 cmin=min(price_per_area_colorbar),
                 cmax=max(price_per_area_colorbar),
             ),
@@ -234,7 +261,7 @@ def create_listings_map(mapbox_token, data, city_data):
         hoverlabel=dict(font_size=12, font_family="Aptos", bordercolor="silver"),
         # width=1500,
         height=800,
-        margin=dict(l=0, r=0, t=0, b=0),
+        margin=dict(l=0, r=0, t=50, b=0),
         showlegend=False,
         mapbox=dict(
             style="streets",
