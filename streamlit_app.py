@@ -25,8 +25,10 @@ visualization.increase_logo_size()
 
 
 (city_data, data) = visualization.create_side_bar_with_filters()
-
-visualization.create_listings_map(mapbox_token, data, city_data)
+@st.experimental_fragment
+def fragment():
+    visualization.create_listings_map(mapbox_token, data, city_data)
+fragment()
 
 if st.checkbox("Mostrar tabela"):
     st.write(data)

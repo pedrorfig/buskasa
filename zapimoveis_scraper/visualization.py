@@ -1,12 +1,12 @@
 # Visualization module
 import math
+import os
 import textwrap
+from pathlib import Path
 
 import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
-from pathlib import Path
-import os
 
 from etl_modules import extract
 
@@ -32,9 +32,10 @@ def remove_whitespace():
         unsafe_allow_html=True,
     )
 
+
 def increase_logo_size():
     st.markdown(
-    """
+        """
             <style>
                 div[data-testid="stSidebarHeader"] > img, div[data-testid="collapsedControl"] > img {
                     height: 5rem;
@@ -47,8 +48,9 @@ def increase_logo_size():
                 }
             </style>
         """,
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
+
 
 def create_price_per_area_distribution_histogram(data):
     fig = go.Figure()
@@ -83,8 +85,7 @@ def create_price_per_area_distribution_histogram(data):
 
 def create_side_bar_with_filters():
 
-
-    st.logo(os.path.join('assets', 'bargain_bungalow.png'))
+    st.logo(os.path.join("assets", "bargain_bungalow.png"))
 
     with st.sidebar:
         # Create title for Filter sidebar
@@ -206,7 +207,6 @@ def customwrap(s, width=30):
 
 def create_listings_map(mapbox_token, data, city_data):
 
-    
     custom_data = np.stack(
         (
             data["link"],
@@ -214,6 +214,7 @@ def create_listings_map(mapbox_token, data, city_data):
             data["price_per_area"],
             data["condo_fee"],
             data["total_area_m2"],
+            data.index
         ),
         axis=1,
     )
@@ -241,6 +242,7 @@ def create_listings_map(mapbox_token, data, city_data):
             name="All listings",
             customdata=custom_data,
             hovertemplate=hover_template,
+            # cluster={"enabled": True, 'step':10, 'size':2*(1 / data["price_per_area"])},
             marker=go.scattermapbox.Marker(
                 allowoverlap=True,
                 size=marker_size,
@@ -250,6 +252,7 @@ def create_listings_map(mapbox_token, data, city_data):
                 color=(data["price_per_area"] // 100) * 100,
                 cmin=min(price_per_area_colorbar),
                 cmax=max(price_per_area_colorbar),
+                opacity=1
             ),
         )
     )
@@ -261,7 +264,6 @@ def create_listings_map(mapbox_token, data, city_data):
         hoverdistance=30,
         hoverlabel_align="left",
         hoverlabel=dict(font_size=12, font_family="Aptos", bordercolor="silver"),
-        # width=1500,
         height=800,
         margin=dict(l=0, r=0, t=50, b=0),
         showlegend=False,
@@ -275,7 +277,10 @@ def create_listings_map(mapbox_token, data, city_data):
         ),
     )
 
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    event = st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False}, on_select='rerun', selection_mode='points')
+    
+    if event.selection['points']:
+        st.write(f"listing_id of point clicked: {event.selection['points'][0]['customdata'][5]}")
 
 
 def get_dynamic_zoom(data):
