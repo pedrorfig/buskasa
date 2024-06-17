@@ -5,6 +5,8 @@ import textwrap
 import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
+from pathlib import Path
+import os
 
 from etl_modules import extract
 
@@ -82,7 +84,7 @@ def create_price_per_area_distribution_histogram(data):
 def create_side_bar_with_filters():
 
 
-    st.logo(r"assets\Design sem nome.png")
+    st.logo(os.path.join('assets', 'bargain_bungalow.png'))
 
     with st.sidebar:
         # Create title for Filter sidebar
