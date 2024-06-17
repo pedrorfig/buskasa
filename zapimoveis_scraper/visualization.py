@@ -82,7 +82,7 @@ def create_price_per_area_distribution_histogram(data):
 def create_side_bar_with_filters():
 
 
-    st.logo(r"assets\Design sem nome.png")
+    st.logo(r"assets\bargain_bungalow.png")
 
     with st.sidebar:
         # Create title for Filter sidebar
