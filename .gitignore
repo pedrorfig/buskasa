@@ -36,6 +36,7 @@ pip-log.txt
 !/.env
 .env
 secrets.toml
+google_credentials.json
 
 #other stuff
 settings.json
