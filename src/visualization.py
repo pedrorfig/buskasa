@@ -9,6 +9,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 import src.extract as extract
+import src.save as save
 
 
 def format_page():
@@ -258,8 +259,6 @@ def create_listings_map(mapbox_token, data, city_data):
         )
     )
 
-    dynamic_zoom = get_dynamic_zoom(data)
-
     fig.update_layout(
         hovermode="closest",
         hoverdistance=30,
@@ -280,9 +279,14 @@ def create_listings_map(mapbox_token, data, city_data):
 
     event = st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False}, on_select='rerun', selection_mode='points')
     
-    if event.selection['points']:
-        st.write(f"listing_id of point clicked: {event.selection['points'][0]['customdata'][5]}")
+    if event.selection.points:
+        if 'listings_clicked' not in st.session_state:
+            st.session_state['listings_clicked'] = [event.selection['points'][0]['customdata'][5]]
+        else:
+            st.session_state['listings_clicked'].append(event.selection['points'][0]['customdata'][5])
 
+    return
+    
 
 def get_dynamic_zoom(data):
     standard_zoom = 500 / (

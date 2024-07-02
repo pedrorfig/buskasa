@@ -84,7 +84,7 @@ class ZapSearch:
             }
             listing_id_sql_statement = r"""
                 SELECT listing_id
-                from listings
+                from fact_listings
                 where
                     city= %(city)s and
                     neighborhood = %(neighborhood)s and
@@ -200,7 +200,7 @@ class ZapSearch:
                 "max_price": self.max_price,
             }
             listingd_on_db_sql_statement = """SELECT *
-                        from listings
+                        from fact_listings
                     WHERE
                         city = %(city)s and
                         neighborhood = %(neighborhood)s and
@@ -248,7 +248,7 @@ class ZapSearch:
                 "max_price": self.max_price,
             }
             listings_on_db_sql_statement = """SELECT *
-                        from listings
+                        from fact_listings
                     WHERE
                         city = %(city)s and
                         neighborhood = %(neighborhood)s and
@@ -294,7 +294,7 @@ class ZapSearch:
         with engine.connect() as conn:
             old_listings = pd.read_sql(
                 """SELECT listing_id
-                        from listings
+                        from fact_listings
                         where
                         updated_at < current_date - 1
                     """,
@@ -353,14 +353,12 @@ class ZapSearch:
 
     def save_listings_to_db(self):
         """ """
-        print("\tSaving listings to database")
-        # Retrieve listing to be saved in the database
-        listings = self.listings_to_add
-        if not listings.empty:
+        print("\tSaving records to database")
+        if not self.listings_to_add.empty:
             engine = self._engine
             with engine.begin() as conn:
-                save.upsert_df(df=listings,
-                               table_name="listings",
+                save.upsert_df(df=self.listings_to_add,
+                               table_name='fact_listings',
                                connection=conn)
 
     def get_existing_zip_codes(self):

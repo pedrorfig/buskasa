@@ -55,7 +55,7 @@ def get_city_id_from_city_and_state_names(state, city):
 
 
 def create_db_engine(
-    user=os.environ["DB_USER"], password=os.environ["DB_PASS"], port=5432
+    user=os.environ["DB_USER"], password=os.environ["DB_PASS"], port=6543
 ):
     """
     Creates engine needed to create connections to the database
@@ -95,7 +95,7 @@ def get_best_deals_from_city(city):
         search_results = pd.read_sql(
             """
             SELECT *
-            FROM listings
+            FROM fact_listings
             WHERE price_per_area_in_first_quartile = True
             AND city = %(city)s
             ORDER BY price_per_area DESC
@@ -119,7 +119,7 @@ def get_unique_cities_from_db():
         unique_cities = pd.read_sql(
             """
             SELECT DISTINCT city
-            FROM listings
+            FROM fact_listings
             """,
             con=conn
         )
@@ -145,7 +145,7 @@ def get_listings_urls(listing_ids, engine):
 
     query = f"""
         SELECT url
-        from listings
+        from fact_listings
         where listing_id in {tuple(listing_ids)} 
         """
     with engine.connect() as conn:
@@ -164,7 +164,7 @@ def delete_listings_from_db(unavailable_ids, engine):
         return f"No unavailable ids found"
     query = text(
         f"""
-            DELETE FROM listings
+            DELETE FROM fact_listings
             WHERE listing_id IN {unavailable_ids}
             """
     )
