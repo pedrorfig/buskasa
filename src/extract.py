@@ -74,10 +74,7 @@ def create_db_engine(
     assert user is not None, "Username is empty"
     assert password is not None, "Password is empty"
 
-    if is_running_locally():
-        db_uri = f"postgresql+psycopg2://{user}:{password}@aws-0-sa-east-1.pooler.supabase.com:{port}/postgres"
-    else:
-        db_uri = f"postgresql+psycopg2://{user}:{password}@aws-0-sa-east-1.pooler.supabase.com:{port}/postgres"
+    db_uri = f"postgresql+psycopg2://{user}:{password}@aws-0-sa-east-1.pooler.supabase.com:{port}/postgres"
     engine = create_engine(db_uri, future=True)
 
     return engine
@@ -125,20 +122,6 @@ def get_unique_cities_from_db():
         )
     engine.dispose()
     return unique_cities
-
-
-def is_running_locally():
-    """
-    Check if code is running locally or in the cloud
-
-    Returns:
-    """
-    hostname = socket.gethostname()
-    return (
-        hostname == "localhost"
-        or hostname == "127.0.0.1"
-        or hostname == "SAOX1Y6-58781"
-    )
 
 
 def get_listings_urls(listing_ids, engine):
