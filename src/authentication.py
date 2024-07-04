@@ -19,7 +19,7 @@ def create_google_credentials_file():
             "client_secret": os.environ["GOOGLE_CLIENT_SECRET"],
             "redirect_uris": [
                 "http://localhost:8501",
-                "https://bargain-bungalow.streamlit.app/",
+                "https://bargain-bungalow.streamlit.app",
             ],
             "javascript_origins": [
                 "http://localhost:8501",
@@ -49,13 +49,17 @@ def is_running_locally() -> bool:
         print(f"Error determining local IP: {e}")
         return False
 
-
-def get_authenticator():
-    
+def create_redirect_uri() -> str:
     if is_running_locally():
         redirect_uri = "http://localhost:8501"
     else:
         redirect_uri = "https://bargain-bungalow.streamlit.app"
+    
+    return redirect_uri
+
+def get_authenticator():
+    
+    redirect_uri = create_redirect_uri()
 
     create_google_credentials_file()
 
