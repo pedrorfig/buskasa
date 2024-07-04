@@ -1,6 +1,7 @@
 from streamlit_google_auth import Authenticate
 import socket
 import json
+import streamlit as st
 from dotenv import load_dotenv
 import os
 
@@ -57,8 +58,9 @@ def create_redirect_uri() -> str:
     
     return redirect_uri
 
+
 def get_authenticator():
-    
+
     redirect_uri = create_redirect_uri()
 
     create_google_credentials_file()
@@ -70,3 +72,18 @@ def get_authenticator():
         redirect_uri=redirect_uri,
     )
     return authenticator
+
+
+def initialize_connected_as_guest_state():
+    if 'connected_as_guest' not in st.session_state:
+        st.session_state['connected_as_guest'] = False
+
+def create_login_modal(authenticator):
+    @st.experimental_dialog("Login", width="small")
+    def login():
+        authenticator.login()
+        st.session_state['connected_as_guest'] = st.checkbox("Entrar como convidado")
+        if st.session_state['connected_as_guest']:
+            st.rerun()
+    if (not st.session_state['connected_as_guest'] and not st.session_state["connected"]):
+        login()

@@ -15,14 +15,13 @@ visualization.format_page()
 authenticator = authentication.get_authenticator()
 # Check if the user is already authenticated
 authenticator.check_authentification()
+authentication.initialize_connected_as_guest_state()
 # Display the login button if the user is not authenticated
-authenticator.login()
+authentication.create_login_modal(authenticator)
 
-
-if st.session_state["connected"]:
-
+if st.session_state["connected"] or st.session_state['connected_as_guest']:
     @st.experimental_dialog(
-        f"Bem-vindx {st.session_state.get('user_info', {}).get('name', '').split(' ')[0]}!",
+        f"Bem-vindx {st.session_state.get('user_info', {}).get('name', 'Visitante').split(' ')[0]}!",
         width="small",
     )
     def welcome_message():
