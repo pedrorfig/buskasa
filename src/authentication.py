@@ -55,7 +55,7 @@ def get_authenticator():
     if is_running_locally():
         redirect_uri = "http://localhost:8501"
     else:
-        redirect_uri = "https://bargain-bungalow.streamlit.app/"
+        redirect_uri = "https://bargain-bungalow.streamlit.app"
 
     create_google_credentials_file()
 
