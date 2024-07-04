@@ -171,7 +171,7 @@ def get_search_parameters():
     if len(sys.argv) == 3:
         print(f"Running for all neighborhoods in {sys.argv[1]} - {sys.argv[2]}")
         neighborhoods = \
-            extract.get_neighborhoods_from_city_and_state(sys.argv[1], sys.argv[2])
+            get_neighborhoods_from_city_and_state(sys.argv[1], sys.argv[2])
     elif len(sys.argv) == 4:
         print(f"Running for {sys.argv[3]} in {sys.argv[1]} - {sys.argv[2]}")
         neighborhoods = sys.argv[3].split(",")

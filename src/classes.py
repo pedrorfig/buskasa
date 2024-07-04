@@ -129,15 +129,6 @@ class ZapSearch:
         """
         self.zap_pages.append(zap_page)
 
-    def save_listings_to_check(self, listings):
-        """
-        Save all avaialble listings on a ZapPage,
-        event those already on the database
-        Args:
-            listings (list): listings to save
-        """
-        self.all_listing_from_search.extend(listings)
-
     def remove_fraudsters(self):
         """
         Remove possible fraudsters from house listings
