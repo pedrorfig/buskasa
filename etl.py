@@ -4,22 +4,14 @@ from src.classes import ZapPage, ZapSearch
 from dotenv import load_dotenv
 from src import extract
 
-# Define which variables will be used for the search
-business_type = "SALE"
-usage_type = "RESIDENTIAL"
-unit_type = "APARTMENT"
-min_area = 80
-min_price = 500000
-max_price = 1500000
-
 
 def main(
-    business_type: str,
-    usage_type: str,
-    unit_type: str,
-    min_area: int,
-    min_price: int,
-    max_price: int,
+    business_type: str = "SALE",
+    usage_type: str = "RESIDENTIAL",
+    unit_type: str = "APARTMENT",
+    min_area: int = 80,
+    min_price: int = 500000,
+    max_price: int = 1500000,
 ):
     """
     Perform a search on ZapImvoeis based on filters, scraping listings,
@@ -36,7 +28,7 @@ def main(
 
     # Load credential values
     load_dotenv()
-
+    # Get state, city and neighborhoods to be search through command prompt 
     state, city, neighborhoods = extract.get_search_parameters()
 
     for neighborhood in neighborhoods:
@@ -73,10 +65,8 @@ def main(
             zap_page.get_listings()
             # Create ZapItem object for each item in a page
             zap_page.create_zap_items()
-            # Save items to ZapSearch object
+            # Save items to ZapSearch
             zap_search.append_zap_page(zap_page)
-            # Save list of all listings scrapped
-            zap_search.save_listings_to_check(zap_page.listings_to_check)
             # If there number of listings reached the total, finish the search
             if zap_page.check_if_search_ended():
                 break
@@ -99,11 +89,4 @@ def main(
 
 if __name__ == "__main__":
 
-    main(
-        business_type,
-        usage_type,
-        unit_type,
-        min_area,
-        min_price,
-        max_price,
-    )
+    main()
