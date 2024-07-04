@@ -1,10 +1,9 @@
 import os
 
 import streamlit as st
-from streamlit_google_auth import Authenticate
-from dotenv import load_dotenv
+import src.authentication as authentication
 import src.visualization as visualization
-import src.save as save
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -12,16 +11,10 @@ mapbox_token = os.environ["MAPBOX_TOKEN"]
 
 visualization.format_page()
 
-authenticator = Authenticate(
-    secret_credentials_path="google_credentials.json",
-    cookie_name="bargain_bungalow_cookie_name",
-    cookie_key="bargain_bungalow_cookie_key",
-    redirect_uri="http://localhost:8501"
-)
-# st.write(st.session_state)
+# Create google authenticator object
+authenticator = authentication.get_authenticator()
 # Check if the user is already authenticated
 authenticator.check_authentification()
-# st.write(st.session_state)
 # Display the login button if the user is not authenticated
 authenticator.login()
 
