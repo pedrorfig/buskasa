@@ -29,7 +29,6 @@ if st.session_state["connected"] or st.session_state['connected_as_guest']:
             """Bargain Bungalow usa AI para ajudar você a encontrar
             os melhores negócios imobiliários."""
         )
-
     if "first_start" not in st.session_state:
         st.session_state.first_start = False
         welcome_message()
@@ -42,9 +41,16 @@ if st.session_state["connected"] or st.session_state['connected_as_guest']:
     @st.experimental_fragment
     def fragment():
         visualization.create_listings_map(mapbox_token, data, city_data)
+        # st.write(st.session_state['user_info']['email'], st.session_state['listings_clicked'])
         with st.expander("Ver resultados em tabela"):
             st.write(data)
     fragment()
     
     if st.button("Log out"):
         authenticator.logout()
+else:
+    st.write('You are not connected')
+    authorization_url = authenticator.get_authorization_url()
+    st.markdown(f'[Login]({authorization_url})')
+    st.link_button('Login', authorization_url)
+
