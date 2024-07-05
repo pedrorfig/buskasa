@@ -50,12 +50,13 @@ def is_running_locally() -> bool:
         print(f"Error determining local IP: {e}")
         return False
 
+
 def create_redirect_uri() -> str:
     if is_running_locally():
         redirect_uri = "http://localhost:8501"
     else:
         redirect_uri = "https://bargain-bungalow.streamlit.app"
-    
+
     return redirect_uri
 
 
@@ -75,15 +76,41 @@ def get_authenticator():
 
 
 def initialize_connected_as_guest_state():
-    if 'connected_as_guest' not in st.session_state:
-        st.session_state['connected_as_guest'] = False
+    if "connected_as_guest" not in st.session_state:
+        st.session_state["connected_as_guest"] = False
+
 
 def create_login_modal(authenticator):
-    @st.experimental_dialog("Login", width="small")
+    @st.experimental_dialog("Login", width="large")
     def login():
         authenticator.login()
-        st.session_state['connected_as_guest'] = st.checkbox("Entrar como convidado")
-        if st.session_state['connected_as_guest']:
+        st.markdown(
+            f"""
+      <style>
+      [class="row-widget stButton"]{{
+          display: flex;
+          justify-content: center}}
+      [class="st-emotion-cache-1vt4y43 ef3psqc12"]{{
+            padding: 8px 12px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            font-size: 10px;
+            background-color: gray;
+            color: white;
+            cursor:pointer
+      }};
+      [class="st-emotion-cache-1vt4y43 ef3psqc12:hover"]{{
+            background-color: gray;
+      }};
+      </style>
+    """,
+            unsafe_allow_html=True,
+        )
+        st.session_state["connected_as_guest"] = st.button(":white[Entrar como convidado]", type='secondary')
+        if st.session_state["connected_as_guest"]:
             st.rerun()
-    if (not st.session_state['connected_as_guest'] and not st.session_state["connected"]):
+
+    if not st.session_state["connected_as_guest"] and not st.session_state["connected"]:
         login()
