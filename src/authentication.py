@@ -7,7 +7,7 @@ import os
 
 load_dotenv()
 
-def create_google_credentials_file():
+def create_google_credentials_file(redirect_uri):
     # Data to be written
     dictionary = {
         "web": {
@@ -18,12 +18,10 @@ def create_google_credentials_file():
             "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
             "client_secret": os.environ["GOOGLE_CLIENT_SECRET"],
             "redirect_uris": [
-                # "http://localhost:8501",
-                "https://bargain-bungalow.streamlit.app",
+                redirect_uri
             ],
             "javascript_origins": [
-                # "http://localhost:8501",
-                "https://bargain-bungalow.streamlit.app",
+                redirect_uri
             ],
         }
     }
@@ -63,7 +61,7 @@ def get_authenticator():
 
     redirect_uri = create_redirect_uri()
 
-    create_google_credentials_file()
+    create_google_credentials_file(redirect_uri)
 
     authenticator = Authenticate(
         secret_credentials_path="google_credentials.json",
