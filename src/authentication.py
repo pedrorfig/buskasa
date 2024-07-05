@@ -7,7 +7,6 @@ import os
 
 load_dotenv()
 
-
 def create_google_credentials_file():
     # Data to be written
     dictionary = {
@@ -19,11 +18,11 @@ def create_google_credentials_file():
             "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
             "client_secret": os.environ["GOOGLE_CLIENT_SECRET"],
             "redirect_uris": [
-                "http://localhost:8501",
+                # "http://localhost:8501",
                 "https://bargain-bungalow.streamlit.app",
             ],
             "javascript_origins": [
-                "http://localhost:8501",
+                # "http://localhost:8501",
                 "https://bargain-bungalow.streamlit.app",
             ],
         }
