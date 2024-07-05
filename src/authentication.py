@@ -18,10 +18,12 @@ def create_google_credentials_file(redirect_uri):
             "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
             "client_secret": os.environ["GOOGLE_CLIENT_SECRET"],
             "redirect_uris": [
-                redirect_uri
+                'https://bargain-bungalow.streamlit.app',
+                'http://localhost:8501'
             ],
             "javascript_origins": [
-                redirect_uri
+                'https://bargain-bungalow.streamlit.app',
+                'http://localhost:8501'
             ],
         }
     }
