@@ -43,6 +43,7 @@ def is_running_locally() -> bool:
             or local_ip == "localhost"
             or hostname == "SAOX1Y6-58781"
         ):
+            st.write(local_ip, hostname)
             return True
         return False
     except Exception as e:
