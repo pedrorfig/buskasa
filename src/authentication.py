@@ -1,4 +1,4 @@
-from streamlit_google_auth import Authenticate
+from src.streamlit_google_auth import Authenticate
 import socket
 import json
 import streamlit as st
@@ -55,16 +55,12 @@ def create_redirect_uri() -> str:
         redirect_uri = "http://localhost:8501"
     else:
         redirect_uri = "https://bargain-bungalow.streamlit.app"
-
     return redirect_uri
 
 
 def get_authenticator():
-
     redirect_uri = create_redirect_uri()
-
     create_google_credentials_file(redirect_uri)
-
     authenticator = Authenticate(
         secret_credentials_path="google_credentials.json",
         cookie_name="bargain_bungalow_cookie_name",
