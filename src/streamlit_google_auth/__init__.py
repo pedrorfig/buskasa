@@ -56,6 +56,7 @@ class Authenticate:
                             """
 
             st.markdown(html_content, unsafe_allow_html=True)
+            st.link_button('Login', authorization_url)
 
     def get_authorization_url(self) -> str:
         flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
