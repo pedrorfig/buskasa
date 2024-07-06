@@ -30,21 +30,6 @@ class Authenticate:
     ) -> tuple:
         if not st.session_state["connected"]:
             authorization_url = self.get_authorization_url()
-            
-            # flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-            #     self.secret_credentials_path,  # replace with you json credentials from your google auth app
-            #     scopes=[
-            #         "openid",
-            #         "https://www.googleapis.com/auth/userinfo.profile",
-            #         "https://www.googleapis.com/auth/userinfo.email",
-            #     ],
-            #     redirect_uri=self.redirect_uri,
-            # )
-
-            # authorization_url, state = flow.authorization_url(
-            #     access_type="offline",
-            #     include_granted_scopes="true",
-            # )
 
             html_content = f"""
                             <div style="display: flex; justify-content: {justify_content};">
@@ -56,7 +41,7 @@ class Authenticate:
                             """
 
             st.markdown(html_content, unsafe_allow_html=True)
-            st.link_button('Login', authorization_url)
+            
 
     def get_authorization_url(self) -> str:
         flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
