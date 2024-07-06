@@ -51,13 +51,13 @@ def increase_logo_size():
     )
 
 
-def create_price_per_area_distribution_histogram(data):
+def create_price_per_area_distribution_histogram(city_data):
     fig = go.Figure()
-    _, bins = np.histogram(data["price_per_area"], bins="auto")
+    _, bins = np.histogram(city_data["price_per_area"], bins="auto")
 
     fig.add_trace(
         go.Histogram(
-            x=data["price_per_area"],
+            x=city_data["price_per_area"],
             xbins={"size": bins[1] - bins[0]},
             marker={
                 "colorscale": "Jet",
@@ -102,7 +102,7 @@ def create_side_bar_with_filters():
         data = extract.get_best_deals_from_city(city)
 
         data = data.query("city == @city")
-        city_data = data.copy()
+        city_price_per_area = [*data["price_per_area"]]
 
         with st.form("listing_filters"):
 
@@ -193,18 +193,18 @@ def create_side_bar_with_filters():
             submit = st.form_submit_button("Filtrar anúncios")
 
         if submit:
-            data = city_data.query(
-                """(neighborhood in @neighborhood) & (new_listing == @new_listing) & (bedrooms >= @number_bedrooms) & (price_per_area <= @price_per_area) & (price <= @price) & (total_area_m2 >= @area[0]) & (total_area_m2 <= @area[1])"""
+            data = data.query(
+                """(city == @city) & (neighborhood in @neighborhood) & (new_listing == @new_listing) & (bedrooms >= @number_bedrooms) & (price_per_area <= @price_per_area) & (price <= @price) & (total_area_m2 >= @area[0]) & (total_area_m2 <= @area[1])"""
             )
 
-    return (city_data, data)
+    return (city_price_per_area, data)
 
 
 def customwrap(s, width=30):
     return "<br>".join(textwrap.wrap(s, width=width))
 
 
-def create_listings_map(data, city_data):
+def create_listings_map(data, city_price_per_area):
 
     mapbox_token = os.environ["MAPBOX_TOKEN"]
     
@@ -230,7 +230,7 @@ def create_listings_map(data, city_data):
     )
 
     marker_size = 1 / data["price_per_area"]
-    price_per_area_colorbar = [*city_data["price_per_area"]]
+    price_per_area_colorbar = city_price_per_area
 
     # Initializing Figure
     fig = go.Figure()
@@ -316,7 +316,7 @@ def write_welcome_message_modal():
 
 
 @st.experimental_fragment
-def load_listings_map_and_table(data, city_data):
-    create_listings_map(data, city_data)
+def load_listings_map_and_table(data, city_price_per_area):
+    create_listings_map(data, city_price_per_area)
     with st.expander("Ver resultados em tabela"):
         st.write(data)
