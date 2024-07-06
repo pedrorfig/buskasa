@@ -36,7 +36,7 @@ if st.session_state["connected"] or st.session_state['connected_as_guest']:
 
     if st.button("Log out"):
         authenticator.logout()
-else:
-    st.write('You are not connected')
-    authorization_url = authenticator.get_authorization_url()
-    st.link_button('Login', authorization_url)
+# else:
+#     st.write('You are not connected')
+#     authorization_url = authenticator.get_authorization_url()
+#     st.link_button('Login', authorization_url)

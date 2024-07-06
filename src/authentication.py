@@ -42,7 +42,6 @@ def is_running_locally() -> bool:
             local_ip.startswith("192.")
             or hostname == "SAOX1Y6-58781"
         ):
-            st.write(local_ip, hostname)
             return True
         return False
     except Exception as e:
@@ -60,7 +59,6 @@ def create_redirect_uri() -> str:
 
 def get_authenticator():
     redirect_uri = create_redirect_uri()
-    st.write(redirect_uri)
     create_google_credentials_file(redirect_uri)
     authenticator = Authenticate(
         secret_credentials_path="google_credentials.json",
