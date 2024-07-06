@@ -39,8 +39,7 @@ def is_running_locally() -> bool:
         local_ip = socket.gethostbyname(hostname)
         # Check if the IP address is in the range of local IP addresses
         if (
-            local_ip.startswith("127.")
-            or local_ip == "localhost"
+            local_ip.startswith("192.")
             or hostname == "SAOX1Y6-58781"
         ):
             st.write(local_ip, hostname)
