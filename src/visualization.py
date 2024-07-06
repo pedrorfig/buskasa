@@ -83,11 +83,10 @@ def create_price_per_area_distribution_histogram(data):
 
 
 def create_side_bar_with_filters():
-
+    # Create sidebar logo
     st.logo(os.path.join("assets", "bargain_bungalow.png"))
 
     with st.sidebar:
-
         # Create title for Filter sidebar
         st.subheader(":black[Filtros]")
         # Create filter for city
@@ -205,8 +204,10 @@ def customwrap(s, width=30):
     return "<br>".join(textwrap.wrap(s, width=width))
 
 
-def create_listings_map(mapbox_token, data, city_data):
+def create_listings_map(data, city_data):
 
+    mapbox_token = os.environ["MAPBOX_TOKEN"]
+    
     custom_data = np.stack(
         (
             data["link"],
@@ -312,3 +313,10 @@ def write_welcome_message_modal():
     if "first_start" not in st.session_state:
         st.session_state.first_start = False
         welcome_message()
+
+
+@st.experimental_fragment
+def load_listings_map_and_table(data, city_data):
+    create_listings_map(data, city_data)
+    with st.expander("Ver resultados em tabela"):
+        st.write(data)

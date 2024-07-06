@@ -13,5 +13,4 @@ class App:
     """
     App object
     """
-
     def __init__(self):

@@ -1,42 +1,34 @@
-import os
-
 import streamlit as st
-import src.authentication as authentication
 import src.visualization as visualization
+from src.streamlit_google_auth import Authenticate
 from dotenv import load_dotenv
 
 load_dotenv()
 
-mapbox_token = os.environ["MAPBOX_TOKEN"]
-
 visualization.format_page()
 
 # Create google authenticator object
-authenticator = authentication.get_authenticator()
+auth = Authenticate(
+    secret_credentials_path="google_credentials.json",
+    cookie_name="bargain_bungalow_cookie_name",
+    cookie_key="bargain_bungalow_cookie_key"
+)
+auth.create_google_credentials_file()
 # Check if the user is already authenticated
-authenticator.check_authentification()
-authentication.initialize_connected_as_guest_state()
+auth.check_authentification()
+auth.initialize_connected_as_guest_state()
 # Display the login button if the user is not authenticated
-authentication.create_login_modal(authenticator)
+auth.create_login_modal()
 
-if st.session_state["connected"] or st.session_state['connected_as_guest']:
-    
+if st.session_state["connected"] or st.session_state["connected_as_guest"]:
+
     visualization.write_welcome_message_modal()
     visualization.remove_whitespace()
     visualization.increase_logo_size()
 
     (city_data, data) = visualization.create_side_bar_with_filters()
 
-    @st.experimental_fragment
-    def fragment():
-        visualization.create_listings_map(mapbox_token, data, city_data)
-        with st.expander("Ver resultados em tabela"):
-            st.write(data)
-    fragment()
+    visualization.load_listings_map_and_table(data=data, city_data=city_data)
 
     if st.button("Log out"):
-        authenticator.logout()
-# else:
-#     st.write('You are not connected')
-#     authorization_url = authenticator.get_authorization_url()
-#     st.link_button('Login', authorization_url)
+        auth.logout()
