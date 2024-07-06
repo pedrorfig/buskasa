@@ -300,3 +300,17 @@ def get_dynamic_zoom(data):
     elif standard_zoom < 10:
         standard_zoom = 10
     return standard_zoom
+
+def write_welcome_message_modal():
+    @st.experimental_dialog(
+        f"Bem-vindx {st.session_state.get('user_info', {}).get('name', 'Visitante').split(' ')[0]}!",
+        width="small",
+    )
+    def welcome_message():
+        st.write(
+            """Bargain Bungalow usa AI para ajudar você a encontrar
+            os melhores negócios imobiliários."""
+        )
+    if "first_start" not in st.session_state:
+        st.session_state.first_start = False
+        welcome_message()
