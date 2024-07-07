@@ -27,7 +27,7 @@ class AppVisualizer:
         self.data = pd.DataFrame()
         self.filtered_data = pd.DataFrame()
         self.city_price_per_area_distribution = []
-        self.update_map = True
+        
         
     def write_welcome_message_modal_first_start(self):
         @st.experimental_dialog(
@@ -192,7 +192,7 @@ class AppVisualizer:
                 self.filtered_data = self.data.query(
                     """(city == @city) & (neighborhood in @neighborhood) & (new_listing == @new_listing) & (bedrooms >= @number_bedrooms) & (price_per_area <= @price_per_area) & (price <= @price) & (total_area_m2 >= @area[0]) & (total_area_m2 <= @area[1])"""
                 )
-                self.update_map = True
+                # self.update_map = True
 
     def create_listings_map(self):
 
@@ -290,11 +290,9 @@ class AppVisualizer:
 
     @st.experimental_fragment
     def load_listings_map_and_table(self):
-        if self.update_map:
-            self.create_listings_map()
-            with st.expander("Ver resultados em tabela"):
-                st.write(self.filtered_data)
-        self.update_map = False
+        self.create_listings_map()
+        with st.expander("Ver resultados em tabela"):
+            st.write(self.filtered_data)
 
 
 class AppFormater:
