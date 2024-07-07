@@ -10,25 +10,30 @@ from dotenv import load_dotenv
 
 import src.extract as extract
 import src.visualization as visualization
+from src.streamlit_google_auth import Authenticate
+
 
 load_dotenv()
 
 mapbox_token = os.environ["MAPBOX_TOKEN"]
 
 
-class AppVisualizer:
+class App:
     """
     Visualizer class that takes care of the visualization of the app.
     """
 
     def __init__(self):
         self.city = None
-
         self.data = pd.DataFrame()
         self.filtered_data = pd.DataFrame()
         self.city_price_per_area_distribution = []
-        
-        
+        self.auth = Authenticate(
+            secret_credentials_path="google_credentials.json",
+            cookie_name="bargain_bungalow_cookie_name",
+            cookie_key="bargain_bungalow_cookie_key",
+        )
+
     def write_welcome_message_modal_first_start(self):
         @st.experimental_dialog(
             f"Bem-vindx {st.session_state.get('user_info', {}).get('name', 'Visitante').split(' ')[0]}!",
@@ -192,7 +197,10 @@ class AppVisualizer:
                 self.filtered_data = self.data.query(
                     """(city == @city) & (neighborhood in @neighborhood) & (new_listing == @new_listing) & (bedrooms >= @number_bedrooms) & (price_per_area <= @price_per_area) & (price <= @price) & (total_area_m2 >= @area[0]) & (total_area_m2 <= @area[1])"""
                 )
-                # self.update_map = True
+            
+            if st.button("Log out"):
+                self.auth.logout()
+
 
     def create_listings_map(self):
 
