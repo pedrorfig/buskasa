@@ -15,8 +15,7 @@ def upsert_df(
     2. Insert/update from temp table into table_name
     Returns: True if successful
     """
-    # Set listing_id as index
-    df = df.set_index("listing_id")
+
     # If the table does not exist, we should just use to_sql to create it
     if not connection.execute(
         sqlalchemy.text(

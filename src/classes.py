@@ -63,14 +63,6 @@ class ZapSearch:
         Get existing listing ids for the specified conditions
         """
         engine = self._engine
-        filter_conditions = {
-            "neighborhood": self.neighborhood,
-            "city": self.city,
-            "business_type": self.business_type,
-            "total_area_m2": self.min_area,
-            "min_price": self.min_price,
-            "max_price": self.max_price,
-        }
         with engine.connect() as conn:
             # Checking for existing listing_ids on the database
             # according to specified filters
@@ -348,7 +340,9 @@ class ZapSearch:
         if not self.listings_to_add.empty:
             engine = self._engine
             with engine.begin() as conn:
-                save.upsert_df(df=self.listings_to_add,
+                # Set listing_id as index
+                listings_to_add = self.listings_to_add.set_index("listing_id")
+                save.upsert_df(df=listings_to_add,
                                table_name='fact_listings',
                                connection=conn)
 

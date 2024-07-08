@@ -1,6 +1,5 @@
 import math
 import os
-import textwrap
 
 import numpy as np
 import pandas as pd
@@ -9,7 +8,7 @@ import streamlit as st
 from dotenv import load_dotenv
 
 import src.extract as extract
-import src.visualization as visualization
+import src.save as save
 from src.streamlit_google_auth import Authenticate
 
 
@@ -28,11 +27,13 @@ class App:
         self.data = pd.DataFrame()
         self.filtered_data = pd.DataFrame()
         self.city_price_per_area_distribution = []
+        self.listings_visited_by_user = []
         self.auth = Authenticate(
             secret_credentials_path="google_credentials.json",
             cookie_name="bargain_bungalow_cookie_name",
             cookie_key="bargain_bungalow_cookie_key",
         )
+        self._engine = extract.create_db_engine()
 
     def write_welcome_message_modal_first_start(self):
         @st.experimental_dialog(
@@ -48,6 +49,26 @@ class App:
         if "first_start" not in st.session_state:
             st.session_state.first_start = False
             welcome_message()
+
+    def get_listings_visited_by_user(self):
+        engine = self._engine
+        with engine.connect() as conn:
+            # Checking for existing listing_ids on the database
+            # according to specified filters
+            filter_conditions = {
+                "user": st.session_state['user_info']['email'],
+            }
+            visited_listing_id_sql_statement = r"""
+                SELECT DISTINCT visited_listing_id
+                FROM fact_listings_visited
+                WHERE "user" = %(user)s
+                """
+            ids = pd.read_sql(
+                visited_listing_id_sql_statement,
+                con=conn,
+                params=filter_conditions
+            )
+            self.listings_visited_by_user = [*ids["visited_listing_id"]]
 
     def create_price_per_area_distribution_histogram(self):
         fig = go.Figure()
@@ -88,63 +109,70 @@ class App:
             st.subheader(":black[Filtros]")
             # Create filter for city
             st.markdown("Cidade")
-            city = st.selectbox(
+            self.city = st.selectbox(
                 "city",
                 options=extract.get_unique_cities_from_db(),
                 placeholder="Selecione uma cidade",
                 index=0,
                 label_visibility="collapsed",
             )
-            self.city = city
+            self.data = extract.get_best_deals_from_city(self.city)
+            self.filtered_data = self.data.copy()
 
-            data = extract.get_best_deals_from_city(city)
-            self.data = data
-            self.filtered_data = data
-
-            self.city_price_per_area_distribution = [*data["price_per_area"]]
+            self.city_price_per_area_distribution = [*self.data["price_per_area"]]
 
             with st.form("listing_filters"):
 
+                st.markdown("Mostrar apenas novos anúncios?")
+                new_listing = st.toggle(
+                    label="New listings",
+                    label_visibility="collapsed",
+                    value=False,
+                    key="new_listings",
+                )
+                st.divider()
+                # Create visited listings filter
+                st.markdown("Mostrar apenas anúncios não visitados?")
+                visited_listings = st.toggle(
+                    label="Unvisited listings",
+                    label_visibility="collapsed",
+                    value=False,
+                    key="unvisited_listings",
+                )
+                st.divider()
                 # Create neighborhood filter
                 st.markdown("Bairro")
                 neighborhood = st.multiselect(
                     "Bairro",
-                    options=sorted(data["neighborhood"].unique()),
+                    options=sorted(self.data["neighborhood"].unique()),
                     placeholder="Selecione um bairro",
                     label_visibility="collapsed",
                 )
                 if not neighborhood:
-                    neighborhood = data["neighborhood"].unique()
+                    neighborhood = self.data["neighborhood"].unique()
 
                 st.divider()
 
                 st.markdown("Localização")
                 location_type = st.selectbox(
                     "Location Type",
-                    options=data["location_type"].unique(),
+                    options=self.data["location_type"].unique(),
                     placeholder="Selecione um tipo de localização",
                     index=None,
                     label_visibility="collapsed",
                 )
+                if not location_type:
+                    location_type = self.data["location_type"].unique()
 
                 st.divider()
                 st.markdown("Número de quartos")
                 number_bedrooms = st.selectbox(
                     "Number of Bedrooms",
-                    options=sorted(data["bedrooms"].unique(), reverse=False),
+                    options=sorted(self.data["bedrooms"].unique(), reverse=False),
                     placeholder="Selecione um número de quartos",
                     label_visibility="collapsed",
                     format_func=lambda x: f"{int(x)}+" if x == x else None,
                     key="number_bedrooms",
-                )
-
-                st.divider()
-                st.markdown("Mostrar apenas novas ofertas?")
-                new_listing = st.toggle(
-                    label="New listings",
-                    label_visibility="collapsed",
-                    value=False,
-                    key="new_listings",
                 )
 
                 st.divider()
@@ -154,10 +182,10 @@ class App:
 
                 price_per_area = st.slider(
                     "Price per Area (R$/m²)",
-                    min_value=math.floor(data["price_per_area"].min() / 100) * 100,
-                    max_value=math.ceil(data["price_per_area"].max() / 100) * 100,
+                    min_value=math.floor(self.data["price_per_area"].min() / 100) * 100,
+                    max_value=math.ceil(self.data["price_per_area"].max() / 100) * 100,
                     step=100,
-                    value=math.ceil(data["price_per_area"].max() / 100) * 100,
+                    value=math.ceil(self.data["price_per_area"].max() / 100) * 100,
                     format="R$/m² %d",
                     label_visibility="collapsed",
                     key="price_per_area",
@@ -167,9 +195,9 @@ class App:
                 st.markdown("Preço (R$)")
                 price = st.slider(
                     "Price",
-                    min_value=math.floor(data["price"].min() / 100000) * 100000,
-                    max_value=math.ceil(data["price"].max() / 100000) * 100000,
-                    value=math.ceil(data["price"].max() / 100000) * 100000,
+                    min_value=math.floor(self.data["price"].min() / 100000) * 100000,
+                    max_value=math.ceil(self.data["price"].max() / 100000) * 100000,
+                    value=math.ceil(self.data["price"].max() / 100000) * 100000,
                     step=100000,
                     format="R$ %d",
                     label_visibility="collapsed",
@@ -180,11 +208,11 @@ class App:
                 st.markdown("Área (m²)")
                 area = st.slider(
                     "Area",
-                    min_value=math.floor(data["total_area_m2"].min() / 50) * 50,
-                    max_value=math.ceil(data["total_area_m2"].max() / 50) * 50,
+                    min_value=math.floor(self.data["total_area_m2"].min() / 50) * 50,
+                    max_value=math.ceil(self.data["total_area_m2"].max() / 50) * 50,
                     value=(
-                        math.floor(data["total_area_m2"].min() / 50) * 50,
-                        math.ceil(data["total_area_m2"].max() / 50) * 50,
+                        math.floor(self.data["total_area_m2"].min() / 50) * 50,
+                        math.ceil(self.data["total_area_m2"].max() / 50) * 50,
                     ),
                     step=50,
                     format="m² %d",
@@ -194,13 +222,19 @@ class App:
                 submit = st.form_submit_button("Filtrar anúncios")
 
             if submit:
-                self.filtered_data = self.data.query(
-                    """(city == @city) & (neighborhood in @neighborhood) & (new_listing == @new_listing) & (bedrooms >= @number_bedrooms) & (price_per_area <= @price_per_area) & (price <= @price) & (total_area_m2 >= @area[0]) & (total_area_m2 <= @area[1])"""
-                )
-            
+                self.filtered_data = self.data.loc[
+                    (self.data["neighborhood"].isin(neighborhood))
+                    & (self.data["location_type"].isin(location_type))
+                    & (self.data["bedrooms"] >= number_bedrooms)
+                    & (self.data["price_per_area"] <= price_per_area)
+                    & (self.data["price"] <= price)
+                    & (self.data["total_area_m2"] >= area[0])
+                    & (self.data["total_area_m2"] <= area[1])
+                    & (self.data["new_listing"] == new_listing)
+                    & (~self.data.index.isin(self.listings_visited_by_user))
+                    ]
             if st.button("Log out"):
                 self.auth.logout()
-
 
     def create_listings_map(self):
 
@@ -283,17 +317,22 @@ class App:
             on_select="rerun",
             selection_mode="points",
         )
-
-        if event.selection.points:
-            if "listings_clicked" not in st.session_state:
-                st.session_state["listings_clicked"] = [
-                    event.selection["points"][0]["customdata"][5]
-                ]
-            else:
-                st.session_state["listings_clicked"].append(
-                    event.selection["points"][0]["customdata"][5]
+        if "user_info" in st.session_state:
+            if event.selection.points:
+                listing_visited = pd.DataFrame(
+                    {
+                        "visited_listing_id": event.selection["points"][0][
+                            "customdata"
+                        ][5],
+                    },
+                    index=[st.session_state.user_info["email"]],
                 )
-
+                listing_visited.index.name = "user"
+                engine = self._engine
+                with engine.begin() as conn:
+                    listing_visited.to_sql(
+                        "fact_listings_visited", conn, if_exists="append"
+                    )
         return
 
     @st.experimental_fragment
@@ -305,7 +344,7 @@ class App:
 
 class AppFormater:
     """
-    FormatApp class that takes care of the formatting of the app.
+    AppFormater class that takes care of the formatting of the app.
     """
 
     def __init__(self):

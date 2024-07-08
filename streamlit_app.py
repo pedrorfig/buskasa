@@ -22,5 +22,6 @@ if st.session_state["connected"] or st.session_state["connected_as_guest"]:
     app.write_welcome_message_modal_first_start()
     app_formater.remove_whitespace()
     app_formater.increase_logo_size()
+    app.get_listings_visited_by_user()
     app.create_side_bar_with_filters()
     app.load_listings_map_and_table()
