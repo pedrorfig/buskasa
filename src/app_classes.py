@@ -133,12 +133,20 @@ class App:
                 st.divider()
                 # Create visited listings filter
                 st.markdown("Mostrar apenas anúncios não visitados?")
-                visited_listings = st.toggle(
-                    label="Unvisited listings",
+                visited_listings = st.selectbox(
+                    label="Mostrar anúncios já visitados?",
                     label_visibility="collapsed",
-                    value=False,
+                    options=["Mostrar todos", "Apenas não visitados", "Apenas visitados"],
                     key="unvisited_listings",
                 )
+                if visited_listings == "Apenas não visitados":
+                    self.data = self.data[
+                        (~self.data.index.isin(self.listings_visited_by_user))
+                    ]
+                elif visited_listings == "Apenas visitados":
+                    self.data = self.data[
+                        (self.data.index.isin(self.listings_visited_by_user))
+                    ]
                 st.divider()
                 # Create neighborhood filter
                 st.markdown("Bairro")
@@ -231,7 +239,7 @@ class App:
                     & (self.data["total_area_m2"] >= area[0])
                     & (self.data["total_area_m2"] <= area[1])
                     & (self.data["new_listing"] == new_listing)
-                    & (~self.data.index.isin(self.listings_visited_by_user))
+                    # & (~self.data.index.isin(self.listings_visited_by_user))
                     ]
             if st.button("Log out"):
                 self.auth.logout()
@@ -310,6 +318,11 @@ class App:
             ),
         )
 
+        self.save_listings_visited_by_user_to_db(fig)
+        
+        return
+
+    def save_listings_visited_by_user_to_db(self, fig):
         event = st.plotly_chart(
             fig,
             use_container_width=True,
@@ -333,7 +346,6 @@ class App:
                     listing_visited.to_sql(
                         "fact_listings_visited", conn, if_exists="append"
                     )
-        return
 
     @st.experimental_fragment
     def load_listings_map_and_table(self):
