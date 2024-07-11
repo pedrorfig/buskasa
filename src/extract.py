@@ -22,9 +22,9 @@ def get_neighborhoods_from_city_and_state(state, city):
         headers={"Bearer": os.environ["BRASIL_ABERTO_API_KEY_PAID"]},
     )
     city_neighborhood_data = response.json()
-    neighborhoods = sorted(pd.DataFrame.from_dict(city_neighborhood_data.get("result"))[
-        "name"
-    ].tolist())
+    neighborhoods = sorted(
+        pd.DataFrame.from_dict(city_neighborhood_data.get("result"))["name"].tolist()
+    )
     return neighborhoods
 
 
@@ -33,7 +33,7 @@ def get_city_id_from_city_and_state_names(state, city):
     with engine.connect() as conn:
         # Checking for existing listing_ids on the database according
         # to the specified filters
-        filter_conditions = {'city': city, 'state': state}
+        filter_conditions = {"city": city, "state": state}
         city_id_dataframe = pd.read_sql(
             """
             SELECT
@@ -47,10 +47,10 @@ def get_city_id_from_city_and_state_names(state, city):
             LIMIT 1
                 """,
             con=conn,
-            params=filter_conditions
+            params=filter_conditions,
         )
 
-    city_id = city_id_dataframe.iloc[0,0]
+    city_id = city_id_dataframe.iloc[0, 0]
     return city_id
 
 
@@ -79,30 +79,61 @@ def create_db_engine(
 
     return engine
 
-
-@st.cache_data
-def get_best_deals_from_city(city):
+@st.cache_data()
+def get_listings(_conn, user=None):
     """
-    Read house listings from db table
-    Returns:
-
+    Get listings for registered user
     """
-    engine = create_db_engine()
-    with engine.connect() as conn:
-        search_results = pd.read_sql(
+    if user:
+        user_has_visits = pd.read_sql(
             """
-            SELECT *
-            FROM fact_listings
-            WHERE price_per_area_in_first_quartile = True
-            AND city = %(city)s
-            ORDER BY price_per_area DESC
-            """,
-            con=conn,
-            params={'city': city},
-            index_col="listing_id"
+                SELECT
+                    CASE
+                        WHEN COUNT(*) > 0 then True
+                        ELSE False
+                    END AS has_visits
+                FROM fact_listings_visited
+                WHERE "user" = %(user)s
+                """,
+            con=_conn,
+            params={"user": user},
         )
-    engine.dispose()
-    return search_results
+        if user_has_visits.iloc[0, 0]:
+            listings = pd.read_sql(
+                """
+                    SELECT *
+                    FROM fact_listings fl
+                    LEFT JOIN fact_listings_visited flv on flv.visited_listing_id = fl.listing_id
+                    WHERE
+                        price_per_area_in_first_quartile = True
+                    """,
+                con=_conn,
+                index_col="listing_id",
+                params={"user": user},
+            )
+        else:
+            listings = pd.read_sql(
+                        """
+                        SELECT *
+                        FROM fact_listings
+                        WHERE price_per_area_in_first_quartile = True
+                        """,
+                        con=_conn,
+                        index_col="listing_id"
+                    )
+    
+    else:
+        listings = pd.read_sql(
+                    """
+                    SELECT *
+                    FROM fact_listings
+                    WHERE price_per_area_in_first_quartile = True
+                    """,
+                    con=_conn,
+                    index_col="listing_id"
+                )
+
+    return listings
 
 
 def get_unique_cities_from_db():
@@ -118,23 +149,10 @@ def get_unique_cities_from_db():
             SELECT DISTINCT city
             FROM fact_listings
             """,
-            con=conn
+            con=conn,
         )
     engine.dispose()
     return unique_cities
-
-
-def get_listings_urls(listing_ids, engine):
-
-    query = f"""
-        SELECT url
-        from fact_listings
-        where listing_id in {tuple(listing_ids)} 
-        """
-    with engine.connect() as conn:
-        urls = pd.read_sql(query, con=conn).squeeze()
-
-    return urls
 
 
 def delete_listings_from_db(unavailable_ids, engine):
@@ -170,8 +188,7 @@ def get_search_parameters():
 
     if len(sys.argv) == 3:
         print(f"Running for all neighborhoods in {sys.argv[1]} - {sys.argv[2]}")
-        neighborhoods = \
-            get_neighborhoods_from_city_and_state(sys.argv[1], sys.argv[2])
+        neighborhoods = get_neighborhoods_from_city_and_state(sys.argv[1], sys.argv[2])
     elif len(sys.argv) == 4:
         print(f"Running for {sys.argv[3]} in {sys.argv[1]} - {sys.argv[2]}")
         neighborhoods = sys.argv[3].split(",")

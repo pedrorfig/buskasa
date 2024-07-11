@@ -1,3 +1,4 @@
+from datetime import datetime
 import math
 import os
 
@@ -33,7 +34,29 @@ class App:
             cookie_name="bargain_bungalow_cookie_name",
             cookie_key="bargain_bungalow_cookie_key",
         )
+        self.user_email = ""
+        self.name = ""
+        self.user_type = ""
         self._engine = extract.create_db_engine()
+
+    def get_user_data(self):
+
+        self.user_email = st.session_state["user_info"]["email"]
+        self.user_name = st.session_state["user_info"]["name"]
+        self.user_type = "Registered" if self.user_email else "Guest"
+
+    def get_listings(self):
+        """
+        Read house listings from db table
+        Returns:
+
+        """
+        engine = self._engine
+        with engine.connect() as conn:
+            if self.user_type == "Registered":
+                self.data = extract.get_listings(conn, self.user_email)
+            else:
+                self.data = extract.get_listings(conn)
 
     def write_welcome_message_modal_first_start(self):
         @st.experimental_dialog(
@@ -56,17 +79,15 @@ class App:
             # Checking for existing listing_ids on the database
             # according to specified filters
             filter_conditions = {
-                "user": st.session_state['user_info']['email'],
+                "user": st.session_state["user_info"]["email"],
             }
             visited_listing_id_sql_statement = r"""
-                SELECT DISTINCT visited_listing_id
+                SELECT visited_listing_id
                 FROM fact_listings_visited
                 WHERE "user" = %(user)s
                 """
             ids = pd.read_sql(
-                visited_listing_id_sql_statement,
-                con=conn,
-                params=filter_conditions
+                visited_listing_id_sql_statement, con=conn, params=filter_conditions
             )
             self.listings_visited_by_user = [*ids["visited_listing_id"]]
 
@@ -107,23 +128,25 @@ class App:
         with st.sidebar:
             # Create title for Filter sidebar
             st.subheader(":black[Filtros]")
-            # Create filter for city
-            st.markdown("Cidade")
-            self.city = st.selectbox(
-                "city",
-                options=extract.get_unique_cities_from_db(),
-                placeholder="Selecione uma cidade",
-                index=0,
-                label_visibility="collapsed",
-            )
-            self.data = extract.get_best_deals_from_city(self.city)
-            self.filtered_data = self.data.copy()
 
-            self.city_price_per_area_distribution = [*self.data["price_per_area"]]
+            self.filtered_data = self.data.copy()
 
             with st.form("listing_filters"):
 
-                st.markdown("Mostrar apenas novos anúncios?")
+                # Create filter for city
+                st.markdown("Cidade")
+                city = st.selectbox(
+                    "city",
+                    options=self.data["city"].unique(),
+                    placeholder="Selecione uma cidade",
+                    index=0,
+                    label_visibility="collapsed",
+                )
+
+                self.city_price_per_area_distribution = [*self.data["price_per_area"]]
+
+                st.divider()
+                st.markdown("Mostrar apenas novos anúncios")
                 new_listing = st.toggle(
                     label="New listings",
                     label_visibility="collapsed",
@@ -132,21 +155,14 @@ class App:
                 )
                 st.divider()
                 # Create visited listings filter
-                st.markdown("Mostrar apenas anúncios não visitados?")
-                visited_listings = st.selectbox(
-                    label="Mostrar anúncios já visitados?",
+                st.markdown("Mostrar apenas anúncios não visitados")
+                visited_listings = st.toggle(
+                    label="Mostrar apenas anúncios não visitados",
                     label_visibility="collapsed",
-                    options=["Mostrar todos", "Apenas não visitados", "Apenas visitados"],
-                    key="unvisited_listings",
+                    key="visited_listings",
+                    value=False,
                 )
-                if visited_listings == "Apenas não visitados":
-                    self.data = self.data[
-                        (~self.data.index.isin(self.listings_visited_by_user))
-                    ]
-                elif visited_listings == "Apenas visitados":
-                    self.data = self.data[
-                        (self.data.index.isin(self.listings_visited_by_user))
-                    ]
+
                 st.divider()
                 # Create neighborhood filter
                 st.markdown("Bairro")
@@ -230,6 +246,7 @@ class App:
                 submit = st.form_submit_button("Filtrar anúncios")
 
             if submit:
+                st.write(f'Test: {self.user_email if visited_listings else ""}')
                 self.filtered_data = self.data.loc[
                     (self.data["neighborhood"].isin(neighborhood))
                     & (self.data["location_type"].isin(location_type))
@@ -239,8 +256,14 @@ class App:
                     & (self.data["total_area_m2"] >= area[0])
                     & (self.data["total_area_m2"] <= area[1])
                     & (self.data["new_listing"] == new_listing)
-                    # & (~self.data.index.isin(self.listings_visited_by_user))
-                    ]
+                    & (self.data["city"] == city)
+                    & (
+                        self.data["user"].notnull()
+                        if visited_listings
+                        else self.data["user"].isnull()
+                    )
+                ]
+
             if st.button("Log out"):
                 self.auth.logout()
 
@@ -319,7 +342,7 @@ class App:
         )
 
         self.save_listings_visited_by_user_to_db(fig)
-        
+
         return
 
     def save_listings_visited_by_user_to_db(self, fig):
