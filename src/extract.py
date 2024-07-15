@@ -79,31 +79,22 @@ def create_db_engine(
 
     return engine
 
-@st.cache_data()
-def get_listings(_conn, user=None):
+@st.cache_data(show_spinner=False)
+def get_listings(_conn, user_has_visits=False, user=None):
     """
     Get listings for registered user
     """
     if user:
-        user_has_visits = pd.read_sql(
-            """
-                SELECT
-                    CASE
-                        WHEN COUNT(*) > 0 then True
-                        ELSE False
-                    END AS has_visits
-                FROM fact_listings_visited
-                WHERE "user" = %(user)s
-                """,
-            con=_conn,
-            params={"user": user},
-        )
-        if user_has_visits.iloc[0, 0]:
+        if user_has_visits:
             listings = pd.read_sql(
                 """
+                    with listings_visited_by_user  as (
+                        select * from fact_listings_visited as flv
+                        where flv."user" = %(user)s
+                        )
                     SELECT *
                     FROM fact_listings fl
-                    LEFT JOIN fact_listings_visited flv on flv.visited_listing_id = fl.listing_id
+                    LEFT JOIN listings_visited_by_user lvu on lvu.visited_listing_id = fl.listing_id
                     WHERE
                         price_per_area_in_first_quartile = True
                     """,
@@ -114,7 +105,7 @@ def get_listings(_conn, user=None):
         else:
             listings = pd.read_sql(
                         """
-                        SELECT *
+                        SELECT *, null as user
                         FROM fact_listings
                         WHERE price_per_area_in_first_quartile = True
                         """,
@@ -125,7 +116,7 @@ def get_listings(_conn, user=None):
     else:
         listings = pd.read_sql(
                     """
-                    SELECT *
+                    SELECT *, null as user
                     FROM fact_listings
                     WHERE price_per_area_in_first_quartile = True
                     """,
