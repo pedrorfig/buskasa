@@ -11,6 +11,8 @@ from dotenv import load_dotenv
 import src.extract as extract
 import src.save as save
 from src.streamlit_google_auth import Authenticate
+from sqlalchemy import Table, Column, Integer, String, MetaData, text
+from sqlalchemy.dialects.postgresql import insert
 
 
 load_dotenv()
@@ -41,9 +43,28 @@ class App:
 
     def get_user_data(self):
 
-        self.user_email = st.session_state["user_info"]["email"]
-        self.user_name = st.session_state["user_info"]["name"]
+        if "user_info" in st.session_state:
+            self.user_email = st.session_state["user_info"]["email"]
+            self.user_name = st.session_state["user_info"]["name"]
         self.user_type = "Registered" if self.user_email else "Guest"
+
+    def check_if_user_has_visits(self):
+        engine = self._engine
+        with engine.connect() as conn:
+            user_has_visits = pd.read_sql(
+                """
+                    SELECT
+                        CASE
+                            WHEN COUNT(*) > 0 then True
+                            ELSE False
+                        END AS has_visits
+                    FROM fact_listings_visited
+                    WHERE "user" = %(user)s
+                    """,
+                con=conn,
+                params={"user": self.user_email},
+            ).iloc[0, 0]
+        self.user_has_visits = user_has_visits
 
     def get_listings(self):
         """
@@ -53,10 +74,9 @@ class App:
         """
         engine = self._engine
         with engine.connect() as conn:
-            if self.user_type == "Registered":
-                self.data = extract.get_listings(conn, self.user_email)
-            else:
-                self.data = extract.get_listings(conn)
+            self.data = extract.get_listings(
+                conn, self.user_has_visits, self.user_email
+            )
 
     def write_welcome_message_modal_first_start(self):
         @st.experimental_dialog(
@@ -105,6 +125,7 @@ class App:
                     "cmin": bins.min(),
                     "cmax": bins.max(),
                 },
+                hoverinfo='skip'
             )
         )
 
@@ -117,13 +138,17 @@ class App:
             height=250,
         )
 
-        return st.plotly_chart(
-            fig, use_container_width=True, config={"displayModeBar": False}
+        st.plotly_chart(
+            fig,
+            use_container_width=True,
+            config={"displayModeBar": False, "responsive": False},
         )
+
+        return
 
     def create_side_bar_with_filters(self):
         # Create sidebar logo
-        st.logo(os.path.join("assets", "bargain_bungalow.png"))
+        st.logo(os.path.join("assets", "bargain_bungalow.png"),)
 
         with st.sidebar:
             # Create title for Filter sidebar
@@ -146,22 +171,24 @@ class App:
                 self.city_price_per_area_distribution = [*self.data["price_per_area"]]
 
                 st.divider()
-                st.markdown("Mostrar apenas novos anúncios")
-                new_listing = st.toggle(
+                st.markdown("Tempo de anúncio")
+                new_listing = st.selectbox(
                     label="New listings",
                     label_visibility="collapsed",
-                    value=False,
+                    options=['Todos', 'Apenas recentes (até 7 dias)'],
                     key="new_listings",
                 )
-                st.divider()
-                # Create visited listings filter
-                st.markdown("Mostrar apenas anúncios não visitados")
-                visited_listings = st.toggle(
-                    label="Mostrar apenas anúncios não visitados",
-                    label_visibility="collapsed",
-                    key="visited_listings",
-                    value=False,
-                )
+                if self.user_type == "Registered":
+                    st.divider()
+                    # Create visited listings filter
+
+                    st.markdown("Mostrar anúncios não visualizados")
+                    visited_listings = st.toggle(
+                        label="visited_listings",
+                        label_visibility="collapsed",
+                        key="visited_listings",
+                        value=True,
+                    )
 
                 st.divider()
                 # Create neighborhood filter
@@ -246,7 +273,6 @@ class App:
                 submit = st.form_submit_button("Filtrar anúncios")
 
             if submit:
-                st.write(f'Test: {self.user_email if visited_listings else ""}')
                 self.filtered_data = self.data.loc[
                     (self.data["neighborhood"].isin(neighborhood))
                     & (self.data["location_type"].isin(location_type))
@@ -255,12 +281,12 @@ class App:
                     & (self.data["price"] <= price)
                     & (self.data["total_area_m2"] >= area[0])
                     & (self.data["total_area_m2"] <= area[1])
-                    & (self.data["new_listing"] == new_listing)
+                    & (self.data["new_listing"] == True if new_listing == 'Apenas recentes (até 7 dias)' else self.data["new_listing"] == (True|False))
                     & (self.data["city"] == city)
                     & (
-                        self.data["user"].notnull()
+                        self.data["user"].isnull()
                         if visited_listings
-                        else self.data["user"].isnull()
+                        else self.data["user"].notnull()
                     )
                 ]
 
@@ -340,41 +366,47 @@ class App:
                 zoom=12,
             ),
         )
+        with st.container(border=True):
+            event = st.plotly_chart(
+                fig,
+                use_container_width=True,
+                config={"displayModeBar": False},
+                on_select="rerun",
+                selection_mode="points",
+            )
 
-        self.save_listings_visited_by_user_to_db(fig)
+        self.save_listings_visited_by_user_to_db(event)
 
         return
 
-    def save_listings_visited_by_user_to_db(self, fig):
-        event = st.plotly_chart(
-            fig,
-            use_container_width=True,
-            config={"displayModeBar": False},
-            on_select="rerun",
-            selection_mode="points",
-        )
+    def save_listings_visited_by_user_to_db(self, event):
         if "user_info" in st.session_state:
             if event.selection.points:
-                listing_visited = pd.DataFrame(
-                    {
-                        "visited_listing_id": event.selection["points"][0][
-                            "customdata"
-                        ][5],
-                    },
-                    index=[st.session_state.user_info["email"]],
-                )
-                listing_visited.index.name = "user"
                 engine = self._engine
                 with engine.begin() as conn:
-                    listing_visited.to_sql(
-                        "fact_listings_visited", conn, if_exists="append"
+                    conn.execute(
+                        text(
+                            """
+                                INSERT INTO fact_listings_visited ("user", "visited_listing_id")
+                                VALUES (:user, :visited_listing_id)
+                                ON CONFLICT ("user", "visited_listing_id")
+                                DO NOTHING;
+                            """
+                        ),
+                        {
+                            "user": self.user_email,
+                            "visited_listing_id": event.selection["points"][0][
+                                "customdata"
+                            ][5],
+                        },
                     )
 
     @st.experimental_fragment
     def load_listings_map_and_table(self):
         self.create_listings_map()
-        with st.expander("Ver resultados em tabela"):
+        with st.expander("Ver resultados em tabela", icon=":material/menu:"):
             st.write(self.filtered_data)
+        st.write(f"Last update: {datetime.today().date()}")
 
 
 class AppFormater:
@@ -400,6 +432,21 @@ class AppFormater:
                     }}
                     .st-emotion-cache-16txtl3 {{
                         padding: {padding_top+1}rem {padding_bottom}rem
+                    }}
+                    .st-emotion-cache-uzeiqp e1nzilvr4 {{
+                        padding: 16px 16px
+                    }}
+                    hr {{
+                        margin: 0px;
+                    }}
+                    .st-emotion-cache-lt1jbb {{
+                        gap: 0.5rem
+                    }}
+                    .element-container st-emotion-cache-d65s76 e1f1d6gn4 {{
+                        heigh: 0px
+                    }}
+                    .mapboxgl-map {{
+                        all: uset
                     }}
                 </style>""",
             unsafe_allow_html=True,

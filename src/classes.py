@@ -896,9 +896,9 @@ class ZapItem:
         Check if listing is new or not
         """
         current_date = datetime.now().date()
-        one_month_ago = current_date - timedelta(days=30)
+        week_old = current_date - timedelta(days=7)
 
-        if self.listing_date >= one_month_ago:
+        if self.listing_date >= week_old:
             return True
         else:
             return False
