@@ -1,6 +1,4 @@
 import streamlit as st
-from streamlit_navigation_bar import st_navbar
-import os
 from src.app_classes import AppFormater, App
 from dotenv import load_dotenv
 
@@ -28,22 +26,6 @@ if st.session_state["connected"] or st.session_state["connected_as_guest"]:
     app.get_listings_visited_by_user()
     app_formater.remove_whitespace()
     app_formater.increase_logo_size()
-    # parent_dir = os.path.dirname(os.path.abspath(__file__))
-    # logo_path = os.path.join(parent_dir, "assets", "bargain_bungalow.svg")
-    # # styles = {
-    # #     "nav": {
-    # #         "height": "8rem",
-    # #     }
-    # # }
-    # st_navbar(
-    #     ["Sobre"],
-    #     options={
-    #         "show_menu": False,
-    #         "use_padding": False,
-    #     },
-    #     # styles=styles,
-    #     # logo_path=logo_path,
-    # )
     app.create_side_bar_with_filters()
     app.load_listings_map_and_table()
     st.toast(
