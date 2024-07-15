@@ -7,11 +7,11 @@ from src import extract
 
 def main(
     business_type: str = "SALE",
-    usage_type: str = "RESIDENTIAL",
-    unit_type: str = "APARTMENT",
-    min_area: int = 80,
-    min_price: int = 500000,
-    max_price: int = 1500000,
+    usage_type: str = "RESIDENTIAL,RESIDENTIAL",
+    unit_type: str = "APARTMENT,HOME",
+    min_area: int = 30,
+    min_price: int = 200000,
+    max_price: int = 2000000,
 ):
     """
     Perform a search on ZapImvoeis based on filters, scraping listings,
