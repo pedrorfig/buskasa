@@ -85,7 +85,7 @@ class App:
         )
         def welcome_message():
             st.write(
-                """Bargain Bungalow usa AI para ajudar você a encontrar
+                """Buskasa usa IA para ajudar você a encontrar
                 os melhores negócios imobiliários."""
             )
 
@@ -432,7 +432,7 @@ class AppFormater:
         pass
 
     def format_page(self):
-        st.set_page_config(layout="wide", page_icon="🏘️", page_title="Bargain Bungalow")
+        st.set_page_config(layout="wide", page_icon="🏘️", page_title="Buskasa")
 
     def remove_whitespace(self):
         padding_top = 1.5

@@ -38,7 +38,7 @@ def create_redirect_uri() -> str:
     if is_running_locally():
         redirect_uri = "http://localhost:8501"
     else:
-        redirect_uri = "https://bargain-bungalow.streamlit.app"
+        redirect_uri = "https://buskasa.streamlit.app"
     return redirect_uri
 
 
