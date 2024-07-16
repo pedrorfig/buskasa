@@ -125,7 +125,7 @@ class App:
                     "cmin": bins.min(),
                     "cmax": bins.max(),
                 },
-                hoverinfo='skip'
+                hoverinfo="skip",
             )
         )
 
@@ -148,7 +148,9 @@ class App:
 
     def create_side_bar_with_filters(self):
         # Create sidebar logo
-        st.logo(os.path.join("assets", "bargain_bungalow.png"),)
+        st.logo(
+            os.path.join("assets", "bargain_bungalow.png"),
+        )
 
         with st.sidebar:
             # Create title for Filter sidebar
@@ -171,23 +173,26 @@ class App:
                 self.city_price_per_area_distribution = [*self.data["price_per_area"]]
 
                 st.divider()
-                st.markdown("Tempo de anúncio")
+                st.markdown("Tempo de anúncios")
                 new_listing = st.selectbox(
                     label="New listings",
                     label_visibility="collapsed",
-                    options=['Todos', 'Apenas recentes (até 7 dias)'],
+                    options=["Todos", "Apenas recentes (até 7 dias)"],
                     key="new_listings",
                 )
                 if self.user_type == "Registered":
                     st.divider()
                     # Create visited listings filter
 
-                    st.markdown("Mostrar anúncios não visualizados")
-                    visited_listings = st.toggle(
-                        label="visited_listings",
+                    st.markdown("Visualização de anúncios")
+                    visited_listings = st.selectbox(
+                        label="Visualização de anúncios",
                         label_visibility="collapsed",
-                        key="visited_listings",
-                        value=True,
+                        options=[
+                            "Todos",
+                            "Apenas já visualizados",
+                            "Apenas não visualizados",
+                        ],
                     )
 
                 st.divider()
@@ -281,12 +286,21 @@ class App:
                     & (self.data["price"] <= price)
                     & (self.data["total_area_m2"] >= area[0])
                     & (self.data["total_area_m2"] <= area[1])
-                    & (self.data["new_listing"] == True if new_listing == 'Apenas recentes (até 7 dias)' else self.data["new_listing"] == (True|False))
+                    & (
+                        self.data["new_listing"] == True
+                        if new_listing == "Apenas recentes (até 7 dias)"
+                        else True
+                    )
                     & (self.data["city"] == city)
                     & (
-                        self.data["user"].isnull()
+                        (
+                            self.data["user"].isnull()
+                            if visited_listings == "Apenas não visualizados"
+                            else self.data["user"].notnull()
+                        )
                         if visited_listings
-                        else self.data["user"].notnull()
+                        in ["Apenas não visualizados", "Apenas já visualizados"]
+                        else True
                     )
                 ]
 
