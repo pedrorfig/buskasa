@@ -14,7 +14,7 @@ import src.save as save
 import src.transform as transform
 
 
-class ZapSearch:
+class ZapNeighborhood:
     """
     Object containing attributes for a search query on a complete neighborhood
     """
@@ -277,11 +277,13 @@ class ZapSearch:
         with engine.connect() as conn:
             old_listings = pd.read_sql(
                 """SELECT listing_id
-                        from fact_listings
-                        where
-                        updated_at < current_date - 1
+                        FROM fact_listings
+                        WHERE
+                            updated_at < current_date - 1
+                            and neighborhood = %(neighborhood)s
                     """,
                 con=conn,
+                params={"neighborhood": self.neighborhood}
             )
         if not old_listings.empty:
             old_listings = old_listings.squeeze()
@@ -526,6 +528,7 @@ class ZapItem:
         self.updated_at = self.get_update_date()
         self.new_listing = self.is_new_listing()
         # Getting house attributes
+        self.unit_type = self.get_unit_type()
         self.bedrooms = self.get_number_of_bedrooms()
         self.bathrooms = self.get_number_of_bathrooms()
         self.vacancies = self.get_number_of_parking_spaces()
@@ -697,6 +700,11 @@ class ZapItem:
             if len(self._listing_data["listing"]["bedrooms"]) > 0
             else 0
         )
+    def get_unit_type(self):
+        """
+        Get the number of bedrooms available for a listing
+        """
+        return self._listing_data["listing"]["unitTypes"][0]
 
     def get_condo_fee(self):
         """

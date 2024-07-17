@@ -1,6 +1,6 @@
 # ETL pipeline to extract listings from ZAP Imóveis website,
 # process them and save to the database
-from src.classes import ZapPage, ZapSearch
+from src.classes import ZapPage, ZapNeighborhood
 from dotenv import load_dotenv
 from src import extract
 
@@ -37,7 +37,7 @@ def main(
         page_number = 0
         # Initialize a ZapSearch item that
         # consists of searching a whole neighborhood
-        zap_search = ZapSearch(
+        zap_neighborhood = ZapNeighborhood(
             state,
             city,
             neighborhood,
@@ -49,16 +49,16 @@ def main(
             min_area,
         )
         # Delete listings that are not available
-        zap_search.remove_listings_deleted()
+        zap_neighborhood.remove_listings_deleted()
         # Get existing listing ids from a neighborhood
-        zap_search.get_existing_ids()
+        zap_neighborhood.get_existing_ids()
         # Get existing zip codes from a neighborhood
-        zap_search.get_existing_zip_codes()
+        zap_neighborhood.get_existing_zip_codes()
         # Iterate through all pages on a neighborhood
         while True:
             print(f"\tPage #{page_number} on {neighborhood}")
             # Initialize a ZapPage object with data for each page_number searched
-            zap_page = ZapPage(page_number, zap_search)
+            zap_page = ZapPage(page_number, zap_neighborhood)
             # Get response for API call on a page_number
             zap_page.get_page()
             # Get all listings from a ZapPage
@@ -66,25 +66,25 @@ def main(
             # Create ZapItem object for each item in a page
             zap_page.create_zap_items()
             # Save items to ZapSearch
-            zap_search.append_zap_page(zap_page)
+            zap_neighborhood.append_zap_page(zap_page)
             # If there number of listings reached the total, finish the search
             if zap_page.check_if_search_ended():
                 break
             # Go to next page
             page_number += 1
         # Convert output to standard format before saving
-        zap_search.concat_zip_codes()
-        zap_search.concat_listings()
+        zap_neighborhood.concat_zip_codes()
+        zap_neighborhood.concat_listings()
         # Treating listings
-        zap_search.remove_fraudsters()
-        zap_search.remove_outliers()
+        zap_neighborhood.remove_fraudsters()
+        zap_neighborhood.remove_outliers()
         # highlight good deals
-        zap_search.calculate_price_per_area_first_quartile()
+        zap_neighborhood.calculate_price_per_area_first_quartile()
         # Save results to db
-        zap_search.save_listings_to_db()
-        zap_search.save_zip_codes_to_db()
+        zap_neighborhood.save_listings_to_db()
+        zap_neighborhood.save_zip_codes_to_db()
         # Close engine
-        zap_search.close_engine()
+        zap_neighborhood.close_engine()
 
 
 if __name__ == "__main__":
