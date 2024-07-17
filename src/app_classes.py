@@ -196,6 +196,15 @@ class App:
                     )
 
                 st.divider()
+                st.markdown("Tipo de Imóvel")
+                unit_type = st.selectbox(
+                    label="Tipo de imóvel",
+                    options=["Todos", "Apartamentos", "Casas"],
+                    placeholder="Selecione um tipo de imóvel",
+                    label_visibility="collapsed",
+                    index=0,
+                )
+                st.divider()
                 # Create neighborhood filter
                 st.markdown("Bairro")
                 neighborhood = st.multiselect(
@@ -279,28 +288,39 @@ class App:
 
             if submit:
                 self.filtered_data = self.data.loc[
-                    (self.data["neighborhood"].isin(neighborhood))
-                    & (self.data["location_type"].isin(location_type))
-                    & (self.data["bedrooms"] >= number_bedrooms)
-                    & (self.data["price_per_area"] <= price_per_area)
-                    & (self.data["price"] <= price)
-                    & (self.data["total_area_m2"] >= area[0])
-                    & (self.data["total_area_m2"] <= area[1])
-                    & (
-                        self.data["new_listing"] == True
-                        if new_listing == "Apenas recentes (até 7 dias)"
-                        else True
-                    )
-                    & (self.data["city"] == city)
-                    & (
-                        (
-                            self.data["user"].isnull()
-                            if visited_listings == "Apenas não visualizados"
-                            else self.data["user"].notnull()
+                    (
+                        (self.data["neighborhood"].isin(neighborhood))
+                        & (self.data["city"] == city)
+                        & (self.data["location_type"].isin(location_type))
+                        & (self.data["bedrooms"] >= number_bedrooms)
+                        & (self.data["price_per_area"] <= price_per_area)
+                        & (self.data["price"] <= price)
+                        & (self.data["total_area_m2"] >= area[0])
+                        & (self.data["total_area_m2"] <= area[1])
+                        & (
+                            (
+                                self.data["unit_type"] == "APARTMENT"
+                                if unit_type == "Apartamentos"
+                                else self.data["unit_type"] == "HOME"
+                            )
+                            if unit_type in ["Apartamentos", "Casas"]
+                            else True
                         )
-                        if visited_listings
-                        in ["Apenas não visualizados", "Apenas já visualizados"]
-                        else True
+                        & (
+                            self.data["new_listing"] == True
+                            if new_listing == "Apenas recentes (até 7 dias)"
+                            else True
+                        )
+                        & (
+                            (
+                                self.data["user"].isnull()
+                                if visited_listings == "Apenas não visualizados"
+                                else self.data["user"].notnull()
+                            )
+                            if visited_listings
+                            in ["Apenas não visualizados", "Apenas já visualizados"]
+                            else True
+                        )
                     )
                 ]
 
