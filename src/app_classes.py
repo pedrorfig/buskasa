@@ -149,7 +149,7 @@ class App:
     def create_side_bar_with_filters(self):
         # Create sidebar logo
         st.logo(
-            os.path.join("assets", "bargain_bungalow.png"),
+            os.path.join("assets", "Buskasa.png"),
         )
 
         with st.sidebar:
@@ -389,7 +389,7 @@ class App:
             hoverlabel_align="left",
             hoverlabel=dict(font_size=12, font_family="Aptos", bordercolor="silver"),
             height=800,
-            margin=dict(l=0, r=0, t=50, b=0),
+            margin=dict(l=0, r=0, t=0, b=0),
             showlegend=False,
             mapbox=dict(
                 style="streets",
@@ -440,7 +440,7 @@ class App:
         self.create_listings_map()
         with st.expander("Ver resultados em tabela", icon=":material/menu:"):
             st.write(self.filtered_data)
-        st.write(f"Last update: {datetime.today().date()}")
+        st.write(f"Última atualização: {datetime.today().date()}")
 
 
 class AppFormater:
