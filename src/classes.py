@@ -8,6 +8,7 @@ import cloudscraper
 import numpy as np
 import pandas as pd
 import requests as r
+from sqlalchemy import text
 
 import src.extract as extract
 import src.save as save
@@ -344,9 +345,24 @@ class ZapNeighborhood:
             with engine.begin() as conn:
                 # Set listing_id as index
                 listings_to_add = self.listings_to_add.set_index("listing_id")
-                save.upsert_df(df=listings_to_add,
-                               table_name='fact_listings',
-                               connection=conn)
+                conn.execute(
+                    text(
+                        """
+                            DELETE FROM fact_listings
+                            WHERE
+                                listing_id in :listing_ids
+                        """
+                    ),
+                    {"listing_ids": tuple(listings_to_add.index)},
+                )
+                listings_to_add.to_sql(
+                    name="fact_listings",
+                    con=conn,
+                    if_exists="append",
+                    index=True,
+                    index_label="listing_id",
+                )
+                
 
     def get_existing_zip_codes(self):
         """
