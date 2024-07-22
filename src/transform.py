@@ -1,3 +1,5 @@
+import textwrap
+
 import pandas as pd
 
 
@@ -22,3 +24,8 @@ def convert_to_dataframe(data):
             cols_to_drop.append(col)
     df = df.drop(columns=cols_to_drop)
     return df
+
+
+def wrap_string_with_fill(text, width):
+    wrapped_text = textwrap.fill(text, width)
+    return wrapped_text.replace('\n', '<br>')

@@ -148,7 +148,7 @@ class App:
     def create_side_bar_with_filters(self):
         # Create sidebar logo
         st.logo(
-            os.path.join("assets", "bargain_bungalow.png"),
+            os.path.join("assets", "Buskasa.png"),
         )
 
         with st.sidebar:
@@ -171,38 +171,56 @@ class App:
 
                 self.city_price_per_area_distribution = [*self.data["price_per_area"]]
 
-                st.divider()
-                st.markdown("Tempo de anúncios")
-                new_listing = st.selectbox(
-                    label="New listings",
-                    label_visibility="collapsed",
-                    options=["Todos", "Apenas recentes (até 7 dias)"],
-                    key="new_listings",
-                )
+                # st.divider()
+                # st.markdown("Tempo de anúncios")
+                # recent_listings_options_map = {
+                #     True: "Apenas anúncios recentes",
+                #     False: "Apenas anúncios mais antigos"
+                # }
+                # new_listing = st.multiselect(
+                #     label="New listings",
+                #     label_visibility="collapsed",
+                #     options=[True, False],
+                #     format_func=lambda x: recent_listings_options_map.get(x),
+                #     key="new_listings"
+                # )
+                # st.write(new_listing)
                 if self.user_type == "Registered":
                     st.divider()
-                    # Create visited listings filter
-
                     st.markdown("Visualização de anúncios")
-                    visited_listings = st.selectbox(
+                    visited_listings = st.multiselect(
                         label="Visualização de anúncios",
+                        options=["Anúncios já visualizados", "Anúncios não visualizados"],
+                        placeholder="Todos",
+                        key="visited_listings",
                         label_visibility="collapsed",
-                        options=[
-                            "Todos",
-                            "Apenas já visualizados",
-                            "Apenas não visualizados",
-                        ],
                     )
+                else:
+                    visited_listings = None
+
+                # Determine the condition based on the selection
+                if visited_listings == ["Anúncios já visualizados"]:
+                    user_filter = (self.data['user'].notnull())  # User email exists
+                elif visited_listings == ["Anúncios não visualizados"]:
+                    user_filter = (self.data['user'].isnull())  # User email is null
+                else:
+                    user_filter = (True)  # Show all rows
 
                 st.divider()
                 st.markdown("Tipo de Imóvel")
-                unit_type = st.selectbox(
+                unit_type = st.multiselect(
                     label="Tipo de imóvel",
-                    options=["Todos", "Apartamentos", "Casas"],
-                    placeholder="Selecione um tipo de imóvel",
-                    label_visibility="collapsed",
-                    index=0,
+                    options=["Apartamentos", "Casas"],
+                    placeholder="Apartamentos e Casas",
+                    label_visibility="collapsed"
                 )
+                # Determine the condition based on the selection
+                if unit_type == ["Apartamentos"]:
+                    unit_type_filter = (self.data['unit_type'] == 'APARTMENT')  # User email exists
+                elif unit_type == ["Casas"]:
+                    unit_type_filter = (self.data['unit_type'] == 'HOME')  # User email is null
+                else:
+                    unit_type_filter = (True)  # Show all rows
                 st.divider()
                 # Create neighborhood filter
                 st.markdown("Bairro")
@@ -296,33 +314,10 @@ class App:
                         & (self.data["price"] <= price)
                         & (self.data["total_area_m2"] >= area[0])
                         & (self.data["total_area_m2"] <= area[1])
-                        & (
-                            (
-                                self.data["unit_type"] == "APARTMENT"
-                                if unit_type == "Apartamentos"
-                                else self.data["unit_type"] == "HOME"
-                            )
-                            if unit_type in ["Apartamentos", "Casas"]
-                            else True
+                        & (unit_type_filter)
+                        & (user_filter)
                         )
-                        & (
-                            self.data["new_listing"] == True
-                            if new_listing == "Apenas recentes (até 7 dias)"
-                            else True
-                        )
-                        & (
-                            (
-                                self.data["user"].isnull()
-                                if visited_listings == "Apenas não visualizados"
-                                else self.data["user"].notnull()
-                            )
-                            if visited_listings
-                            in ["Apenas não visualizados", "Apenas já visualizados"]
-                            else True
-                        )
-                    )
                 ]
-
             if st.button("Log out"):
                 self.auth.logout()
 
@@ -345,11 +340,12 @@ class App:
         )
 
         hover_template = (
-            "<b>Price   </b>               R$%{customdata[1]:,.0f}<br>"
+            "<b>%{customdata[0]}</b> <br>"
+            + "<b>Price   </b>               R$%{customdata[1]:,.0f}<br>"
             + "<b>Price per Area </b> R$/m<sup>2</sup> %{customdata[2]:,.2f} <br>"
             + "<b>Condo Fee  </b>       R$ %{customdata[3]:,.2f} <br>"
             + "<b>Usable Area</b>      %{customdata[4]} m<sup>2</sup> <br>"
-            + "<b>%{customdata[0]}</b> <br>"
+            # dinamically wrap text of customdata[0] in <br> tags for line breaks
             + "<extra></extra>"
         )
 
@@ -388,7 +384,7 @@ class App:
             hoverlabel_align="left",
             hoverlabel=dict(font_size=12, font_family="Aptos", bordercolor="silver"),
             height=800,
-            margin=dict(l=0, r=0, t=50, b=0),
+            margin=dict(l=0, r=0, t=0, b=0),
             showlegend=False,
             mapbox=dict(
                 style="streets",
@@ -439,7 +435,7 @@ class App:
         self.create_listings_map()
         with st.expander("Ver resultados em tabela", icon=":material/menu:"):
             st.write(self.filtered_data)
-        st.write(f"Last update: {datetime.today().date()}")
+        st.write(f"Última atualização: {datetime.today().date()}")
 
 
 class AppFormater:

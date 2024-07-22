@@ -599,13 +599,14 @@ class ZapItem:
         Get Advertizer's name'
         """
         return self._listing_data["account"]["name"]
+    
 
     def create_html_link(self):
         """
         Create HTML link to listing
 
         """
-        return f'<a href="{self.url}">{self.description}</a>'
+        return f'<a href="{self.url}">{transform.wrap_string_with_fill(self.description, 50)}</a>'
 
     def create_listing_url(self):
         """
