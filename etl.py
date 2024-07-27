@@ -28,7 +28,7 @@ def main(
 
     # Load credential values
     load_dotenv()
-    # Get state, city and neighborhoods to be search through command prompt 
+    # Get state, city and neighborhoods to be search through command prompt
     state, city, neighborhoods = extract.get_search_parameters()
 
     for neighborhood in neighborhoods:
@@ -57,7 +57,8 @@ def main(
         # Iterate through all pages on a neighborhood
         while True:
             print(f"\tPage #{page_number} on {neighborhood}")
-            # Initialize a ZapPage object with data for each page_number searched
+            # Initialize a ZapPage object with data for each page_number
+            # searched
             zap_page = ZapPage(page_number, zap_neighborhood)
             # Get response for API call on a page_number
             zap_page.get_page()
