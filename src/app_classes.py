@@ -49,7 +49,7 @@ class App:
 
     def check_if_user_has_visits(self):
         engine = self._engine
-        with engine.connect() as conn:
+        with engine.begin() as conn:
             user_has_visits = pd.read_sql(
                 """
                     SELECT
@@ -72,7 +72,7 @@ class App:
 
         """
         engine = self._engine
-        with engine.connect() as conn:
+        with engine.begin() as conn:
             self.data = extract.get_listings(
                 conn, self.user_has_visits, self.user_email
             )
@@ -94,7 +94,7 @@ class App:
 
     def get_listings_visited_by_user(self):
         engine = self._engine
-        with engine.connect() as conn:
+        with engine.begin() as conn:
             # Checking for existing listing_ids on the database
             # according to specified filters
             filter_conditions = {
@@ -168,23 +168,34 @@ class App:
                     index=0,
                     label_visibility="collapsed",
                 )
-
                 self.city_price_per_area_distribution = [*self.data["price_per_area"]]
+                st.divider()
 
-                # st.divider()
-                # st.markdown("Tempo de anúncios")
-                # recent_listings_options_map = {
-                #     True: "Apenas anúncios recentes",
-                #     False: "Apenas anúncios mais antigos"
-                # }
-                # new_listing = st.multiselect(
-                #     label="New listings",
-                #     label_visibility="collapsed",
-                #     options=[True, False],
-                #     format_func=lambda x: recent_listings_options_map.get(x),
-                #     key="new_listings"
-                # )
-                # st.write(new_listing)
+                # Create neighborhood filter
+                st.markdown("Bairro")
+                neighborhood = st.multiselect(
+                    "Bairro",
+                    options=sorted(self.data["neighborhood"].unique()),
+                    placeholder="Selecione um bairro",
+                    label_visibility="collapsed",
+                )
+                if not neighborhood:
+                    neighborhood = self.data["neighborhood"].unique()
+
+                st.divider()
+                # Type of street location filter
+                st.markdown("Localização")
+                location_type = st.selectbox(
+                    "Location Type",
+                    options=self.data["location_type"].unique(),
+                    placeholder="Selecione um tipo de localização",
+                    index=None,
+                    label_visibility="collapsed",
+                )
+                if not location_type:
+                    location_type = self.data["location_type"].unique()
+
+
                 if self.user_type == "Registered":
                     st.divider()
                     st.markdown("Visualização de anúncios")
@@ -221,31 +232,6 @@ class App:
                     unit_type_filter = (self.data['unit_type'] == 'HOME')  # User email is null
                 else:
                     unit_type_filter = (True)  # Show all rows
-                st.divider()
-                # Create neighborhood filter
-                st.markdown("Bairro")
-                neighborhood = st.multiselect(
-                    "Bairro",
-                    options=sorted(self.data["neighborhood"].unique()),
-                    placeholder="Selecione um bairro",
-                    label_visibility="collapsed",
-                )
-                if not neighborhood:
-                    neighborhood = self.data["neighborhood"].unique()
-
-                st.divider()
-
-                st.markdown("Localização")
-                location_type = st.selectbox(
-                    "Location Type",
-                    options=self.data["location_type"].unique(),
-                    placeholder="Selecione um tipo de localização",
-                    index=None,
-                    label_visibility="collapsed",
-                )
-                if not location_type:
-                    location_type = self.data["location_type"].unique()
-
                 st.divider()
                 st.markdown("Número de quartos")
                 number_bedrooms = st.selectbox(
