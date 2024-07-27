@@ -30,7 +30,7 @@ def get_neighborhoods_from_city_and_state(state, city):
 
 def get_city_id_from_city_and_state_names(state, city):
     engine = create_db_engine()
-    with engine.connect() as conn:
+    with engine.begin() as conn:
         # Checking for existing listing_ids on the database according
         # to the specified filters
         filter_conditions = {"city": city, "state": state}
@@ -134,7 +134,7 @@ def get_unique_cities_from_db():
 
     """
     engine = create_db_engine()
-    with engine.connect() as conn:
+    with engine.begin() as conn:
         unique_cities = pd.read_sql(
             """
             SELECT DISTINCT city
@@ -160,7 +160,7 @@ def delete_listings_from_db(unavailable_ids, engine):
             WHERE listing_id IN {unavailable_ids}
             """
     )
-    with engine.connect() as conn:
+    with engine.begin() as conn:
         conn.execute(query)
         conn.commit()
     return
