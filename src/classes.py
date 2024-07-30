@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import requests as r
 from sqlalchemy import text
+import recordlinkage
 
 import src.extract as extract
 import src.transform as transform
@@ -154,9 +155,8 @@ class ZapNeighborhood:
             listings_from_recent_accounts = \
                 listings[listings['recent_account']]['listing_id']
             # Total area typos
-            listings_with_total_area_typos = listings[listings["total_area_m2"] >= 500][
-                "listing_id"
-            ]
+            listings_with_total_area_typos = \
+                listings[listings["total_area_m2"] >= 500]["listing_id"]
             # Populating series of listings to be removed
             listing_ids_to_remove = pd.concat(
                 [
@@ -192,7 +192,9 @@ class ZapNeighborhood:
                         business_type = %(business_type)s
                     """
             listings_on_db = pd.read_sql(
-                listingd_on_db_sql_statement, con=conn, params=filter_conditions
+                listingd_on_db_sql_statement,
+                con=conn,
+                params=filter_conditions
             )
         search_listings = self.listings_to_add
         if (not search_listings.empty) and (not listings_on_db.empty):
@@ -231,16 +233,19 @@ class ZapNeighborhood:
                 "min_price": self.min_price,
                 "max_price": self.max_price,
             }
-            listings_on_db_sql_statement = """
-                	SELECT *
-                        from fact_listings
-                    WHERE
-                        city = %(city)s and
-                        neighborhood = %(neighborhood)s and
-                        business_type = %(business_type)s
-                    """
+            listings_on_db_sql_statement = \
+                """
+                SELECT *
+                    from fact_listings
+                WHERE
+                    city = %(city)s and
+                    neighborhood = %(neighborhood)s and
+                    business_type = %(business_type)s
+                """
             listings_on_db = pd.read_sql(
-                listings_on_db_sql_statement, con=conn, params=filter_conditions
+                listings_on_db_sql_statement,
+                con=conn,
+                params=filter_conditions
             )
         search_listings = self.listings_to_add
         if not search_listings.empty and not listings_on_db.empty:
@@ -268,6 +273,33 @@ class ZapNeighborhood:
         else:
             self.listings_to_add = search_listings
         return "Outliers removed"
+
+    def remove_duplicated_listings(self):
+        """
+        Remove listings that are already on the DB
+        """
+        print("\tRemoving duplicated listings")
+        # Initializing indexer
+        indexer = recordlinkage.Index()
+        # Blocking comparisons on neighborhood
+        indexer.block(['street_address'])
+        # Indexing listings
+        candidate_links = indexer.index(self.listings_to_add.set_index('listing_id'))
+        compare_cl = recordlinkage.Compare()
+        # Modelling comparisons
+        compare_cl.numeric(left_on="price", right_on="price", method='linear', offset=10000, scale=100000, label="price")
+        compare_cl.numeric(left_on="total_area_m2", right_on="total_area_m2", method='linear', scale=50, label="total_area_m2")
+        compare_cl.numeric(left_on="street_number", right_on="street_number", method='linear', scale=100, label="street_number")
+        compare_cl.exact("floor", "floor", label="floor")
+        compare_cl.exact("bedrooms", "bedrooms", label="bedrooms")
+        compare_cl.exact("bathrooms", "bathrooms", label="bathrooms")
+        compare_cl.string("description", "description", method="lcs", threshold=0.85, label="description")
+        # Compare records
+        features = compare_cl.compute(candidate_links, self.listings_to_add.set_index('listing_id'))
+        # Filter compared records that have matches of at least 4 features
+        matches = features[features.sum(axis=1) >= 5]
+     
+        pass
 
     def remove_listings_deleted(self):
         """
@@ -780,8 +812,12 @@ class ZapItem:
         Get the street number of the listing, if it is not available guess one from the zip code
         """
         assigned_number = self._listing_data["link"]["data"]["streetNumber"]
-        if assigned_number != "":
-            return assigned_number
+        # If assigned number looks like a number, return it
+        if assigned_number.isnumeric():
+            return int(assigned_number)
+        # if it is not empty, but not a number, return 13
+        elif assigned_number:
+            return 13
         else:
             return self.get_random_street_number_from_zipcode()
 
@@ -826,12 +862,12 @@ class ZapItem:
                     # If there are two values,
                     # randomly assing one between max and min values
                     if (
-                        max(street_complement_numbers) - min(street_complement_numbers)
+                        (max(street_complement_numbers) - min(street_complement_numbers))
                         > 10
                     ):
                         num_max = int(max(street_complement_numbers))
                         num_min = int(min(street_complement_numbers))
-                        random_number = str(round(random.uniform(num_min, num_max)))
+                        random_number = round(random.uniform(num_min, num_max))
                     # If has one or more values and the word "fim" on it,
                     # them we have the minimum possible street number
                     elif (
@@ -839,9 +875,8 @@ class ZapItem:
                         and "fim" in street_complement
                     ):
                         num_min = int(min(street_complement_numbers))
-                        random_number = str(
+                        random_number = \
                             round(random.uniform(num_min, num_min + 100))
-                        )
                     # If has one or more values and the word "até" on it,
                     # them we have the maximum possible street number
                     elif (
@@ -849,7 +884,7 @@ class ZapItem:
                         and "até" in street_complement
                     ):
                         num_max = int(max(street_complement_numbers))
-                        random_number = str(round(random.uniform(1, num_max)))
+                        random_number = round(random.uniform(1, num_max))
                 else:
                     # Creating a random street number
                     random_number = 1
@@ -857,7 +892,7 @@ class ZapItem:
             # or data type street number will be 1
             except (ConnectionError, TypeError) as error:
                 print(f"Found error: {error}")
-                random_number = 1
+                random_number = 13
         return random_number
 
     @backoff.on_exception(backoff.expo, r.exceptions.RequestException, max_tries=10)
