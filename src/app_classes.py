@@ -195,13 +195,15 @@ class App:
                 if not location_type:
                     location_type = self.data["location_type"].unique()
 
-
                 if self.user_type == "Registered":
                     st.divider()
                     st.markdown("Visualização de anúncios")
                     visited_listings = st.multiselect(
                         label="Visualização de anúncios",
-                        options=["Anúncios já visualizados", "Anúncios não visualizados"],
+                        options=[
+                            "Anúncios já visualizados",
+                            "Anúncios não visualizados",
+                        ],
                         placeholder="Todos",
                         key="visited_listings",
                         label_visibility="collapsed",
@@ -211,11 +213,11 @@ class App:
 
                 # Determine the condition based on the selection
                 if visited_listings == ["Anúncios já visualizados"]:
-                    user_filter = (self.data['user'].notnull())  # User email exists
+                    user_filter = self.data["user"].notnull()  # User email exists
                 elif visited_listings == ["Anúncios não visualizados"]:
-                    user_filter = (self.data['user'].isnull())  # User email is null
+                    user_filter = self.data["user"].isnull()  # User email is null
                 else:
-                    user_filter = (True)  # Show all rows
+                    user_filter = True  # Show all rows
 
                 st.divider()
                 st.markdown("Tipo de Imóvel")
@@ -223,15 +225,19 @@ class App:
                     label="Tipo de imóvel",
                     options=["Apartamentos", "Casas"],
                     placeholder="Apartamentos e Casas",
-                    label_visibility="collapsed"
+                    label_visibility="collapsed",
                 )
                 # Determine the condition based on the selection
                 if unit_type == ["Apartamentos"]:
-                    unit_type_filter = (self.data['unit_type'] == 'APARTMENT')  # User email exists
+                    unit_type_filter = (
+                        self.data["unit_type"] == "APARTMENT"
+                    )  # User email exists
                 elif unit_type == ["Casas"]:
-                    unit_type_filter = (self.data['unit_type'] == 'HOME')  # User email is null
+                    unit_type_filter = (
+                        self.data["unit_type"] == "HOME"
+                    )  # User email is null
                 else:
-                    unit_type_filter = (True)  # Show all rows
+                    unit_type_filter = True  # Show all rows
                 st.divider()
                 st.markdown("Número de quartos")
                 number_bedrooms = st.selectbox(
@@ -302,7 +308,7 @@ class App:
                         & (self.data["total_area_m2"] <= area[1])
                         & (unit_type_filter)
                         & (user_filter)
-                        )
+                    )
                 ]
             if st.button("Log out"):
                 self.auth.logout()
@@ -399,6 +405,7 @@ class App:
             if event.selection.points:
                 engine = self._engine
                 with engine.begin() as conn:
+                    listing_clicked = event.selection["points"][0]["customdata"][5]
                     conn.execute(
                         text(
                             """
@@ -410,9 +417,7 @@ class App:
                         ),
                         {
                             "user": self.user_email,
-                            "visited_listing_id": event.selection["points"][0][
-                                "customdata"
-                            ][5],
+                            "visited_listing_id": listing_clicked,
                         },
                     )
 
