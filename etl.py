@@ -3,8 +3,6 @@
 from src.classes import ZapPage, ZapNeighborhood
 from dotenv import load_dotenv
 from src import extract
-
-
 def main(
     business_type: str = "SALE",
     usage_type: str = "RESIDENTIAL,RESIDENTIAL",
@@ -79,7 +77,7 @@ def main(
         # Treating listings
         zap_neighborhood.remove_fraudsters()
         zap_neighborhood.remove_outliers()
-        # zap_neighborhood.remove_duplicated_listings()
+        zap_neighborhood.remove_duplicated_listings()
         # highlight good deals
         zap_neighborhood.calculate_price_per_area_first_quartile()
         # Save results to db

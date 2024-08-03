@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 import requests as r
 from sqlalchemy import text
-import recordlinkage
 
 import src.extract as extract
 import src.transform as transform
@@ -279,27 +278,10 @@ class ZapNeighborhood:
         Remove listings that are already on the DB
         """
         print("\tRemoving duplicated listings")
-        # Initializing indexer
-        indexer = recordlinkage.Index()
-        # Blocking comparisons on neighborhood
-        indexer.block(['street_address'])
-        # Indexing listings
-        candidate_links = indexer.index(self.listings_to_add.set_index('listing_id'))
-        compare_cl = recordlinkage.Compare()
-        # Modelling comparisons
-        compare_cl.numeric(left_on="price", right_on="price", method='linear', offset=10000, scale=100000, label="price")
-        compare_cl.numeric(left_on="total_area_m2", right_on="total_area_m2", method='linear', scale=50, label="total_area_m2")
-        compare_cl.numeric(left_on="street_number", right_on="street_number", method='linear', scale=100, label="street_number")
-        compare_cl.exact("floor", "floor", label="floor")
-        compare_cl.exact("bedrooms", "bedrooms", label="bedrooms")
-        compare_cl.exact("bathrooms", "bathrooms", label="bathrooms")
-        compare_cl.string("description", "description", method="lcs", threshold=0.85, label="description")
-        # Compare records
-        features = compare_cl.compute(candidate_links, self.listings_to_add.set_index('listing_id'))
-        # Filter compared records that have matches of at least 4 features
-        matches = features[features.sum(axis=1) >= 5]
-     
-        pass
+        listings = self.listings_to_add
+        deduplucated_listings = listings.sort_values('price', ascending=True).drop_duplicates(subset=['bedrooms', 'bathrooms', 'floor', 'total_area_m2', 'zip_code',
+       'street_address', 'street_number'], keep='first')
+        self.listings_to_add = deduplucated_listings
 
     def remove_listings_deleted(self):
         """
