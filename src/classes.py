@@ -279,7 +279,7 @@ class ZapNeighborhood:
         """
         print("\tRemoving duplicated listings")
         listings = self.listings_to_add
-        deduplucated_listings = listings.sort_values('price', ascending=True).drop_duplicates(subset=['bedrooms', 'bathrooms', 'floor', 'total_area_m2', 'zip_code',
+        deduplucated_listings = listings.sort_values("price", ascending=True).drop_duplicates(subset=['bedrooms', 'bathrooms', 'floor', 'total_area_m2', 'zip_code',
        'street_address', 'street_number'], keep='first')
         self.listings_to_add = deduplucated_listings
 
@@ -340,10 +340,12 @@ class ZapNeighborhood:
     def save_zip_codes_to_db(self):
         """ """
         print("\tSaving ZIP codes to database")
-        zip_df = self.zip_codes_to_add
-        if not zip_df.empty:
+        zip_to_add = self.zip_codes_to_add
+        # Only new zip codes will be added
+        zip_to_add = zip_to_add[~zip_to_add.index.isin(self.existing_zip_codes.index)]
+        if not zip_to_add.empty:
             with self._engine.begin() as conn:
-                zip_df.to_sql(
+                zip_to_add.to_sql(
                     name="dim_zip_code",
                     con=conn,
                     if_exists="append",
