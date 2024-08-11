@@ -293,6 +293,20 @@ class App:
                     label_visibility="collapsed",
                     key="area",
                 )
+                st.divider()
+                st.markdown("Densidade de verde")
+                green_density = st.slider(
+                    "Green Density",
+                    min_value=math.floor(self.data["green_density"].min() / 0.05) * 0.05,
+                    max_value=math.ceil(self.data["green_density"].max() / 0.05) * 0.05,
+                    value=(
+                        math.floor(self.data["green_density"].min() / 0.05) * 0.05,
+                        math.ceil(self.data["green_density"].max() / 0.05) * 0.05,
+                    ),
+                    step=0.05,
+                    label_visibility="collapsed",
+                    key="green_density",
+                )
                 submit = st.form_submit_button("Filtrar anúncios")
 
             if submit:
@@ -306,6 +320,8 @@ class App:
                         & (self.data["price"] <= price)
                         & (self.data["total_area_m2"] >= area[0])
                         & (self.data["total_area_m2"] <= area[1])
+                        & (self.data["green_density"] >= green_density[0])
+                        & (self.data["green_density"] <= green_density[1])
                         & (unit_type_filter)
                         & (user_filter)
                     )

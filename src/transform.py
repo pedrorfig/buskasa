@@ -29,3 +29,46 @@ def convert_to_dataframe(data):
 def wrap_string_with_fill(text, width):
     wrapped_text = textwrap.fill(text, width)
     return wrapped_text.replace('\n', '<br>')
+
+
+def define_bounding_box(latitude, longitude, height=0.005, width=0.005):
+    # Calculate the minimum and maximum latitude
+
+    latitude_multiplier = latitude // height
+    longitude_multiplier = longitude // width
+
+    min_lat = round(latitude_multiplier * height, 3)
+    max_lat = round(min_lat + height, 3)
+
+    # Calculate the minimum and maximum longitude
+    min_lon = round(longitude_multiplier * width, 3)
+    max_lon = round(min_lon + width, 3)
+
+    return min_lat, max_lat, min_lon, max_lon
+
+
+def calculate_green_density(image):
+
+    # Convert the image to RGB mode
+    image = image.convert("RGB")
+
+    # Get the size of the image
+    width, height = image.size
+    
+    # Initialize counters
+    total_pixels = width * height
+    green_pixels = 0
+    # Iterate over each pixel in the image
+    for x in range(width):
+        for y in range(height):
+            # Get the RGB values of the pixel
+            r, g, b = image.getpixel((x, y))
+            # Check if the pixel is green
+            threshold = 10
+            if g > r + threshold and g > b + threshold:
+                green_pixels += 1
+    
+    # Calculate the tree density
+    tree_density = green_pixels / total_pixels
+    
+    return tree_density

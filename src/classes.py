@@ -74,8 +74,7 @@ class ZapNeighborhood:
                 "min_price": self.min_price,
                 "max_price": self.max_price,
             }
-            listing_id_sql_statement = \
-                """
+            listing_id_sql_statement = """
                 SELECT listing_id
                 from fact_listings
                 where
@@ -151,11 +150,13 @@ class ZapNeighborhood:
                 listings["advertizer"].isin(known_fraudsters)
             ]["listing_id"]
             # Fraudsters by accounts that are too recent
-            listings_from_recent_accounts = \
-                listings[listings['recent_account']]['listing_id']
+            listings_from_recent_accounts = listings[listings["recent_account"]][
+                "listing_id"
+            ]
             # Total area typos
-            listings_with_total_area_typos = \
-                listings[listings["total_area_m2"] >= 500]["listing_id"]
+            listings_with_total_area_typos = listings[listings["total_area_m2"] >= 500][
+                "listing_id"
+            ]
             # Populating series of listings to be removed
             listing_ids_to_remove = pd.concat(
                 [
@@ -191,9 +192,7 @@ class ZapNeighborhood:
                         business_type = %(business_type)s
                     """
             listings_on_db = pd.read_sql(
-                listingd_on_db_sql_statement,
-                con=conn,
-                params=filter_conditions
+                listingd_on_db_sql_statement, con=conn, params=filter_conditions
             )
         search_listings = self.listings_to_add
         if (not search_listings.empty) and (not listings_on_db.empty):
@@ -232,8 +231,7 @@ class ZapNeighborhood:
                 "min_price": self.min_price,
                 "max_price": self.max_price,
             }
-            listings_on_db_sql_statement = \
-                """
+            listings_on_db_sql_statement = """
                 SELECT *
                     from fact_listings
                 WHERE
@@ -242,12 +240,11 @@ class ZapNeighborhood:
                     business_type = %(business_type)s
                 """
             listings_on_db = pd.read_sql(
-                listings_on_db_sql_statement,
-                con=conn,
-                params=filter_conditions
+                listings_on_db_sql_statement, con=conn, params=filter_conditions
             )
         search_listings = self.listings_to_add
-        if not search_listings.empty and not listings_on_db.empty:
+        if (not search_listings.empty) and (not listings_on_db.empty):
+            print((not search_listings.empty),(not listings_on_db.empty))
             all_listings = pd.concat([listings_on_db, search_listings])
             # Calculate interquartile range
             q_low = all_listings["price_per_area"].quantile(0.25)
@@ -279,8 +276,20 @@ class ZapNeighborhood:
         """
         print("\tRemoving duplicated listings")
         listings = self.listings_to_add
-        deduplucated_listings = listings.sort_values("price", ascending=True).drop_duplicates(subset=['bedrooms', 'bathrooms', 'floor', 'total_area_m2', 'zip_code',
-       'street_address', 'street_number'], keep='first')
+        deduplucated_listings = listings.sort_values(
+            "price", ascending=True
+        ).drop_duplicates(
+            subset=[
+                "bedrooms",
+                "bathrooms",
+                "floor",
+                "total_area_m2",
+                "zip_code",
+                "street_address",
+                "street_number",
+            ],
+            keep="first",
+        )
         self.listings_to_add = deduplucated_listings
 
     def remove_listings_deleted(self):
@@ -540,6 +549,7 @@ class ZapItem:
     def __init__(self, listing, zap_page):
         # Getting ZapPage object
         self._zap_page = zap_page
+        self._db_engine = zap_page.zap_search._engine
         # Getting listing data
         self._listing_data = listing
         self.listing_id = self.get_listing_id()
@@ -567,12 +577,13 @@ class ZapItem:
         self.street_number = self.get_street_number()
         self.location_type = self.get_location_type()
         self.address = self.get_complete_address()
+        self.latitude, self.longitude = self.get_longitude_latitude()
         self.precision = None
+        self.green_density = self.get_green_density()
         # Getting cost data
         self.price = self.get_listing_price()
         self.condo_fee = self.get_condo_fee()
         self.price_per_area = self.calculate_price_per_area()
-        self.latitude, self.longitude = self.get_longitude_latitude()
         # Getting reference data
         self.url = self.create_listing_url()
         self.link = self.create_html_link()
@@ -580,16 +591,47 @@ class ZapItem:
         self.advertizer = self.get_advitizer_name()
         self.primary_phone = self.get_primary_phone()
         self.recent_account = self.is_recent_account()
-    
+
+    def get_green_density(self):
+        with self._db_engine.begin() as conn:
+            query = text(
+                """
+                SELECT green_density
+                FROM fact_image_analysis
+                WHERE min_lat <= :latitude AND :latitude <= max_lat
+                AND min_lon <= :longitude AND :longitude <= max_lon
+            """
+            )
+            result = conn.execute(
+                query,
+                parameters={"latitude": round(self.latitude,3), "longitude": round(self.longitude,3)},
+            )
+            green_densities = result.first()
+        if green_densities is None:
+            print(f"Point is not in any bounding box: {self.latitude}, {self.longitude}")
+            min_lat, max_lat, min_lon, max_lon = transform.define_bounding_box(
+                self.latitude, self.longitude
+            )
+            image = extract.get_sat_image(min_lat, max_lat, min_lon, max_lon)
+            green_density = transform.calculate_green_density(image)
+            extract.add_green_density_to_db(
+                self._db_engine, min_lat, max_lat, min_lon, max_lon, green_density
+            )
+        else:
+            green_density = green_densities[0]
+        return green_density
+
     def is_recent_account(self):
         """
         Check if account is more recent than 30 days
         """
-        account_date_str = self._listing_data.get('account',{}).get('createdDate', None)
+        account_date_str = self._listing_data.get("account", {}).get(
+            "createdDate", None
+        )
         if account_date_str is None:
             return True
         # if account more recent than 30 days
-        account_date = datetime.strptime(account_date_str, '%Y-%m-%dT%H:%M:%SZ')
+        account_date = datetime.strptime(account_date_str, "%Y-%m-%dT%H:%M:%SZ")
         # Get the current date
         current_date = datetime.utcnow()
         # Calculate the date 30 days ago
@@ -846,9 +888,8 @@ class ZapItem:
                     # If there are two values,
                     # randomly assing one between max and min values
                     if (
-                        (max(street_complement_numbers) - min(street_complement_numbers))
-                        > 10
-                    ):
+                        max(street_complement_numbers) - min(street_complement_numbers)
+                    ) > 10:
                         num_max = int(max(street_complement_numbers))
                         num_min = int(min(street_complement_numbers))
                         random_number = round(random.uniform(num_min, num_max))
@@ -859,8 +900,7 @@ class ZapItem:
                         and "fim" in street_complement
                     ):
                         num_min = int(min(street_complement_numbers))
-                        random_number = \
-                            round(random.uniform(num_min, num_min + 100))
+                        random_number = round(random.uniform(num_min, num_min + 100))
                     # If has one or more values and the word "até" on it,
                     # them we have the maximum possible street number
                     elif (

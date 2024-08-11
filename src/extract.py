@@ -1,6 +1,5 @@
+import io
 import os
-import socket
-from datetime import date
 import sys
 
 import pandas as pd
@@ -8,6 +7,7 @@ import requests as r
 import streamlit as st
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
+from PIL import Image
 
 load_dotenv()
 
@@ -126,6 +126,60 @@ def get_listings(_conn, user_has_visits=False, user=None):
 
     return listings
 
+
+def get_sat_image(min_lat, max_lat, min_lon, max_lon):
+    # Define the URL template
+    url_template = "https://api.mapbox.com/styles/v1/{username}/{style_id}/static/[{min_lon},{min_lat},{max_lon},{max_lat}]/{width}x{height}@2x?access_token={access_token}"
+
+    # Define the variable values
+    username = "mapbox"
+    style_id = "satellite-v9"
+    width = 300
+    height = 300
+    access_token = os.getenv('MAPBOX_TOKEN')
+    # Replace the variables in the URL template
+    url = url_template.format(
+        username=username,
+        style_id=style_id,
+        min_lat=min_lat,
+        max_lat=max_lat,
+        min_lon=min_lon,
+        max_lon=max_lon,
+        width=width,
+        height=height,
+        access_token=access_token
+    )
+
+    # Send the GET request
+    response = r.get(url)
+
+    # Check the response status code
+    if response.status_code == 200:
+        # Process the response data
+        image = Image.open(io.BytesIO(response.content))
+    else:
+        print("API call failed with status code:", response)
+        image = None
+    return image
+
+def add_green_density_to_db(db_engine, min_lat, max_lat, min_lon, max_lon, green_density):
+    with db_engine.begin() as conn:
+        query = text(
+        """
+        INSERT INTO fact_image_analysis (min_lat, max_lat, min_lon, max_lon, green_density)
+        VALUES (:min_lat, :max_lat, :min_lon, :max_lon, :green_density)
+        """)
+        conn.execute(
+            query,
+            parameters={
+                "min_lat": min_lat,
+                "max_lat": max_lat,
+                "min_lon": min_lon,
+                "max_lon": max_lon,
+                "green_density": green_density,
+            }
+        )
+    return
 
 def get_unique_cities_from_db():
     """
