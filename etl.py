@@ -52,6 +52,8 @@ def main(
         zap_neighborhood.get_existing_ids()
         # Get existing zip codes from a neighborhood
         zap_neighborhood.get_existing_zip_codes()
+        # Get image analysis for a neighborhood
+        zap_neighborhood.get_image_analysis()
         # Iterate through all pages on a neighborhood
         while True:
             print(f"\tPage #{page_number} on {neighborhood}")

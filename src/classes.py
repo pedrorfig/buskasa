@@ -402,6 +402,18 @@ class ZapNeighborhood:
                 "SELECT * from dim_zip_code", con=conn, index_col="zip_code"
             )
         self.existing_zip_codes = data
+    def get_image_analysis(self):
+        """
+        Read image analysis db table
+        Returns:
+
+        """
+        engine = self._engine
+        with engine.begin() as conn:
+            data = pd.read_sql(
+                "SELECT * from fact_image_analysis", con=conn, index_col="id"
+            )
+        self.existing_image_analysis = data
 
     def close_engine(self):
         self._engine.dispose()
@@ -593,20 +605,19 @@ class ZapItem:
         self.recent_account = self.is_recent_account()
 
     def get_green_density(self):
-        with self._db_engine.begin() as conn:
-            query = text(
-                """
-                SELECT green_density
-                FROM fact_image_analysis
-                WHERE min_lat <= :latitude AND :latitude <= max_lat
-                AND min_lon <= :longitude AND :longitude <= max_lon
-            """
-            )
-            result = conn.execute(
-                query,
-                parameters={"latitude": round(self.latitude,3), "longitude": round(self.longitude,3)},
-            )
-            green_densities = result.first()
+        green_densities = self._zap_page.zap_search.existing_image_analysis
+
+        # Filter the DataFrame based on the latitude and longitude
+        filtered_green_density = green_densities[
+            (green_densities["min_lat"] <= round(self.latitude, 3)) &
+            (round(self.latitude, 3) <= green_densities["max_lat"]) &
+            (green_densities["min_lon"] <= round(self.longitude, 3)) &
+            (round(self.longitude, 3) <= green_densities["max_lon"])
+        ]
+
+        # Get the green_density value from the filtered DataFrame
+        green_density = filtered_green_density["green_density"].values[0] if not filtered_green_density.empty else None
+
         if green_densities is None:
             print(f"Point is not in any bounding box: {self.latitude}, {self.longitude}")
             min_lat, max_lat, min_lon, max_lon = transform.define_bounding_box(
@@ -617,8 +628,7 @@ class ZapItem:
             extract.add_green_density_to_db(
                 self._db_engine, min_lat, max_lat, min_lon, max_lon, green_density
             )
-        else:
-            green_density = green_densities[0]
+
         return green_density
 
     def is_recent_account(self):
