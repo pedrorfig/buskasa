@@ -31,4 +31,4 @@ jobs:
           BRASIL_ABERTO_API_KEY_PAID: ${{ secrets.BRASIL_ABERTO_API_KEY_PAID }}
           BRASIL_ABERTO_API_KEY_FREE: ${{ secrets.BRASIL_ABERTO_API_KEY_FREE }}
 
-        run: python etl.py "São Paulo" "São Paulo" "Pinheiros,Paraíso,Cerqueira César,Consolação,Bela Vista,Jardins,Higienópolis,Jardim Paulista,Vila Mariana,Aclimação,Perdizes,Alto de Pinheiros,Itaim Bibi,Moema,Santa Cecília"
+        run: python etl.py "São Paulo" "São Paulo" "Paraíso,Cerqueira César,Consolação,Bela Vista,Jardins,Higienópolis,Jardim Paulista,Vila Mariana,Aclimação,Perdizes,Alto de Pinheiros,Itaim Bibi,Moema,Santa Cecília,Pinheiros"
