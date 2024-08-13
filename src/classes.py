@@ -592,6 +592,7 @@ class ZapItem:
         self.latitude, self.longitude = self.get_longitude_latitude()
         self.precision = None
         self.green_density = self.get_green_density()
+        self.is_quiet = self.is_quiet()
         # Getting cost data
         self.price = self.get_listing_price()
         self.condo_fee = self.get_condo_fee()
@@ -604,6 +605,8 @@ class ZapItem:
         self.primary_phone = self.get_primary_phone()
         self.recent_account = self.is_recent_account()
 
+    def is_quiet(self):
+        return (self.location_type != "Avenida") & (self.floor >= 8)
     def get_green_density(self):
         green_densities = self._zap_page.zap_search.existing_image_analysis
 
