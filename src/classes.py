@@ -159,7 +159,7 @@ class ZapNeighborhood:
                 "listing_id"
             ]
             # Listings that don't have a complete account
-            listings_with_unlicensed_accounts = listings[listings["account_is_incomplete"]]['listing_id']
+            listings_with_unlicensed_accounts = listings[listings["account_is_unlicensed"]]['listing_id']
             # Populating series of listings to be removed
             listing_ids_to_remove = pd.concat(
                 [
@@ -608,9 +608,9 @@ class ZapItem:
         self.advertizer = self.get_advitizer_name()
         self.primary_phone = self.get_primary_phone()
         self.recent_account = self.is_recent_account()
-        self.account_is_incomplete = self.account_is_incomplete()
+        self.account_is_unlicensed = self.account_is_unlicensed()
 
-    def account_is_incomplete(self):
+    def account_is_unlicensed(self):
         no_license_number = (self._listing_data.get('account', {}).get('licenseNumber') == '')
         return  no_license_number
 
