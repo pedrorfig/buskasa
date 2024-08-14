@@ -31,7 +31,7 @@ def wrap_string_with_fill(text, width):
     return wrapped_text.replace('\n', '<br>')
 
 
-def define_bounding_box(latitude, longitude, height=0.005, width=0.005):
+def define_bounding_box(latitude, longitude, height=0.01, width=0.01):
     # Calculate the minimum and maximum latitude
 
     latitude_multiplier = latitude // height
