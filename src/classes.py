@@ -159,14 +159,16 @@ class ZapNeighborhood:
                 "listing_id"
             ]
             # Listings that don't have a complete account
-            listings_with_unlicensed_accounts = listings[listings["account_is_unlicensed"]]['listing_id']
+            listings_with_unlicensed_accounts = listings[
+                listings["account_is_unlicensed"]
+            ]["listing_id"]
             # Populating series of listings to be removed
             listing_ids_to_remove = pd.concat(
                 [
                     listings_from_known_fraudsters,
                     listings_from_recent_accounts,
                     listings_with_total_area_typos,
-                    listings_with_unlicensed_accounts
+                    listings_with_unlicensed_accounts,
                 ]
             )
             self.listing_ids_to_remove = listing_ids_to_remove.to_list()
@@ -248,7 +250,7 @@ class ZapNeighborhood:
             )
         search_listings = self.listings_to_add
         if (not search_listings.empty) and (not listings_on_db.empty):
-            print((not search_listings.empty),(not listings_on_db.empty))
+            print((not search_listings.empty), (not listings_on_db.empty))
             all_listings = pd.concat([listings_on_db, search_listings])
             # Calculate interquartile range
             q_low = all_listings["price_per_area"].quantile(0.25)
@@ -406,6 +408,7 @@ class ZapNeighborhood:
                 "SELECT * from dim_zip_code", con=conn, index_col="zip_code"
             )
         self.existing_zip_codes = data
+
     def get_image_analysis(self):
         """
         Read image analysis db table
@@ -611,28 +614,36 @@ class ZapItem:
         self.account_is_unlicensed = self.account_is_unlicensed()
 
     def account_is_unlicensed(self):
-        no_license_number = (self._listing_data.get('account', {}).get('licenseNumber') == '')
-        return  no_license_number
+        no_license_number = (
+            self._listing_data.get("account", {}).get("licenseNumber") == ""
+        )
+        return no_license_number
 
-    
     def is_quiet(self):
         return (self.location_type != "Avenida") & (self.floor >= 8)
+
     def get_green_density(self):
         green_densities = self._zap_page.zap_search.existing_image_analysis
 
         # Filter the DataFrame based on the latitude and longitude
         filtered_green_density = green_densities[
-            (green_densities["min_lat"] <= round(self.latitude, 3)) &
-            (round(self.latitude, 3) <= green_densities["max_lat"]) &
-            (green_densities["min_lon"] <= round(self.longitude, 3)) &
-            (round(self.longitude, 3) <= green_densities["max_lon"])
+            (green_densities["min_lat"] <= round(self.latitude, 3))
+            & (round(self.latitude, 3) <= green_densities["max_lat"])
+            & (green_densities["min_lon"] <= round(self.longitude, 3))
+            & (round(self.longitude, 3) <= green_densities["max_lon"])
         ]
 
         # Get the green_density value from the filtered DataFrame
-        green_density = filtered_green_density["green_density"].values[0] if not filtered_green_density.empty else None
+        green_density = (
+            filtered_green_density["green_density"].values[0]
+            if not filtered_green_density.empty
+            else None
+        )
 
-        if green_densities is None:
-            print(f"Point is not in any bounding box: {self.latitude}, {self.longitude}")
+        if green_density is None:
+            print(
+                f"Point is not in any bounding box: {self.latitude}, {self.longitude}"
+            )
             min_lat, max_lat, min_lon, max_lon = transform.define_bounding_box(
                 self.latitude, self.longitude
             )
@@ -642,7 +653,30 @@ class ZapItem:
                 self._db_engine, min_lat, max_lat, min_lon, max_lon, green_density
             )
 
+            self.update_green_density_df(green_densities, green_density, min_lat, max_lat, min_lon, max_lon)
+
         return green_density
+
+    def update_green_density_df(self, green_densities, green_density, min_lat, max_lat, min_lon, max_lon):
+        green_density_entry = pd.DataFrame.from_dict(
+                        {
+                            "min_lat": [min_lat],
+                            "max_lat": [max_lat],
+                            "min_lon": [min_lon],
+                            "max_lon": [max_lon],
+                            "green_density": [green_density],
+                        }
+                    )
+    
+        updated_green_densities = pd.concat(
+                [
+                    green_densities,
+                    green_density_entry
+                ],
+                ignore_index=True,
+                axis=0
+            )
+        self._zap_page.zap_search.existing_image_analysis = updated_green_densities
 
     def is_recent_account(self):
         """
