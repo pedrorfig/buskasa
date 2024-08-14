@@ -144,6 +144,7 @@ class ZapNeighborhood:
         listings_from_known_fraudsters = pd.Series()
         listings_from_recent_accounts = pd.Series()
         listings_with_total_area_typos = pd.Series()
+        listings_with_unlicensed_accounts = pd.Series()
         if not listings.empty:
             # Known fraudster
             listings_from_known_fraudsters = listings[
@@ -157,12 +158,15 @@ class ZapNeighborhood:
             listings_with_total_area_typos = listings[listings["total_area_m2"] >= 500][
                 "listing_id"
             ]
+            # Listings that don't have a complete account
+            listings_with_unlicensed_accounts = listings[listings["account_is_incomplete"]]['listing_id']
             # Populating series of listings to be removed
             listing_ids_to_remove = pd.concat(
                 [
                     listings_from_known_fraudsters,
                     listings_from_recent_accounts,
                     listings_with_total_area_typos,
+                    listings_with_unlicensed_accounts
                 ]
             )
             self.listing_ids_to_remove = listing_ids_to_remove.to_list()
@@ -604,7 +608,13 @@ class ZapItem:
         self.advertizer = self.get_advitizer_name()
         self.primary_phone = self.get_primary_phone()
         self.recent_account = self.is_recent_account()
+        self.account_is_incomplete = self.account_is_incomplete()
 
+    def account_is_incomplete(self):
+        no_license_number = (self._listing_data.get('account', {}).get('licenseNumber') == '')
+        return  no_license_number
+
+    
     def is_quiet(self):
         return (self.location_type != "Avenida") & (self.floor >= 8)
     def get_green_density(self):
