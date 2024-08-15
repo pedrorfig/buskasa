@@ -307,6 +307,20 @@ class App:
                     label_visibility="collapsed",
                     key="green_density",
                 )
+
+                st.divider()
+                st.markdown("Silencioso")
+                is_quiet = st.toggle(
+                    label="Quiet",
+                    label_visibility="collapsed",
+                    key="is_quiet"
+                )
+
+                if is_quiet:
+                    is_quiet_filter = self.data["is_quiet"] == True
+                else:
+                    is_quiet_filter = True
+
                 submit = st.form_submit_button("Filtrar anúncios")
 
             if submit:
@@ -324,6 +338,7 @@ class App:
                         & (self.data["green_density"] <= green_density[1])
                         & (unit_type_filter)
                         & (user_filter)
+                        & (is_quiet_filter)
                     )
                 ]
             if st.button("Log out"):
