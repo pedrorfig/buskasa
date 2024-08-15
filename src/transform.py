@@ -48,27 +48,29 @@ def define_bounding_box(latitude, longitude, height=0.01, width=0.01):
 
 
 def calculate_green_density(image):
+    
+    if image is not None:
+        # Convert the image to RGB mode
+        image = image.convert("RGB")
 
-    # Convert the image to RGB mode
-    image = image.convert("RGB")
-
-    # Get the size of the image
-    width, height = image.size
-    
-    # Initialize counters
-    total_pixels = width * height
-    green_pixels = 0
-    # Iterate over each pixel in the image
-    for x in range(width):
-        for y in range(height):
-            # Get the RGB values of the pixel
-            r, g, b = image.getpixel((x, y))
-            # Check if the pixel is green
-            threshold = 10
-            if g > r + threshold and g > b + threshold:
-                green_pixels += 1
-    
-    # Calculate the tree density
-    tree_density = green_pixels / total_pixels
-    
-    return tree_density
+        # Get the size of the image
+        width, height = image.size
+        
+        # Initialize counters
+        total_pixels = width * height
+        green_pixels = 0
+        # Iterate over each pixel in the image
+        for x in range(width):
+            for y in range(height):
+                # Get the RGB values of the pixel
+                r, g, b = image.getpixel((x, y))
+                # Check if the pixel is green
+                threshold = 10
+                if g > r + threshold and g > b + threshold:
+                    green_pixels += 1
+        
+        # Calculate the tree density
+        green_density = green_pixels / total_pixels
+    else:
+        green_density = 0
+    return green_density
