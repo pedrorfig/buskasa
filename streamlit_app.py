@@ -18,7 +18,6 @@ app.auth.initialize_connected_as_guest_state()
 # Display the login button if the user is not authenticated
 app.auth.create_login_modal()
 if st.session_state["connected"] or st.session_state["connected_as_guest"]:
-    app.write_welcome_message_modal_first_start()
     app.get_user_data()
     app.check_if_user_has_visits()
     with st.spinner("Carregando anúncios..."):
