@@ -77,38 +77,27 @@ class App:
                 conn, self.user_has_visits, self.user_email
             )
 
-    def write_welcome_message_modal_first_start(self):
-        @st.experimental_dialog(
-            f"Bem-vindx {st.session_state.get('user_info', {}).get('name', 'Visitante').split(' ')[0]}!",
-            width="small",
-        )
-        def welcome_message():
-            st.write(
-                """Buskasa usa IA para ajudar você a encontrar
-                os melhores negócios imobiliários."""
-            )
-
-        if "first_start" not in st.session_state:
-            st.session_state.first_start = False
-            welcome_message()
 
     def get_listings_visited_by_user(self):
-        engine = self._engine
-        with engine.begin() as conn:
-            # Checking for existing listing_ids on the database
-            # according to specified filters
-            filter_conditions = {
-                "user": st.session_state["user_info"]["email"],
-            }
-            visited_listing_id_sql_statement = r"""
-                SELECT visited_listing_id
-                FROM fact_listings_visited
-                WHERE "user" = %(user)s
-                """
-            ids = pd.read_sql(
-                visited_listing_id_sql_statement, con=conn, params=filter_conditions
-            )
-            self.listings_visited_by_user = [*ids["visited_listing_id"]]
+        if 'user_info' in st.session_state:
+            engine = self._engine
+            with engine.begin() as conn:
+                # Checking for existing listing_ids on the database
+                # according to specified filters
+                filter_conditions = {
+                    "user": st.session_state["user_info"]["email"],
+                }
+                visited_listing_id_sql_statement = r"""
+                    SELECT visited_listing_id
+                    FROM fact_listings_visited
+                    WHERE "user" = %(user)s
+                    """
+                ids = pd.read_sql(
+                    visited_listing_id_sql_statement, con=conn, params=filter_conditions
+                )
+                self.listings_visited_by_user = [*ids["visited_listing_id"]]
+        else:
+            pass
 
     def create_price_per_area_distribution_histogram(self):
         fig = go.Figure()
@@ -153,7 +142,7 @@ class App:
 
         with st.sidebar:
             # Create title for Filter sidebar
-            st.subheader(":black[Filtros]")
+            st.subheader("Filtros")
 
             self.filtered_data = self.data.copy()
 
@@ -267,6 +256,7 @@ class App:
 
                 st.divider()
                 st.markdown("Preço (R$)")
+                
                 price = st.slider(
                     "Price",
                     min_value=math.floor(self.data["price"].min() / 100000) * 100000,
@@ -295,15 +285,9 @@ class App:
                 )
                 st.divider()
                 st.markdown("Densidade de verde")
-                green_density = st.slider(
+                green_density = st.select_slider(
                     "Green Density",
-                    min_value=math.floor(self.data["green_density"].min() / 0.05) * 0.05,
-                    max_value=math.ceil(self.data["green_density"].max() / 0.05) * 0.05,
-                    value=(
-                        math.floor(self.data["green_density"].min() / 0.05) * 0.05,
-                        math.ceil(self.data["green_density"].max() / 0.05) * 0.05,
-                    ),
-                    step=0.05,
+                    options=['Pouco Verde', 'Moderadamente Verde', 'Bastante Verde', 'Extremamente Verde'],
                     label_visibility="collapsed",
                     key="green_density",
                 )
@@ -334,8 +318,7 @@ class App:
                         & (self.data["price"] <= price)
                         & (self.data["total_area_m2"] >= area[0])
                         & (self.data["total_area_m2"] <= area[1])
-                        & (self.data["green_density"] >= green_density[0])
-                        & (self.data["green_density"] <= green_density[1])
+                        & (self.data["green_density_grouped"] == green_density)
                         & (unit_type_filter)
                         & (user_filter)
                         & (is_quiet_filter)
@@ -452,7 +435,7 @@ class App:
                         },
                     )
 
-    @st.experimental_fragment
+    @st.fragment
     def load_listings_map_and_table(self):
         self.create_listings_map()
         with st.expander("Ver resultados em tabela", icon=":material/menu:"):
