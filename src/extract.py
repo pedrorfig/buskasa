@@ -134,8 +134,8 @@ def get_sat_image(min_lat, max_lat, min_lon, max_lon):
     # Define the variable values
     username = "mapbox"
     style_id = "satellite-v9"
-    width = 300
-    height = 300
+    width = 500
+    height = 500
     access_token = os.getenv('MAPBOX_TOKEN')
     # Replace the variables in the URL template
     url = url_template.format(

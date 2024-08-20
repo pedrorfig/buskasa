@@ -1,6 +1,8 @@
 import textwrap
-
 import pandas as pd
+from sqlalchemy import text
+
+import src.extract as extract
 
 
 def convert_to_dataframe(data):
@@ -48,14 +50,14 @@ def define_bounding_box(latitude, longitude, height=0.01, width=0.01):
 
 
 def calculate_green_density(image):
-    
+
     if image is not None:
         # Convert the image to RGB mode
         image = image.convert("RGB")
 
         # Get the size of the image
         width, height = image.size
-        
+
         # Initialize counters
         total_pixels = width * height
         green_pixels = 0
@@ -66,11 +68,33 @@ def calculate_green_density(image):
                 r, g, b = image.getpixel((x, y))
                 # Check if the pixel is green
                 threshold = 10
-                if g > r + threshold and g > b + threshold:
+                if (g > r + threshold):
                     green_pixels += 1
-        
+
         # Calculate the tree density
         green_density = green_pixels / total_pixels
     else:
         green_density = 0
     return green_density
+
+
+def group_green_density():
+    # Connect to the PostgreSQL database
+    engine = extract.create_db_engine()
+    with engine.begin() as conn:
+        query = text(
+            """WITH quartile_green_density AS (
+                        select CASE
+                                    WHEN NTILE(4) OVER (ORDER BY green_density) = 1 THEN 'Pouco Verde'
+                                    WHEN NTILE(4) OVER (ORDER BY green_density) = 2 THEN 'Moderadamente Verde'
+                                    WHEN NTILE(4) OVER (ORDER BY green_density) = 3 THEN 'Bastante Verde'
+                                    WHEN NTILE(4) OVER (ORDER BY green_density) = 4 THEN 'Extremamente Verde'
+                                END as green_density_grouped,
+                                listing_id
+                        from fact_listings) 
+                    UPDATE fact_listings SET green_density_grouped = quartile_green_density.green_density_grouped
+                    FROM quartile_green_density
+                    WHERE fact_listings.listing_id = quartile_green_density.listing_id;
+                """)
+        conn.execute(query)
+    return

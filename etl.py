@@ -2,7 +2,7 @@
 # process them and save to the database
 from src.classes import ZapPage, ZapNeighborhood
 from dotenv import load_dotenv
-from src import extract
+from src import extract, transform
 def main(
     business_type: str = "SALE",
     usage_type: str = "RESIDENTIAL",
@@ -87,7 +87,7 @@ def main(
         zap_neighborhood.save_zip_codes_to_db()
         # Close engine
         zap_neighborhood.close_engine()
-
+    transform.group_green_density()
 
 if __name__ == "__main__":
 
