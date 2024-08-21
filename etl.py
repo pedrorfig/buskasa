@@ -47,7 +47,7 @@ def main(
             min_area,
         )
         # Delete listings that are not available
-        zap_neighborhood.remove_listings_deleted()
+        zap_neighborhood.remove_old_listings()
         # Get existing listing ids from a neighborhood
         zap_neighborhood.get_existing_ids()
         # Get existing zip codes from a neighborhood
