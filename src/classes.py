@@ -297,31 +297,24 @@ class ZapNeighborhood:
         )
         self.listings_to_add = deduplucated_listings
 
-    def remove_listings_deleted(self):
+    def remove_old_listings(self):
         """
         Remove listings that haven't been updated for more than a week
         """
         print("\tRemoving deleted listings")
         engine = self._engine
         with engine.begin() as conn:
-            old_listings = pd.read_sql(
-                """SELECT listing_id
-                        FROM fact_listings
-                        WHERE
-                            updated_at < current_date - 1
-                            and neighborhood = %(neighborhood)s
-                    """,
-                con=conn,
-                params={"neighborhood": self.neighborhood},
+            conn.execute(
+                text(
+                    """
+                            DELETE FROM fact_listings
+                            WHERE
+                                updated_at < current_date - 1
+                                and neighborhood = :neighborhood
+                        """
+                ),
+                parameters={"neighborhood": self.neighborhood},
             )
-        if not old_listings.empty:
-            old_listings = old_listings.squeeze()
-            if isinstance(old_listings, str):
-                old_listings = [old_listings]
-            else:
-                old_listings = old_listings.to_list()
-            # Delete unavailable ids from db
-            extract.delete_listings_from_db(old_listings, self._engine)
         return
 
     def get_request_headers(self):
@@ -652,29 +645,28 @@ class ZapItem:
                 self._db_engine, min_lat, max_lat, min_lon, max_lon, green_density
             )
 
-            self.update_green_density_df(green_densities, green_density, min_lat, max_lat, min_lon, max_lon)
+            self.update_green_density_df(
+                green_densities, green_density, min_lat, max_lat, min_lon, max_lon
+            )
 
         return green_density
 
-    def update_green_density_df(self, green_densities, green_density, min_lat, max_lat, min_lon, max_lon):
+    def update_green_density_df(
+        self, green_densities, green_density, min_lat, max_lat, min_lon, max_lon
+    ):
         green_density_entry = pd.DataFrame.from_dict(
-                        {
-                            "min_lat": [min_lat],
-                            "max_lat": [max_lat],
-                            "min_lon": [min_lon],
-                            "max_lon": [max_lon],
-                            "green_density": [green_density],
-                        }
-                    )
-    
+            {
+                "min_lat": [min_lat],
+                "max_lat": [max_lat],
+                "min_lon": [min_lon],
+                "max_lon": [max_lon],
+                "green_density": [green_density],
+            }
+        )
+
         updated_green_densities = pd.concat(
-                [
-                    green_densities,
-                    green_density_entry
-                ],
-                ignore_index=True,
-                axis=0
-            )
+            [green_densities, green_density_entry], ignore_index=True, axis=0
+        )
         self._zap_page.zap_search.existing_image_analysis = updated_green_densities
 
     def is_recent_account(self):
