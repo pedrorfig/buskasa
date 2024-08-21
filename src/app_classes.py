@@ -123,12 +123,11 @@ class App:
             margin=dict(l=0, r=0, t=0, b=0),
             plot_bgcolor="rgba(0,0,0,0)",
             paper_bgcolor="rgba(0,0,0,0)",
-            height=250,
+            height=100,
         )
 
         st.plotly_chart(
             fig,
-            use_container_width=True,
             config={"displayModeBar": False, "responsive": False},
         )
 
@@ -147,165 +146,165 @@ class App:
             self.filtered_data = self.data.copy()
 
             with st.form("listing_filters"):
-
-                # Create filter for city
-                st.markdown("Cidade")
-                city = st.selectbox(
-                    "city",
-                    options=self.data["city"].unique(),
-                    placeholder="Selecione uma cidade",
-                    index=0,
-                    label_visibility="collapsed",
-                )
-                self.city_price_per_area_distribution = [*self.data["price_per_area"]]
-                st.divider()
-
-                # Create neighborhood filter
-                st.markdown("Bairro")
-                neighborhood = st.multiselect(
-                    "Bairro",
-                    options=sorted(self.data["neighborhood"].unique()),
-                    placeholder="Selecione um bairro",
-                    label_visibility="collapsed",
-                )
-                if not neighborhood:
-                    neighborhood = self.data["neighborhood"].unique()
-
-                st.divider()
-                # Type of street location filter
-                st.markdown("Localização")
-                location_type = st.selectbox(
-                    "Location Type",
-                    options=self.data["location_type"].unique(),
-                    placeholder="Selecione um tipo de localização",
-                    index=None,
-                    label_visibility="collapsed",
-                )
-                if not location_type:
-                    location_type = self.data["location_type"].unique()
-
-                if self.user_type == "Registered":
-                    st.divider()
-                    st.markdown("Visualização de anúncios")
-                    visited_listings = st.multiselect(
-                        label="Visualização de anúncios",
-                        options=[
-                            "Anúncios já visualizados",
-                            "Anúncios não visualizados",
-                        ],
-                        placeholder="Todos",
-                        key="visited_listings",
+                with st.expander("Localização", expanded=False, icon=":material/location_on:"):
+                    # Create filter for city
+                    st.markdown("Cidade")
+                    city = st.selectbox(
+                        "city",
+                        options=self.data["city"].unique(),
+                        placeholder="Selecione uma cidade",
+                        index=0,
                         label_visibility="collapsed",
                     )
-                else:
-                    visited_listings = None
+                    self.city_price_per_area_distribution = [*self.data["price_per_area"]]
+                    st.divider()
 
-                # Determine the condition based on the selection
-                if visited_listings == ["Anúncios já visualizados"]:
-                    user_filter = self.data["user"].notnull()  # User email exists
-                elif visited_listings == ["Anúncios não visualizados"]:
-                    user_filter = self.data["user"].isnull()  # User email is null
-                else:
-                    user_filter = True  # Show all rows
+                    # Create neighborhood filter
+                    st.markdown("Bairro")
+                    neighborhood = st.multiselect(
+                        "Bairro",
+                        options=sorted(self.data["neighborhood"].unique()),
+                        placeholder="Selecione um bairro",
+                        label_visibility="collapsed",
+                    )
+                    if not neighborhood:
+                        neighborhood = self.data["neighborhood"].unique()
 
-                st.divider()
-                st.markdown("Tipo de Imóvel")
-                unit_type = st.multiselect(
-                    label="Tipo de imóvel",
-                    options=["Apartamentos", "Casas"],
-                    placeholder="Apartamentos e Casas",
-                    label_visibility="collapsed",
-                )
-                # Determine the condition based on the selection
-                if unit_type == ["Apartamentos"]:
-                    unit_type_filter = (
-                        self.data["unit_type"] == "APARTMENT"
-                    )  # User email exists
-                elif unit_type == ["Casas"]:
-                    unit_type_filter = (
-                        self.data["unit_type"] == "HOME"
-                    )  # User email is null
-                else:
-                    unit_type_filter = True  # Show all rows
-                st.divider()
-                st.markdown("Número de quartos")
-                number_bedrooms = st.selectbox(
-                    "Number of Bedrooms",
-                    options=sorted(self.data["bedrooms"].unique(), reverse=False),
-                    placeholder="Selecione um número de quartos",
-                    label_visibility="collapsed",
-                    format_func=lambda x: f"{int(x)}+" if x == x else None,
-                    key="number_bedrooms",
-                )
+                    st.divider()
+                    # Type of street location filter
+                    st.markdown("Localização")
+                    location_type = st.selectbox(
+                        "Location Type",
+                        options=self.data["location_type"].unique(),
+                        placeholder="Selecione um tipo de localização",
+                        index=None,
+                        label_visibility="collapsed",
+                    )
+                    if not location_type:
+                        location_type = self.data["location_type"].unique()
+                with st.expander("Características do Imóvel", expanded=False, icon=":material/home:"):
+                    st.markdown("Tipo de Imóvel")
+                    unit_type = st.multiselect(
+                        label="Tipo de imóvel",
+                        options=["Apartamentos", "Casas"],
+                        placeholder="Apartamentos e Casas",
+                        label_visibility="collapsed",
+                    )
+                    # Determine the condition based on the selection
+                    if unit_type == ["Apartamentos"]:
+                        unit_type_filter = (
+                            self.data["unit_type"] == "APARTMENT"
+                        )  # User email exists
+                    elif unit_type == ["Casas"]:
+                        unit_type_filter = (
+                            self.data["unit_type"] == "HOME"
+                        )  # User email is null
+                    else:
+                        unit_type_filter = True  # Show all rows
+                    st.divider()
+                    st.markdown("Número de quartos")
+                    number_bedrooms = st.selectbox(
+                        "Number of Bedrooms",
+                        options=sorted(self.data["bedrooms"].unique(), reverse=False),
+                        placeholder="Selecione um número de quartos",
+                        label_visibility="collapsed",
+                        format_func=lambda x: f"{int(x)}+" if x == x else None,
+                        key="number_bedrooms",
+                    )
+                    st.divider()
+                    st.markdown("Área (m²)")
+                    area = st.slider(
+                        "Area",
+                        min_value=math.floor(self.data["total_area_m2"].min() / 50) * 50,
+                        max_value=math.ceil(self.data["total_area_m2"].max() / 50) * 50,
+                        value=(
+                            math.floor(self.data["total_area_m2"].min() / 50) * 50,
+                            math.ceil(self.data["total_area_m2"].max() / 50) * 50,
+                        ),
+                        step=50,
+                        format="m² %d",
+                        label_visibility="collapsed",
+                        key="area",
+                    )
+                with st.expander("Filtros inteligentes", expanded=True, icon=":material/emoji_objects:"):
+                    st.markdown("Custo-benefício")
 
-                st.divider()
-                st.markdown("Preço por Área")
+                    self.create_price_per_area_distribution_histogram()
 
-                self.create_price_per_area_distribution_histogram()
+                    price_per_area = st.slider(
+                        "Price per Area (R$/m²)",
+                        min_value=math.floor(self.data["price_per_area"].min() / 100) * 100,
+                        max_value=math.ceil(self.data["price_per_area"].max() / 100) * 100,
+                        step=100,
+                        value=math.ceil(self.data["price_per_area"].max() / 100) * 100,
+                        format="R$/m² %d",
+                        label_visibility="collapsed",
+                        key="price_per_area",
+                    )
 
-                price_per_area = st.slider(
-                    "Price per Area (R$/m²)",
-                    min_value=math.floor(self.data["price_per_area"].min() / 100) * 100,
-                    max_value=math.ceil(self.data["price_per_area"].max() / 100) * 100,
-                    step=100,
-                    value=math.ceil(self.data["price_per_area"].max() / 100) * 100,
-                    format="R$/m² %d",
-                    label_visibility="collapsed",
-                    key="price_per_area",
-                )
+                    st.divider()
+                    st.markdown("Preço (R$)")
+                    
+                    price = st.slider(
+                        "Price",
+                        min_value=math.floor(self.data["price"].min() / 100000) * 100000,
+                        max_value=math.ceil(self.data["price"].max() / 100000) * 100000,
+                        value=math.ceil(self.data["price"].max() / 100000) * 100000,
+                        step=100000,
+                        format="R$ %d",
+                        label_visibility="collapsed",
+                        key="price",
+                    )
 
-                st.divider()
-                st.markdown("Preço (R$)")
-                
-                price = st.slider(
-                    "Price",
-                    min_value=math.floor(self.data["price"].min() / 100000) * 100000,
-                    max_value=math.ceil(self.data["price"].max() / 100000) * 100000,
-                    value=math.ceil(self.data["price"].max() / 100000) * 100000,
-                    step=100000,
-                    format="R$ %d",
-                    label_visibility="collapsed",
-                    key="price",
-                )
+                    st.divider()
+                    st.markdown("Densidade de verde")
+                    green_density = st.multiselect(
+                        "Green Density",
+                        options=['Pouco Verde', 'Moderadamente Verde', 'Bastante Verde', 'Extremamente Verde'],
+                        label_visibility="collapsed",
+                        key="green_density",
+                    )
+                    if not green_density:
+                        green_density = self.data["green_density_grouped"].unique()
 
-                st.divider()
-                st.markdown("Área (m²)")
-                area = st.slider(
-                    "Area",
-                    min_value=math.floor(self.data["total_area_m2"].min() / 50) * 50,
-                    max_value=math.ceil(self.data["total_area_m2"].max() / 50) * 50,
-                    value=(
-                        math.floor(self.data["total_area_m2"].min() / 50) * 50,
-                        math.ceil(self.data["total_area_m2"].max() / 50) * 50,
-                    ),
-                    step=50,
-                    format="m² %d",
-                    label_visibility="collapsed",
-                    key="area",
-                )
-                st.divider()
-                st.markdown("Densidade de verde")
-                green_density = st.select_slider(
-                    "Green Density",
-                    options=['Pouco Verde', 'Moderadamente Verde', 'Bastante Verde', 'Extremamente Verde'],
-                    label_visibility="collapsed",
-                    key="green_density",
-                )
+                    st.divider()
+                    st.markdown("Silencioso")
+                    is_quiet = st.toggle(
+                        label="Quiet",
+                        label_visibility="collapsed",
+                        key="is_quiet"
+                    )
 
-                st.divider()
-                st.markdown("Silencioso")
-                is_quiet = st.toggle(
-                    label="Quiet",
-                    label_visibility="collapsed",
-                    key="is_quiet"
-                )
+                    if is_quiet:
+                        is_quiet_filter = self.data["is_quiet"] == True
+                    else:
+                        is_quiet_filter = True
 
-                if is_quiet:
-                    is_quiet_filter = self.data["is_quiet"] == True
-                else:
-                    is_quiet_filter = True
+                # if self.user_type == "Registered":
+                #     st.divider()
+                #     st.markdown("Visualização de anúncios")
+                #     visited_listings = st.multiselect(
+                #         label="Visualização de anúncios",
+                #         options=[
+                #             "Anúncios já visualizados",
+                #             "Anúncios não visualizados",
+                #         ],
+                #         placeholder="Todos",
+                #         key="visited_listings",
+                #         label_visibility="collapsed",
+                #     )
+                # else:
+                #     visited_listings = None
 
-                submit = st.form_submit_button("Filtrar anúncios")
+                # # Determine the condition based on the selection
+                # if visited_listings == ["Anúncios já visualizados"]:
+                #     user_filter = self.data["user"].notnull()  # User email exists
+                # elif visited_listings == ["Anúncios não visualizados"]:
+                #     user_filter = self.data["user"].isnull()  # User email is null
+                # else:
+                user_filter = True  # Show all rows
+
+                submit = st.form_submit_button("Filtrar anúncios", type="primary")
 
             if submit:
                 self.filtered_data = self.data.loc[
@@ -318,7 +317,7 @@ class App:
                         & (self.data["price"] <= price)
                         & (self.data["total_area_m2"] >= area[0])
                         & (self.data["total_area_m2"] <= area[1])
-                        & (self.data["green_density_grouped"] == green_density)
+                        & (self.data["green_density_grouped"].isin(green_density))
                         & (unit_type_filter)
                         & (user_filter)
                         & (is_quiet_filter)
@@ -369,7 +368,6 @@ class App:
                 name="All listings",
                 customdata=custom_data,
                 hovertemplate=hover_template,
-                # cluster={"enabled": True, 'step':10, 'size':2*(1 / data["price_per_area"])},
                 marker=go.scattermapbox.Marker(
                     allowoverlap=True,
                     size=marker_size,
@@ -389,7 +387,7 @@ class App:
             hoverdistance=30,
             hoverlabel_align="left",
             hoverlabel=dict(font_size=12, font_family="Aptos", bordercolor="silver"),
-            height=800,
+            height=900,
             margin=dict(l=0, r=0, t=0, b=0),
             showlegend=False,
             mapbox=dict(
@@ -401,14 +399,12 @@ class App:
                 zoom=12,
             ),
         )
-        with st.container(border=True):
-            event = st.plotly_chart(
-                fig,
-                use_container_width=True,
-                config={"displayModeBar": False},
-                on_select="rerun",
-                selection_mode="points",
-            )
+        event = st.plotly_chart(
+            fig,
+            config={"displayModeBar": False},
+            on_select="rerun",
+            selection_mode="points",
+        )
 
         self.save_listings_visited_by_user_to_db(event)
 
@@ -455,33 +451,26 @@ class AppFormater:
         st.set_page_config(layout="wide", page_icon="🏘️", page_title="Buskasa")
 
     def remove_whitespace(self):
-        padding_top = 1.5
-        padding_bottom = 1.5
+        padding = 0
         st.markdown(
             f"""
                 <style>
-                    .appview-container .main .block-container {{
-                        padding-top: {padding_top}rem;
-                        padding-bottom: {padding_bottom}rem;
+                    # [data-testid="element-container"] {{
+                    #     padding: 0rem;
+                    # }}
+                    # [data-testid="stVerticalBlock"] {{
+                    #     gap: 0;
+                    # }}
+                    .st-emotion-cache-1jicfl2 {{
+                        padding: {padding}rem;
                     }}
-                    .st-emotion-cache-16txtl3 {{
-                        padding: {padding_top+1}rem {padding_bottom}rem
+                    .st-emotion-cache-12fmjuu {{
+                        gap: 0;
+                        height: 0;
                     }}
-                    .st-emotion-cache-uzeiqp e1nzilvr4 {{
-                        padding: 16px 16px
-                    }}
-                    hr {{
-                        margin: 0px;
-                    }}
-                    .st-emotion-cache-lt1jbb {{
-                        gap: 0.5rem
-                    }}
-                    .element-container st-emotion-cache-d65s76 e1f1d6gn4 {{
-                        heigh: 0px
-                    }}
-                    .mapboxgl-map {{
-                        all: uset
-                    }}
+                    # hr {{
+                    #     margin: 0px;
+                    # }}
                 </style>""",
             unsafe_allow_html=True,
         )
