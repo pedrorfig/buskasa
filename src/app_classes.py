@@ -141,11 +141,11 @@ class App:
 
         with st.sidebar:
             # Create title for Filter sidebar
-            st.subheader("Filtros")
 
             self.filtered_data = self.data.copy()
 
             with st.form("listing_filters"):
+                st.header("Filtros")
                 with st.expander("Localização", expanded=False, icon=":material/location_on:"):
                     # Create filter for city
                     st.markdown("Cidade")
@@ -323,8 +323,6 @@ class App:
                         & (is_quiet_filter)
                     )
                 ]
-            if st.button("Log out"):
-                self.auth.logout()
 
     def create_listings_map(self):
 
@@ -434,10 +432,6 @@ class App:
     @st.fragment
     def load_listings_map_and_table(self):
         self.create_listings_map()
-        with st.expander("Ver resultados em tabela", icon=":material/menu:"):
-            st.write(self.filtered_data)
-        st.write(f"Última atualização: {datetime.today().date()}")
-
 
 class AppFormater:
     """
@@ -451,26 +445,25 @@ class AppFormater:
         st.set_page_config(layout="wide", page_icon="🏘️", page_title="Buskasa")
 
     def remove_whitespace(self):
-        padding = 0
         st.markdown(
-            f"""
-                <style>
-                    # [data-testid="element-container"] {{
+                    # [data-testid="element-container"] {
                     #     padding: 0rem;
-                    # }}
-                    # [data-testid="stVerticalBlock"] {{
-                    #     gap: 0;
-                    # }}
-                    .st-emotion-cache-1jicfl2 {{
-                        padding: {padding}rem;
-                    }}
-                    .st-emotion-cache-12fmjuu {{
+                    # }
+            """
+                <style>
+                    div[data-testid="stVerticalBlock"]{
                         gap: 0;
-                        height: 0;
-                    }}
-                    # hr {{
-                    #     margin: 0px;
-                    # }}
+                    }
+                    div[data-testid="stExpander"]{
+                        padding: 5px;
+                    }
+                    #MainMenu, header, footer {visibility: hidden}
+                    .st-emotion-cache-1jicfl2 {
+                        padding: 0rem;
+                    }
+                    [data-testid="baseButton-primaryFormSubmit"] {
+                        margin: 5px;
+                    }
                 </style>""",
             unsafe_allow_html=True,
         )
@@ -480,7 +473,7 @@ class AppFormater:
             """
                 <style>
                     div[data-testid="stSidebarHeader"] > img, div[data-testid="collapsedControl"] > img {
-                        height: 5rem;
+                        height: 6rem;
                         width: auto;
                     }
                     div[data-testid="stSidebarHeader"], div[data-testid="stSidebarHeader"] > *,
