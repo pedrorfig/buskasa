@@ -6,8 +6,9 @@ import pandas as pd
 import requests as r
 import streamlit as st
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, text
 from PIL import Image
+from sqlalchemy import create_engine, text
+import overpy
 
 load_dotenv()
 
@@ -161,6 +162,20 @@ def get_sat_image(min_lat, max_lat, min_lon, max_lon):
         print("API call failed with status code:", response)
         image = None
     return image
+
+def get_n_bus_lines(min_lat, max_lat, min_lon, max_lon):
+    # Import the overpy module
+    
+    api = overpy.Overpass()
+
+    bbox = [*map(lambda x: str(x), [min_lat, min_lon, max_lat, max_lon])]
+    query = f'relation["route"="bus"]({",".join(bbox)});out;'
+
+    # Execute the query
+    result = api.query(query)
+
+    # Output the number of bus stops
+    return len(result.relations)
 
 def add_green_density_to_db(db_engine, min_lat, max_lat, min_lon, max_lon, green_density):
     with db_engine.begin() as conn:

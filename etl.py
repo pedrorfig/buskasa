@@ -54,6 +54,8 @@ def main(
         zap_neighborhood.get_existing_zip_codes()
         # Get image analysis for a neighborhood
         zap_neighborhood.get_image_analysis()
+        # Get traffic analysis for a neighborhood
+        zap_neighborhood.get_traffic_analysis()
         # Iterate through all pages on a neighborhood
         while True:
             print(f"\tPage #{page_number} on {neighborhood}")
@@ -83,6 +85,8 @@ def main(
         # highlight good deals
         zap_neighborhood.calculate_price_per_area_first_quartile()
         # Save results to db
+        zap_neighborhood.save_image_analysis_to_db()
+        zap_neighborhood.save_traffic_analysis_to_db()
         zap_neighborhood.save_listings_to_db()
         zap_neighborhood.save_zip_codes_to_db()
         # Close engine

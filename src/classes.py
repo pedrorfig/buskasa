@@ -359,6 +359,29 @@ class ZapNeighborhood:
                     index=True,
                     index_label="zip_code",
                 )
+    def save_traffic_analysis_to_db(self):
+        """ """
+        print("\tSaving traffic analysis to database")
+        traffic_analysis_to_add = self.existing_traffic_analysis
+        if not traffic_analysis_to_add.empty:
+            with self._engine.begin() as conn:
+                traffic_analysis_to_add.to_sql(
+                    name="fact_traffic_analysis",
+                    con=conn,
+                    if_exists="append",
+                    index=False)
+    def save_image_analysis_to_db(self):
+        """ """
+        print("\tSaving image analysis to database")
+        image_analysis_to_add = self.existing_image_analysis
+        if not image_analysis_to_add.empty:
+            with self._engine.begin() as conn:
+                image_analysis_to_add.to_sql(
+                    name="fact_image_analysis",
+                    con=conn,
+                    if_exists="append",
+                    index=False)
+
 
     def save_listings_to_db(self):
         """ """
@@ -413,6 +436,18 @@ class ZapNeighborhood:
                 "SELECT * from fact_image_analysis", con=conn, index_col="id"
             )
         self.existing_image_analysis = data
+    def get_traffic_analysis(self):
+        """
+        Read image analysis db table
+        Returns:
+
+        """
+        engine = self._engine
+        with engine.begin() as conn:
+            data = pd.read_sql(
+                "SELECT * from fact_traffic_analysis", con=conn, index_col="id"
+            )
+        self.existing_traffic_analysis = data
 
     def close_engine(self):
         self._engine.dispose()
@@ -591,6 +626,7 @@ class ZapItem:
         self.latitude, self.longitude = self.get_longitude_latitude()
         self.precision = None
         self.green_density = self.get_green_density()
+        self.n_nearby_bus_lanes = self.get_number_of_nearby_bus_lines()
         self.is_quiet = self.is_quiet()
         # Getting cost data
         self.price = self.get_listing_price()
@@ -613,8 +649,49 @@ class ZapItem:
 
     def is_quiet(self):
         return (self.location_type != "Avenida") & (self.floor >= 8)
+    
+    def get_number_of_nearby_bus_lines(self):
+        if self.latitude is None or self.longitude is None:
+            return None
+        
+        traffic_analysis = self._zap_page.zap_search.existing_traffic_analysis
+
+        # Filter the DataFrame based on the latitude and longitude
+        filtered_traffic_analysis = traffic_analysis[
+            (traffic_analysis["min_lat"] <= round(self.latitude, 4))
+            & (round(self.latitude, 4) <= traffic_analysis["max_lat"])
+            & (traffic_analysis["min_lon"] <= round(self.longitude, 4))
+            & (round(self.longitude, 4) <= traffic_analysis["max_lon"])
+        ]
+
+        # Get the green_density value from the filtered DataFrame
+        n_bus_lanes = (
+            filtered_traffic_analysis["n_nearby_bus_lanes"].values[0]
+            if not filtered_traffic_analysis.empty
+            else None
+        )
+
+        if n_bus_lanes is None:
+            print(
+                f"Point is not in any bounding box: {self.latitude}, {self.longitude}"
+            )
+            min_lat, max_lat, min_lon, max_lon = transform.define_bounding_box(
+                self.latitude, self.longitude, height=0.001, width=0.001
+            )
+            n_bus_lanes = extract.get_n_bus_lines(min_lat, max_lat, min_lon, max_lon)
+
+            self.update_n_bus_lines_df(
+                traffic_analysis, n_bus_lanes, min_lat, max_lat, min_lon, max_lon
+            )
+
+        return n_bus_lanes
+        
 
     def get_green_density(self):
+        
+        if self.latitude is None or self.longitude is None:
+            return None
+        
         green_densities = self._zap_page.zap_search.existing_image_analysis
 
         # Filter the DataFrame based on the latitude and longitude
@@ -641,9 +718,9 @@ class ZapItem:
             )
             image = extract.get_sat_image(min_lat, max_lat, min_lon, max_lon)
             green_density = transform.calculate_green_density(image)
-            extract.add_green_density_to_db(
-                self._db_engine, min_lat, max_lat, min_lon, max_lon, green_density
-            )
+            # extract.add_green_density_to_db(
+            #     self._db_engine, min_lat, max_lat, min_lon, max_lon, green_density
+            # )
 
             self.update_green_density_df(
                 green_densities, green_density, min_lat, max_lat, min_lon, max_lon
@@ -668,6 +745,24 @@ class ZapItem:
             [green_densities, green_density_entry], ignore_index=True, axis=0
         )
         self._zap_page.zap_search.existing_image_analysis = updated_green_densities
+    
+    def update_n_bus_lines_df(
+        self, traffic_analysis, n_bus_lines, min_lat, max_lat, min_lon, max_lon
+    ):
+        n_bus_lines_entry = pd.DataFrame.from_dict(
+            {
+                "min_lat": [min_lat],
+                "max_lat": [max_lat],
+                "min_lon": [min_lon],
+                "max_lon": [max_lon],
+                "n_nearby_bus_lanes": [n_bus_lines],
+            }
+        )
+
+        updated_n_bus_lines = pd.concat(
+            [traffic_analysis, n_bus_lines_entry], ignore_index=True, axis=0
+        )
+        self._zap_page.zap_search.existing_traffic_analysis = updated_n_bus_lines
 
     def is_recent_account(self):
         """
