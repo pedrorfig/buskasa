@@ -50,18 +50,24 @@ class ZapNeighborhood:
         # Save all listings from search to check if any was deleted on the web,
         # so it is also deleted on the DB
         self.all_listing_from_search = []
-        # Placeholder for saving ZIP codes that aren't currently on the DB
+        # Placeholder for retrieving records on the DB
         self.existing_zip_codes = None
-        self.zip_codes_to_add = pd.DataFrame()
-        # Placeholder for saving ZIP codes that aren't currently on the DB
         self.listing_ids_to_remove = []
-        self.listings_to_add = pd.DataFrame()
         self.existing_listing_ids_in_db = None
+        self.existing_image_analysis = pd.DataFrame()
+        self.existing_traffic_analysis = pd.DataFrame()
+        # Placeholder for saving records that aren't currently on the DB
+        self.zip_codes_to_add = pd.DataFrame()
+        self.listings_to_add = pd.DataFrame()
+        self.image_analysis_to_add = pd.DataFrame()
+        self.traffic_analysis_to_add = pd.DataFrame()
+        
 
     def get_existing_ids(self):
         """
         Get existing listing ids for the specified conditions
         """
+        print("\tGetting existing listing ids")
         engine = self._engine
         with engine.begin() as conn:
             # Checking for existing listing_ids on the database
@@ -301,7 +307,7 @@ class ZapNeighborhood:
         """
         Remove listings that haven't been updated for more than a week
         """
-        print("\tRemoving deleted listings")
+        print("\tRemoving old listings")
         engine = self._engine
         with engine.begin() as conn:
             conn.execute(
@@ -362,7 +368,7 @@ class ZapNeighborhood:
     def save_traffic_analysis_to_db(self):
         """ """
         print("\tSaving traffic analysis to database")
-        traffic_analysis_to_add = self.existing_traffic_analysis
+        traffic_analysis_to_add = self.traffic_analysis_to_add
         if not traffic_analysis_to_add.empty:
             with self._engine.begin() as conn:
                 traffic_analysis_to_add.to_sql(
@@ -373,7 +379,7 @@ class ZapNeighborhood:
     def save_image_analysis_to_db(self):
         """ """
         print("\tSaving image analysis to database")
-        image_analysis_to_add = self.existing_image_analysis
+        image_analysis_to_add = self.image_analysis_to_add
         if not image_analysis_to_add.empty:
             with self._engine.begin() as conn:
                 image_analysis_to_add.to_sql(
@@ -417,6 +423,7 @@ class ZapNeighborhood:
         Returns:
 
         """
+        print("\tGetting existing zip codes")
         engine = self._engine
         with engine.begin() as conn:
             data = pd.read_sql(
@@ -430,6 +437,7 @@ class ZapNeighborhood:
         Returns:
 
         """
+        print("\tGetting image analysis")
         engine = self._engine
         with engine.begin() as conn:
             data = pd.read_sql(
@@ -442,6 +450,7 @@ class ZapNeighborhood:
         Returns:
 
         """
+        print("\tGetting traffic analysis")
         engine = self._engine
         with engine.begin() as conn:
             data = pd.read_sql(
@@ -565,10 +574,8 @@ class ZapPage:
         in the DB
         """
         for listing in self.listings:
-            listing_id = listing.get("listing").get("id")
-            if listing_id not in self.zap_search.existing_listing_ids_in_db:
-                item = ZapItem(listing, self)
-                self.add_zap_item(item)
+            item = ZapItem(listing, self)
+            self.add_zap_item(item)
 
     def add_zap_item(self, zap_item):
         """
@@ -651,10 +658,13 @@ class ZapItem:
         return (self.location_type != "Avenida") & (self.floor >= 8)
     
     def get_number_of_nearby_bus_lines(self):
-        if self.latitude is None or self.longitude is None:
+        if np.isnan(self.latitude) or np.isnan(self.longitude):
             return None
-        
+
         traffic_analysis = self._zap_page.zap_search.existing_traffic_analysis
+        traffic_analysis_to_add = self._zap_page.zap_search.traffic_analysis_to_add
+
+        traffic_analysis = pd.concat([traffic_analysis, traffic_analysis_to_add], ignore_index=True, axis=0)
 
         # Filter the DataFrame based on the latitude and longitude
         filtered_traffic_analysis = traffic_analysis[
@@ -673,7 +683,7 @@ class ZapItem:
 
         if n_bus_lanes is None:
             print(
-                f"Point is not in any bounding box: {self.latitude}, {self.longitude}"
+                f"Point is not in any bounding box on traffic analysis: {self.latitude}, {self.longitude}"
             )
             min_lat, max_lat, min_lon, max_lon = transform.define_bounding_box(
                 self.latitude, self.longitude, height=0.001, width=0.001
@@ -681,18 +691,21 @@ class ZapItem:
             n_bus_lanes = extract.get_n_bus_lines(min_lat, max_lat, min_lon, max_lon)
 
             self.update_n_bus_lines_df(
-                traffic_analysis, n_bus_lanes, min_lat, max_lat, min_lon, max_lon
+                traffic_analysis_to_add, n_bus_lanes, min_lat, max_lat, min_lon, max_lon
             )
 
         return n_bus_lanes
-        
+
 
     def get_green_density(self):
-        
-        if self.latitude is None or self.longitude is None:
+
+        if np.isnan(self.latitude) or np.isnan(self.longitude):
             return None
-        
+
         green_densities = self._zap_page.zap_search.existing_image_analysis
+        green_densities_to_add = self._zap_page.zap_search.image_analysis_to_add
+
+        green_densities = pd.concat([green_densities, green_densities_to_add], ignore_index=True, axis=0)
 
         # Filter the DataFrame based on the latitude and longitude
         filtered_green_density = green_densities[
@@ -718,18 +731,16 @@ class ZapItem:
             )
             image = extract.get_sat_image(min_lat, max_lat, min_lon, max_lon)
             green_density = transform.calculate_green_density(image)
-            # extract.add_green_density_to_db(
-            #     self._db_engine, min_lat, max_lat, min_lon, max_lon, green_density
-            # )
 
-            self.update_green_density_df(
-                green_densities, green_density, min_lat, max_lat, min_lon, max_lon
+            self.update_green_densities_to_add(
+                green_densities_to_add, green_density, min_lat, max_lat, min_lon, max_lon
             )
 
         return green_density
 
-    def update_green_density_df(
-        self, green_densities, green_density, min_lat, max_lat, min_lon, max_lon
+    def update_green_densities_to_add(
+        self, green_densities_to_add, green_density,
+        min_lat, max_lat, min_lon, max_lon
     ):
         green_density_entry = pd.DataFrame.from_dict(
             {
@@ -740,14 +751,14 @@ class ZapItem:
                 "green_density": [green_density],
             }
         )
-
         updated_green_densities = pd.concat(
-            [green_densities, green_density_entry], ignore_index=True, axis=0
+            [green_densities_to_add, green_density_entry],
+            ignore_index=True, axis=0
         )
-        self._zap_page.zap_search.existing_image_analysis = updated_green_densities
+        self._zap_page.zap_search.green_densities_to_add = updated_green_densities
     
     def update_n_bus_lines_df(
-        self, traffic_analysis, n_bus_lines, min_lat, max_lat, min_lon, max_lon
+        self, traffic_analysis_to_add, n_bus_lines, min_lat, max_lat, min_lon, max_lon
     ):
         n_bus_lines_entry = pd.DataFrame.from_dict(
             {
@@ -760,9 +771,10 @@ class ZapItem:
         )
 
         updated_n_bus_lines = pd.concat(
-            [traffic_analysis, n_bus_lines_entry], ignore_index=True, axis=0
+            [traffic_analysis_to_add, n_bus_lines_entry],
+            ignore_index=True, axis=0
         )
-        self._zap_page.zap_search.existing_traffic_analysis = updated_n_bus_lines
+        self._zap_page.zap_search.traffic_analysis_to_add = updated_n_bus_lines
 
     def is_recent_account(self):
         """

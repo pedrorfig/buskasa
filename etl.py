@@ -1,6 +1,6 @@
 # ETL pipeline to extract listings from ZAP Imóveis website,
 # process them and save to the database
-from src.classes import ZapPage, ZapNeighborhood
+from src.classes import ZapPage, ZapNeighborhood, ZapItem
 from dotenv import load_dotenv
 from src import extract, transform
 def main(
@@ -58,7 +58,7 @@ def main(
         zap_neighborhood.get_traffic_analysis()
         # Iterate through all pages on a neighborhood
         while True:
-            print(f"\tPage #{page_number} on {neighborhood}")
+            print(f"\t\tPage #{page_number} on {neighborhood}")
             # Initialize a ZapPage object with data for each page_number
             # searched
             zap_page = ZapPage(page_number, zap_neighborhood)
@@ -67,7 +67,9 @@ def main(
             # Get all listings from a ZapPage
             zap_page.get_listings()
             # Create ZapItem object for each item in a page
-            zap_page.create_zap_items()
+            for listing in zap_page.listings:
+                item = ZapItem(listing, zap_page)
+                zap_page.add_zap_item(item)
             # Save items to ZapSearch
             zap_neighborhood.append_zap_page(zap_page)
             # If there number of listings reached the total, finish the search
@@ -92,6 +94,7 @@ def main(
         # Close engine
         zap_neighborhood.close_engine()
     transform.group_green_density()
+    transform.group_n_bus_lanes()
 
 if __name__ == "__main__":
 

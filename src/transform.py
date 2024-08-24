@@ -98,3 +98,23 @@ def group_green_density():
                 """)
         conn.execute(query)
     return
+def group_n_bus_lanes():
+    # Connect to the PostgreSQL database
+    engine = extract.create_db_engine()
+    with engine.begin() as conn:
+        query = text(
+            """WITH quartile_n_bus_lanes AS (
+                        select CASE
+                                    WHEN NTILE(4) OVER (ORDER BY n_bus_lanes) = 1 THEN 'Muito Calmo'
+                                    WHEN NTILE(4) OVER (ORDER BY n_bus_lanes) = 2 THEN 'Calmo'
+                                    WHEN NTILE(4) OVER (ORDER BY n_bus_lanes) = 3 THEN 'Movimentado'
+                                    WHEN NTILE(4) OVER (ORDER BY n_bus_lanes) = 4 THEN 'Agitado'
+                                END as n_bus_lanes_grouped,
+                                listing_id
+                        from fact_listings) 
+                    UPDATE fact_listings SET n_bus_lanes_grouped = quartile_n_bus_lanes.n_bus_lanes_grouped
+                    FROM quartile_n_bus_lanes
+                    WHERE fact_listings.listing_id = quartile_n_bus_lanes.listing_id;
+                """)
+        conn.execute(query)
+    return

@@ -268,41 +268,15 @@ class App:
                         green_density = self.data["green_density_grouped"].unique()
 
                     st.divider()
-                    st.markdown("Silencioso")
-                    is_quiet = st.toggle(
+                    st.markdown("Nível de Movimentação")
+                    n_nearby_bus_lanes = st.slider(
                         label="Quiet",
                         label_visibility="collapsed",
-                        key="is_quiet"
+                        key="is_quiet",
+                        min_value=0,
+                        max_value=int(max(self.data['n_nearby_bus_lanes'])),
+                        value=[0, 65],
                     )
-
-                    if is_quiet:
-                        is_quiet_filter = self.data["is_quiet"] == True
-                    else:
-                        is_quiet_filter = True
-
-                # if self.user_type == "Registered":
-                #     st.divider()
-                #     st.markdown("Visualização de anúncios")
-                #     visited_listings = st.multiselect(
-                #         label="Visualização de anúncios",
-                #         options=[
-                #             "Anúncios já visualizados",
-                #             "Anúncios não visualizados",
-                #         ],
-                #         placeholder="Todos",
-                #         key="visited_listings",
-                #         label_visibility="collapsed",
-                #     )
-                # else:
-                #     visited_listings = None
-
-                # # Determine the condition based on the selection
-                # if visited_listings == ["Anúncios já visualizados"]:
-                #     user_filter = self.data["user"].notnull()  # User email exists
-                # elif visited_listings == ["Anúncios não visualizados"]:
-                #     user_filter = self.data["user"].isnull()  # User email is null
-                # else:
-                user_filter = True  # Show all rows
 
                 submit = st.form_submit_button("Filtrar anúncios", type="primary")
 
@@ -318,9 +292,9 @@ class App:
                         & (self.data["total_area_m2"] >= area[0])
                         & (self.data["total_area_m2"] <= area[1])
                         & (self.data["green_density_grouped"].isin(green_density))
+                        & (self.data["n_nearby_bus_lanes"] >= n_nearby_bus_lanes[0])
+                        & (self.data["n_nearby_bus_lanes"] <= n_nearby_bus_lanes[1])
                         & (unit_type_filter)
-                        & (user_filter)
-                        & (is_quiet_filter)
                     )
                 ]
 
@@ -451,9 +425,9 @@ class AppFormater:
                     # }
             """
                 <style>
-                    div[data-testid="stVerticalBlock"]{
-                        gap: 0;
-                    }
+                    # div[data-testid="stVerticalBlock"]{
+                    #     gap: 0;
+                    # }
                     div[data-testid="stExpander"]{
                         padding: 5px;
                     }
