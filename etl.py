@@ -3,6 +3,13 @@
 from src.classes import ZapPage, ZapNeighborhood, ZapItem
 from dotenv import load_dotenv
 from src import extract, transform
+import logging
+
+# Configure logging
+logging.basicConfig(format="%(asctime)s %(name)-12s %(levelname)-8s %(message)s", level=logging.INFO)
+# Create logger object
+logger = logging.getLogger(__name__)
+
 def main(
     business_type: str = "SALE",
     usage_type: str = "RESIDENTIAL",
