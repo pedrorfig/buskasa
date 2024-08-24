@@ -26,7 +26,7 @@ if st.session_state["connected"] or st.session_state["connected_as_guest"]:
     app_formater.remove_whitespace()
     app_formater.increase_logo_size()
     app.create_side_bar_with_filters()
-    app.load_listings_map_and_table()
+    app.load_listings_map()
     st.toast(
         """Nós usamos cookies para recomendar
              os apartamentos que mais combinam com você""",

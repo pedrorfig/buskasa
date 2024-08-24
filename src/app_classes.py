@@ -77,9 +77,8 @@ class App:
                 conn, self.user_has_visits, self.user_email
             )
 
-
     def get_listings_visited_by_user(self):
-        if 'user_info' in st.session_state:
+        if "user_info" in st.session_state:
             engine = self._engine
             with engine.begin() as conn:
                 # Checking for existing listing_ids on the database
@@ -123,13 +122,13 @@ class App:
             margin=dict(l=0, r=0, t=0, b=0),
             plot_bgcolor="rgba(0,0,0,0)",
             paper_bgcolor="rgba(0,0,0,0)",
-            height=100,
+            height=150,
         )
-
-        st.plotly_chart(
-            fig,
-            config={"displayModeBar": False, "responsive": False},
-        )
+        with st.container(height=150, border=False):
+            st.plotly_chart(
+                fig,
+                config={"displayModeBar": False, "responsive": False},
+            )
 
         return
 
@@ -146,7 +145,9 @@ class App:
 
             with st.form("listing_filters"):
                 st.header("Filtros")
-                with st.expander("Localização", expanded=False, icon=":material/location_on:"):
+                with st.expander(
+                    "Localização", expanded=False, icon=":material/location_on:"
+                ):
                     # Create filter for city
                     st.markdown("Cidade")
                     city = st.selectbox(
@@ -156,7 +157,9 @@ class App:
                         index=0,
                         label_visibility="collapsed",
                     )
-                    self.city_price_per_area_distribution = [*self.data["price_per_area"]]
+                    self.city_price_per_area_distribution = [
+                        *self.data["price_per_area"]
+                    ]
                     st.divider()
 
                     # Create neighborhood filter
@@ -182,7 +185,9 @@ class App:
                     )
                     if not location_type:
                         location_type = self.data["location_type"].unique()
-                with st.expander("Características do Imóvel", expanded=False, icon=":material/home:"):
+                with st.expander(
+                    "Características do Imóvel", expanded=False, icon=":material/home:"
+                ):
                     st.markdown("Tipo de Imóvel")
                     unit_type = st.multiselect(
                         label="Tipo de imóvel",
@@ -215,7 +220,8 @@ class App:
                     st.markdown("Área (m²)")
                     area = st.slider(
                         "Area",
-                        min_value=math.floor(self.data["total_area_m2"].min() / 50) * 50,
+                        min_value=math.floor(self.data["total_area_m2"].min() / 50)
+                        * 50,
                         max_value=math.ceil(self.data["total_area_m2"].max() / 50) * 50,
                         value=(
                             math.floor(self.data["total_area_m2"].min() / 50) * 50,
@@ -226,15 +232,21 @@ class App:
                         label_visibility="collapsed",
                         key="area",
                     )
-                with st.expander("Filtros inteligentes", expanded=True, icon=":material/emoji_objects:"):
+                with st.expander(
+                    "Filtros inteligentes",
+                    expanded=True,
+                    icon=":material/emoji_objects:",
+                ):
                     st.markdown("Custo-benefício")
 
                     self.create_price_per_area_distribution_histogram()
 
                     price_per_area = st.slider(
                         "Price per Area (R$/m²)",
-                        min_value=math.floor(self.data["price_per_area"].min() / 100) * 100,
-                        max_value=math.ceil(self.data["price_per_area"].max() / 100) * 100,
+                        min_value=math.floor(self.data["price_per_area"].min() / 100)
+                        * 100,
+                        max_value=math.ceil(self.data["price_per_area"].max() / 100)
+                        * 100,
                         step=100,
                         value=math.ceil(self.data["price_per_area"].max() / 100) * 100,
                         format="R$/m² %d",
@@ -244,10 +256,11 @@ class App:
 
                     st.divider()
                     st.markdown("Preço (R$)")
-                    
+
                     price = st.slider(
                         "Price",
-                        min_value=math.floor(self.data["price"].min() / 100000) * 100000,
+                        min_value=math.floor(self.data["price"].min() / 100000)
+                        * 100000,
                         max_value=math.ceil(self.data["price"].max() / 100000) * 100000,
                         value=math.ceil(self.data["price"].max() / 100000) * 100000,
                         step=100000,
@@ -260,7 +273,11 @@ class App:
                     st.markdown("Densidade de verde")
                     green_density = st.multiselect(
                         "Green Density",
-                        options=['Pouco Verde', 'Moderadamente Verde', 'Bastante Verde', 'Extremamente Verde'],
+                        options=[
+                            "Pouco Verde",
+                            "Moderadamente Verde",
+                            "Bastante Verde",
+                        ],
                         label_visibility="collapsed",
                         key="green_density",
                     )
@@ -269,14 +286,16 @@ class App:
 
                     st.divider()
                     st.markdown("Nível de Movimentação")
-                    n_nearby_bus_lanes = st.slider(
-                        label="Quiet",
+                    movement_intensity = st.multiselect(
+                        "Green Density",
+                        options=["Muito Calmo", "Calmo", "Movimentado", "Agitado"],
                         label_visibility="collapsed",
-                        key="is_quiet",
-                        min_value=0,
-                        max_value=int(max(self.data['n_nearby_bus_lanes'])),
-                        value=[0, 65],
+                        key="n_nearby_bus_lanes_grouped",
                     )
+                    if not movement_intensity:
+                        movement_intensity = self.data[
+                            "n_nearby_bus_lanes_grouped"
+                        ].unique()
 
                 submit = st.form_submit_button("Filtrar anúncios", type="primary")
 
@@ -292,8 +311,11 @@ class App:
                         & (self.data["total_area_m2"] >= area[0])
                         & (self.data["total_area_m2"] <= area[1])
                         & (self.data["green_density_grouped"].isin(green_density))
-                        & (self.data["n_nearby_bus_lanes"] >= n_nearby_bus_lanes[0])
-                        & (self.data["n_nearby_bus_lanes"] <= n_nearby_bus_lanes[1])
+                        & (
+                            self.data["n_nearby_bus_lanes_grouped"].isin(
+                                movement_intensity
+                            )
+                        )
                         & (unit_type_filter)
                     )
                 ]
@@ -359,7 +381,9 @@ class App:
             hoverdistance=30,
             hoverlabel_align="left",
             hoverlabel=dict(font_size=12, font_family="Aptos", bordercolor="silver"),
-            height=900,
+            autosize=True,
+            # style={"height": "100vh"},
+            # height='100vh',
             margin=dict(l=0, r=0, t=0, b=0),
             showlegend=False,
             mapbox=dict(
@@ -371,12 +395,14 @@ class App:
                 zoom=12,
             ),
         )
-        event = st.plotly_chart(
-            fig,
-            config={"displayModeBar": False},
-            on_select="rerun",
-            selection_mode="points",
-        )
+        with st.container():
+            event = st.plotly_chart(
+                fig,
+                config={"displayModeBar": False},
+                on_select="rerun",
+                selection_mode="points",
+                use_container_width=True,
+            )
 
         self.save_listings_visited_by_user_to_db(event)
 
@@ -404,8 +430,9 @@ class App:
                     )
 
     @st.fragment
-    def load_listings_map_and_table(self):
+    def load_listings_map(self):
         self.create_listings_map()
+
 
 class AppFormater:
     """
@@ -420,16 +447,19 @@ class AppFormater:
 
     def remove_whitespace(self):
         st.markdown(
-                    # [data-testid="element-container"] {
-                    #     padding: 0rem;
-                    # }
             """
                 <style>
-                    # div[data-testid="stVerticalBlock"]{
-                    #     gap: 0;
-                    # }
+                    div[data-testid="stVerticalBlock"]{
+                        gap: 0;
+                    }
+                    [data-testid="element-container"] {
+                        padding: 0rem;
+                    }
                     div[data-testid="stExpander"]{
                         padding: 5px;
+                    }
+                    .stPlotlyChart {
+                        height: 100vh ;
                     }
                     #MainMenu, header, footer {visibility: hidden}
                     .st-emotion-cache-1jicfl2 {
