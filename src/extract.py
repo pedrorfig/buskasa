@@ -9,6 +9,13 @@ from dotenv import load_dotenv
 from PIL import Image
 from sqlalchemy import create_engine, text
 import overpy
+import logging
+
+# Configure logging
+logging.basicConfig(format="%(asctime)s %(name)-12s %(levelname)-8s %(message)s", level=logging.INFO)
+# Create logger object
+logger = logging.getLogger(__name__)
+
 
 load_dotenv()
 
@@ -74,9 +81,11 @@ def create_db_engine(
     assert isinstance(port, int), "Port must be numeric"
     assert user is not None, "Username is empty"
     assert password is not None, "Password is empty"
-
+    
+    logger.info("Creating database engine")
+    
     db_uri = f"postgresql+psycopg2://{user}:{password}@aws-0-sa-east-1.pooler.supabase.com:{port}/postgres"
-    engine = create_engine(db_uri, future=True)
+    engine = create_engine(db_uri, future=True, echo=True)
 
     return engine
 
@@ -176,6 +185,21 @@ def get_n_bus_lines(min_lat, max_lat, min_lon, max_lon):
 
     # Output the number of bus stops
     return len(result.relations)
+
+def is_next_to_park(lat, lon):
+    api = overpy.Overpass()
+
+    query = f'way["leisure"="park"](around:1000, {lat}, {lon});out;'
+
+    # Execute the query
+    result = api.query(query)
+
+    next_to_park = False
+    for way in result.ways:
+        if way.tags.get('park:type') == 'city_park':
+            next_to_park = True
+    return next_to_park
+
 
 def add_green_density_to_db(db_engine, min_lat, max_lat, min_lon, max_lon, green_density):
     with db_engine.begin() as conn:

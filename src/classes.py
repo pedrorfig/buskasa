@@ -1,3 +1,4 @@
+import logging
 import os
 import random
 import re
@@ -9,6 +10,12 @@ import numpy as np
 import pandas as pd
 import requests as r
 from sqlalchemy import text
+
+# Configure logging
+logging.basicConfig(format="%(asctime)s %(name)-12s %(levelname)-8s %(message)s", level=logging.INFO)
+# Create logger object
+logger = logging.getLogger(__name__)
+
 
 import src.extract as extract
 import src.transform as transform
@@ -632,7 +639,7 @@ class ZapItem:
         self.address = self.get_complete_address()
         self.latitude, self.longitude = self.get_longitude_latitude()
         self.precision = None
-        self.green_density = self.get_green_density()
+        self.green_density, self.is_next_to_park = self.get_sat_image_analysis_metrics()
         self.n_nearby_bus_lanes = self.get_number_of_nearby_bus_lines()
         self.is_quiet = self.is_quiet()
         # Getting cost data
@@ -697,28 +704,33 @@ class ZapItem:
         return n_bus_lanes
 
 
-    def get_green_density(self):
+    def get_sat_image_analysis_metrics(self):
 
         if np.isnan(self.latitude) or np.isnan(self.longitude):
-            return None
+            return 0, False
 
-        green_densities = self._zap_page.zap_search.existing_image_analysis
-        green_densities_to_add = self._zap_page.zap_search.image_analysis_to_add
+        sat_image_analysis = self._zap_page.zap_search.existing_image_analysis
+        sat_image_analysis_to_add = self._zap_page.zap_search.image_analysis_to_add
 
-        green_densities = pd.concat([green_densities, green_densities_to_add], ignore_index=True, axis=0)
+        sat_image_analysis = pd.concat([sat_image_analysis, sat_image_analysis_to_add], ignore_index=True, axis=0)
 
         # Filter the DataFrame based on the latitude and longitude
-        filtered_green_density = green_densities[
-            (green_densities["min_lat"] <= round(self.latitude, 3))
-            & (round(self.latitude, 3) <= green_densities["max_lat"])
-            & (green_densities["min_lon"] <= round(self.longitude, 3))
-            & (round(self.longitude, 3) <= green_densities["max_lon"])
+        filtered_sat_image_analysis = sat_image_analysis[
+            (sat_image_analysis["min_lat"] <= round(self.latitude, 3))
+            & (round(self.latitude, 3) <= sat_image_analysis["max_lat"])
+            & (sat_image_analysis["min_lon"] <= round(self.longitude, 3))
+            & (round(self.longitude, 3) <= sat_image_analysis["max_lon"])
         ]
 
         # Get the green_density value from the filtered DataFrame
         green_density = (
-            filtered_green_density["green_density"].values[0]
-            if not filtered_green_density.empty
+            filtered_sat_image_analysis["green_density"].values[0]
+            if not filtered_sat_image_analysis.empty
+            else None
+        )
+        is_next_to_park = (
+            filtered_sat_image_analysis["is_next_to_park"].values[0]
+            if not filtered_sat_image_analysis.empty
             else None
         )
 
@@ -731,31 +743,35 @@ class ZapItem:
             )
             image = extract.get_sat_image(min_lat, max_lat, min_lon, max_lon)
             green_density = transform.calculate_green_density(image)
-
-            self.update_green_densities_to_add(
-                green_densities_to_add, green_density, min_lat, max_lat, min_lon, max_lon
+        if is_next_to_park is None:
+            is_next_to_park = extract.is_next_to_park(self.latitude, self.longitude)
+            
+            self.update_sat_image_analysis_to_add(
+                sat_image_analysis_to_add, green_density, is_next_to_park, min_lat, max_lat, min_lon, max_lon
             )
 
-        return green_density
+        return green_density, is_next_to_park
 
-    def update_green_densities_to_add(
-        self, green_densities_to_add, green_density,
-        min_lat, max_lat, min_lon, max_lon
+    def update_sat_image_analysis_to_add(
+        self, sat_image_analysis_to_add, green_density,
+        is_next_to_park, min_lat, max_lat, min_lon, max_lon
     ):
-        green_density_entry = pd.DataFrame.from_dict(
+        sat_image_analysis_entry = pd.DataFrame.from_dict(
             {
                 "min_lat": [min_lat],
                 "max_lat": [max_lat],
                 "min_lon": [min_lon],
                 "max_lon": [max_lon],
                 "green_density": [green_density],
+                "is_next_to_park": [is_next_to_park],
             }
         )
-        updated_green_densities = pd.concat(
-            [green_densities_to_add, green_density_entry],
+        updated_sat_image_analysis = pd.concat(
+            [sat_image_analysis_to_add, sat_image_analysis_entry],
             ignore_index=True, axis=0
         )
-        self._zap_page.zap_search.green_densities_to_add = updated_green_densities
+
+        self._zap_page.zap_search.image_analysis_to_add = updated_sat_image_analysis
     
     def update_n_bus_lines_df(
         self, traffic_analysis_to_add, n_bus_lines, min_lat, max_lat, min_lon, max_lon
@@ -1106,8 +1122,9 @@ class ZapItem:
         )
         if not (np.isnan(latitude) or np.isnan(longitude)):
             self.precision = "exact"
-            latitude = latitude + np.random.random() / 1000
-            longitude = longitude + np.random.random() / 1000
+            # Add some noise to the latitude and longitude
+            latitude = latitude + np.random.random() / 10000
+            longitude = longitude + np.random.random() / 10000
         else:
             self.precision = "approximate"
         return latitude, longitude

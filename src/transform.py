@@ -78,23 +78,34 @@ def calculate_green_density(image):
     return green_density
 
 
+
 def group_green_density():
     # Connect to the PostgreSQL database
     engine = extract.create_db_engine()
     with engine.begin() as conn:
         query = text(
-            """WITH quartile_green_density AS (
-                        select CASE
-                                    WHEN NTILE(4) OVER (ORDER BY green_density) = 1 THEN 'Pouco Verde'
-                                    WHEN NTILE(4) OVER (ORDER BY green_density) = 2 THEN 'Moderadamente Verde'
-                                    WHEN NTILE(4) OVER (ORDER BY green_density) = 3 THEN 'Bastante Verde'
-                                    WHEN NTILE(4) OVER (ORDER BY green_density) = 4 THEN 'Extremamente Verde'
-                                END as green_density_grouped,
-                                listing_id
-                        from fact_listings) 
-                    UPDATE fact_listings SET green_density_grouped = quartile_green_density.green_density_grouped
-                    FROM quartile_green_density
-                    WHERE fact_listings.listing_id = quartile_green_density.listing_id;
+            """with quartile_green_density as (select
+                        CASE
+                            WHEN NTILE(3) OVER (
+                            ORDER BY
+                                green_density
+                            ) = 3 THEN 'Bastante Verde'
+                            WHEN NTILE(3) OVER (
+                            ORDER BY
+                                green_density
+                            ) = 2 THEN 'Moderadamente Verde'
+                            WHEN NTILE(3) OVER (
+                            ORDER BY
+                                green_density
+                            ) = 1 and is_next_to_park is False THEN 'Pouco Verde'
+                            WHEN is_next_to_park is True THEN 'Moderadamente Verde'
+                        END as green_density_grouped,
+                        listing_id
+                        from
+                        fact_listings)
+                        UPDATE fact_listings SET green_density_grouped = quartile_green_density.green_density_grouped
+                        FROM quartile_green_density
+                        WHERE fact_listings.listing_id = quartile_green_density.listing_id;
                 """)
         conn.execute(query)
     return
@@ -103,18 +114,18 @@ def group_n_bus_lanes():
     engine = extract.create_db_engine()
     with engine.begin() as conn:
         query = text(
-            """WITH quartile_n_bus_lanes AS (
+            """WITH quartile_n_nearby_bus_lanes AS (
                         select CASE
-                                    WHEN NTILE(4) OVER (ORDER BY n_bus_lanes) = 1 THEN 'Muito Calmo'
-                                    WHEN NTILE(4) OVER (ORDER BY n_bus_lanes) = 2 THEN 'Calmo'
-                                    WHEN NTILE(4) OVER (ORDER BY n_bus_lanes) = 3 THEN 'Movimentado'
-                                    WHEN NTILE(4) OVER (ORDER BY n_bus_lanes) = 4 THEN 'Agitado'
-                                END as n_bus_lanes_grouped,
+                                    WHEN NTILE(4) OVER (ORDER BY n_nearby_bus_lanes) = 1 THEN 'Muito Calmo'
+                                    WHEN NTILE(4) OVER (ORDER BY n_nearby_bus_lanes) = 2 THEN 'Calmo'
+                                    WHEN NTILE(4) OVER (ORDER BY n_nearby_bus_lanes) = 3 THEN 'Movimentado'
+                                    WHEN NTILE(4) OVER (ORDER BY n_nearby_bus_lanes) = 4 THEN 'Agitado'
+                                END as n_nearby_bus_lanes_grouped,
                                 listing_id
                         from fact_listings) 
-                    UPDATE fact_listings SET n_bus_lanes_grouped = quartile_n_bus_lanes.n_bus_lanes_grouped
-                    FROM quartile_n_bus_lanes
-                    WHERE fact_listings.listing_id = quartile_n_bus_lanes.listing_id;
+                    UPDATE fact_listings SET n_nearby_bus_lanes_grouped = quartile_n_nearby_bus_lanes.n_nearby_bus_lanes_grouped
+                    FROM quartile_n_nearby_bus_lanes
+                    WHERE fact_listings.listing_id = quartile_n_nearby_bus_lanes.listing_id;
                 """)
         conn.execute(query)
     return
