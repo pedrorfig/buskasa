@@ -189,7 +189,7 @@ def get_n_bus_lines(min_lat, max_lat, min_lon, max_lon):
 def is_next_to_park(lat, lon):
     api = overpy.Overpass()
 
-    query = f'way["leisure"="park"](around:1200, {lat}, {lon});out;'
+    query = f'nr["leisure"="park"](around:1200, {lat}, {lon});out;'
 
     # Execute the query
     result = api.query(query)
@@ -197,6 +197,9 @@ def is_next_to_park(lat, lon):
     next_to_park = False
     for way in result.ways:
         if way.tags.get('park:type') == 'city_park':
+            next_to_park = True
+    for way in result.relations:
+        if way.tags.get('leisure') == 'park':
             next_to_park = True
     return next_to_park
 
