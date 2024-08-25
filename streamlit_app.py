@@ -7,7 +7,7 @@ load_dotenv()
 # Initialize app formatation
 app_formater = AppFormater()
 app_formater.format_page()
-
+app_formater.format_app_layout()
 # Initialize app visualization
 app = App()
 
@@ -23,8 +23,6 @@ if st.session_state["connected"] or st.session_state["connected_as_guest"]:
     with st.spinner("Carregando anúncios..."):
         app.get_listings()
     app.get_listings_visited_by_user()
-    app_formater.remove_whitespace()
-    app_formater.increase_logo_size()
     app.create_side_bar_with_filters()
     app.load_listings_map()
     st.toast(

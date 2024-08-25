@@ -94,45 +94,15 @@ def get_listings(_conn, user_has_visits=False, user=None):
     """
     Get listings for registered user
     """
-    if user:
-        if user_has_visits:
-            listings = pd.read_sql(
+    listings = pd.read_sql(
                 """
-                    with listings_visited_by_user  as (
-                        select * from fact_listings_visited as flv
-                        where flv."user" = %(user)s
-                        )
-                    SELECT *
-                    FROM fact_listings fl
-                    LEFT JOIN listings_visited_by_user lvu on lvu.visited_listing_id = fl.listing_id
-                    WHERE
-                        price_per_area_in_first_quartile = True
-                    """,
+                SELECT *, null as user
+                FROM fact_listings
+                WHERE price_per_area_in_first_quartile = True
+                """,
                 con=_conn,
-                index_col="listing_id",
-                params={"user": user},
+                index_col="listing_id"
             )
-        else:
-            listings = pd.read_sql(
-                        """
-                        SELECT *, null as user
-                        FROM fact_listings
-                        WHERE price_per_area_in_first_quartile = True
-                        """,
-                        con=_conn,
-                        index_col="listing_id"
-                    )
-    
-    else:
-        listings = pd.read_sql(
-                    """
-                    SELECT *, null as user
-                    FROM fact_listings
-                    WHERE price_per_area_in_first_quartile = True
-                    """,
-                    con=_conn,
-                    index_col="listing_id"
-                )
 
     return listings
 

@@ -74,7 +74,7 @@ class App:
         engine = self._engine
         with engine.begin() as conn:
             self.data = extract.get_listings(
-                conn, self.user_has_visits, self.user_email
+                conn
             )
 
     def get_listings_visited_by_user(self):
@@ -395,16 +395,12 @@ class App:
                 zoom=12,
             ),
         )
-        with st.container():
-            event = st.plotly_chart(
-                fig,
-                config={"displayModeBar": False},
-                on_select="rerun",
-                selection_mode="points",
-                use_container_width=True,
-            )
-
-        self.save_listings_visited_by_user_to_db(event)
+        
+        st.plotly_chart(
+            fig,
+            config={"displayModeBar": False},
+            use_container_width=True,
+        )
 
         return
 
@@ -443,49 +439,8 @@ class AppFormater:
         pass
 
     def format_page(self):
-        st.set_page_config(layout="wide", page_icon="🏘️", page_title="Buskasa")
+        st.set_page_config(layout="wide", page_icon="🏘️", page_title="Buskasa", initial_sidebar_state='expanded', )
 
-    def remove_whitespace(self):
-        st.markdown(
-            """
-                <style>
-                    div[data-testid="stVerticalBlock"]{
-                        gap: 0;
-                    }
-                    [data-testid="element-container"] {
-                        padding: 0rem;
-                    }
-                    div[data-testid="stExpander"]{
-                        padding: 5px;
-                    }
-                    .stPlotlyChart {
-                        height: 100vh ;
-                    }
-                    #MainMenu, header, footer {visibility: hidden}
-                    .st-emotion-cache-1jicfl2 {
-                        padding: 0rem;
-                    }
-                    [data-testid="baseButton-primaryFormSubmit"] {
-                        margin: 5px;
-                    }
-                </style>""",
-            unsafe_allow_html=True,
-        )
-
-    def increase_logo_size(self):
-        st.markdown(
-            """
-                <style>
-                    div[data-testid="stSidebarHeader"] > img, div[data-testid="collapsedControl"] > img {
-                        height: 6rem;
-                        width: auto;
-                    }
-                    div[data-testid="stSidebarHeader"], div[data-testid="stSidebarHeader"] > *,
-                    div[data-testid="collapsedControl"], div[data-testid="collapsedControl"] > * {
-                        display: flex;
-                        align-items: center;
-                    }
-                </style>
-            """,
-            unsafe_allow_html=True,
-        )
+    def format_app_layout(self):
+        with open("assets/style.css") as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)

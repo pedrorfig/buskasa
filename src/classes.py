@@ -735,9 +735,6 @@ class ZapItem:
         )
 
         if green_density is None:
-            print(
-                f"Point is not in any bounding box: {self.latitude}, {self.longitude}"
-            )
             min_lat, max_lat, min_lon, max_lon = transform.define_bounding_box(
                 self.latitude, self.longitude
             )
