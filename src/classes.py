@@ -262,8 +262,18 @@ class ZapNeighborhood:
                 listings_on_db_sql_statement, con=conn, params=filter_conditions
             )
         search_listings = self.listings_to_add
-        if (not search_listings.empty) and (not listings_on_db.empty):
+        
+        if search_listings.empty and listings_on_db.empty:
+            all_listings = pd.DataFrame()
+        elif search_listings.empty:
+            all_listings = listings_on_db
+        elif listings_on_db.empty:
+            all_listings = search_listings
+        else:
             all_listings = pd.concat([listings_on_db, search_listings])
+        
+        if (not search_listings.empty) and (not listings_on_db.empty):
+            all_listings = pd.concat([listings_on_db, search_listings])            
             # Calculate interquartile range
             q_low = all_listings["price_per_area"].quantile(0.25)
             q_hi = all_listings["price_per_area"].quantile(0.75)
@@ -294,22 +304,24 @@ class ZapNeighborhood:
         """
         print("\tRemoving duplicated listings")
         listings = self.listings_to_add
-        deduplucated_listings = listings.sort_values(
-            "price", ascending=True
-        ).drop_duplicates(
-            subset=[
-                "bedrooms",
-                "bathrooms",
-                "floor",
-                "total_area_m2",
-                "zip_code",
-                "street_address",
-                "street_number",
-            ],
-            keep="first",
-        )
-        self.listings_to_add = deduplucated_listings
-
+        try:
+            deduplucated_listings = listings.sort_values(
+                "price", ascending=True
+            ).drop_duplicates(
+                subset=[
+                    "bedrooms",
+                    "bathrooms",
+                    "floor",
+                    "total_area_m2",
+                    "zip_code",
+                    "street_address",
+                    "street_number",
+                ],
+                keep="first",
+            )
+            self.listings_to_add = deduplucated_listings
+        except KeyError:
+            print("No listings to deduplicate")
     def remove_old_listings(self):
         """
         Remove listings that haven't been updated for more than a week

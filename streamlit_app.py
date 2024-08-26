@@ -10,13 +10,13 @@ app_formater.format_page()
 app = App()
 app.create_login_modal()
 # Initialize app formatation
-with st.spinner("Carregando anúncios..."):
-    app.get_listings()
 st.toast(
     """Nós usamos cookies para recomendar
             os apartamentos que mais combinam com você""",
     icon=":material/cookie:",
 )
-app.create_side_bar_with_filters()
-app.load_listings_map()
-app_formater.format_app_layout()
+with st.spinner("Carregando anúncios..."):
+    app.get_listings()
+    app.create_side_bar_with_filters()
+    app.load_listings_map()
+    app_formater.format_app_layout()

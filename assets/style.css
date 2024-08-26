@@ -1,4 +1,5 @@
 #MainMenu, header, footer {visibility: hidden;}
+.element-container:has(iframe[height="0"]) {display: none;}
 .st-emotion-cache-1jicfl2 {
     padding: 0rem;
     }
@@ -12,4 +13,8 @@ div[data-testid="stSidebarHeader"] > img, div[data-testid="collapsedControl"] > 
 div[data-testid="stSidebarHeader"], div[data-testid="stSidebarHeader"] > *,div[data-testid="collapsedControl"], div[data-testid="collapsedControl"] > * {
     display: flex;
     align-items: center;
+}
+hr {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
 }
