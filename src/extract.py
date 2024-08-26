@@ -90,13 +90,13 @@ def create_db_engine(
     return engine
 
 @st.cache_data(show_spinner=False)
-def get_listings(_conn, user_has_visits=False, user=None):
+def get_listings(_conn):
     """
-    Get listings for registered user
+    Get listings
     """
     listings = pd.read_sql(
                 """
-                SELECT *, null as user
+                SELECT *
                 FROM fact_listings
                 WHERE price_per_area_in_first_quartile = True
                 """,

@@ -2,9 +2,9 @@
 div[data-testid="stVerticalBlock"]{
     gap: 0rem;
 }
-/* [data-testid="element-container"] {
+[data-testid="element-container"] {
     margin: 0rem;
-}  */
+} 
 div[data-testid="stExpander"]{
     padding: 3px;
 }

@@ -9,8 +9,7 @@ import streamlit as st
 from dotenv import load_dotenv
 
 import src.extract as extract
-from src.streamlit_google_auth import Authenticate
-from sqlalchemy import Table, Column, Integer, String, MetaData, text
+from sqlalchemy import  text
 from sqlalchemy.dialects.postgresql import insert
 
 
@@ -29,41 +28,12 @@ class App:
         self.data = pd.DataFrame()
         self.filtered_data = pd.DataFrame()
         self.city_price_per_area_distribution = []
-        self.listings_visited_by_user = []
-        self.auth = Authenticate(
-            secret_credentials_path="google_credentials.json",
-            cookie_name="bargain_bungalow_cookie_name",
-            cookie_key="bargain_bungalow_cookie_key",
-        )
-        self.user_email = ""
-        self.name = ""
-        self.user_type = ""
         self._engine = extract.create_db_engine()
-
-    def get_user_data(self):
-
-        if "user_info" in st.session_state:
-            self.user_email = st.session_state["user_info"]["email"]
-            self.user_name = st.session_state["user_info"]["name"]
-        self.user_type = "Registered" if self.user_email else "Guest"
-
-    def check_if_user_has_visits(self):
-        engine = self._engine
-        with engine.begin() as conn:
-            user_has_visits = pd.read_sql(
-                """
-                    SELECT
-                        CASE
-                            WHEN COUNT(*) > 0 then True
-                            ELSE False
-                        END AS has_visits
-                    FROM fact_listings_visited
-                    WHERE "user" = %(user)s
-                    """,
-                con=conn,
-                params={"user": self.user_email},
-            ).iloc[0, 0]
-        self.user_has_visits = user_has_visits
+    def create_login_modal(self):
+        @st.dialog("Bem-vindo(a) ao Buskasa!", width="small")
+        def welcome():
+            st.write("Buskasa usa AI para encontrar os melhores imóveis para você!")
+        welcome()
 
     def get_listings(self):
         """
@@ -76,27 +46,6 @@ class App:
             self.data = extract.get_listings(
                 conn
             )
-
-    def get_listings_visited_by_user(self):
-        if "user_info" in st.session_state:
-            engine = self._engine
-            with engine.begin() as conn:
-                # Checking for existing listing_ids on the database
-                # according to specified filters
-                filter_conditions = {
-                    "user": st.session_state["user_info"]["email"],
-                }
-                visited_listing_id_sql_statement = r"""
-                    SELECT visited_listing_id
-                    FROM fact_listings_visited
-                    WHERE "user" = %(user)s
-                    """
-                ids = pd.read_sql(
-                    visited_listing_id_sql_statement, con=conn, params=filter_conditions
-                )
-                self.listings_visited_by_user = [*ids["visited_listing_id"]]
-        else:
-            pass
 
     def create_price_per_area_distribution_histogram(self):
         fig = go.Figure()
@@ -199,11 +148,11 @@ class App:
                     if unit_type == ["Apartamentos"]:
                         unit_type_filter = (
                             self.data["unit_type"] == "APARTMENT"
-                        )  # User email exists
+                        )
                     elif unit_type == ["Casas"]:
                         unit_type_filter = (
                             self.data["unit_type"] == "HOME"
-                        )  # User email is null
+                        )  
                     else:
                         unit_type_filter = True  # Show all rows
                     st.divider()
@@ -403,27 +352,6 @@ class App:
         )
 
         return
-
-    def save_listings_visited_by_user_to_db(self, event):
-        if "user_info" in st.session_state:
-            if event.selection.points:
-                engine = self._engine
-                with engine.begin() as conn:
-                    listing_clicked = event.selection["points"][0]["customdata"][5]
-                    conn.execute(
-                        text(
-                            """
-                                INSERT INTO fact_listings_visited ("user", "visited_listing_id")
-                                VALUES (:user, :visited_listing_id)
-                                ON CONFLICT ("user", "visited_listing_id")
-                                DO NOTHING;
-                            """
-                        ),
-                        {
-                            "user": self.user_email,
-                            "visited_listing_id": listing_clicked,
-                        },
-                    )
 
     @st.fragment
     def load_listings_map(self):
