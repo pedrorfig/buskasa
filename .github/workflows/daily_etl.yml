@@ -31,4 +31,4 @@ jobs:
           BRASIL_ABERTO_API_KEY_PAID: ${{ secrets.BRASIL_ABERTO_API_KEY_PAID }}
           BRASIL_ABERTO_API_KEY_FREE: ${{ secrets.BRASIL_ABERTO_API_KEY_FREE }}
 
-        run: python etl.py "São Paulo" "São Paulo" "Paraíso,Cerqueira César,Consolação,Bela Vista,Jardins,Higienópolis,Jardim Paulista,Vila Mariana,Aclimação,Perdizes,Alto de Pinheiros,Itaim Bibi,Moema,Santa Cecília,Pinheiros"
+        run: python etl.py "São Paulo" "São Paulo" "Paraíso,Cerqueira César,Consolação,Sumaré,Bela Vista,Jardins,Higienópolis,Jardim Paulista,Vila Mariana,Aclimação,Perdizes,Alto de Pinheiros,Itaim Bibi,Moema,Santa Cecília,Pinheiros,Vila Olímpia,República,Pacaembú,Barra Funda,Chácara Klabin,Cambuci,Sumarézinho,Vila Nova Conceição,Jardim Luzitânia,Vila Clementino,Jardim Paulistano"
