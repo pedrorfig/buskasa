@@ -1,18 +1,4 @@
-
-div[data-testid="stVerticalBlock"]{
-    gap: 0rem;
-}
-[data-testid="element-container"] {
-    margin: 0rem;
-} 
-div[data-testid="stExpander"]{
-    padding: 3px;
-}
 #MainMenu, header, footer {visibility: hidden;}
-
-/* This code gets the first element on the sidebar,
-and overrides its default styling */
-
 .st-emotion-cache-1jicfl2 {
     padding: 0rem;
     }
@@ -20,11 +6,10 @@ and overrides its default styling */
         height: 100vh;
     }
 div[data-testid="stSidebarHeader"] > img, div[data-testid="collapsedControl"] > img {
-    height: 6rem;
+    height: 5rem;
     width: auto;
 }
-div[data-testid="stSidebarHeader"], div[data-testid="stSidebarHeader"] > *,
-div[data-testid="collapsedControl"], div[data-testid="collapsedControl"] > * {
+div[data-testid="stSidebarHeader"], div[data-testid="stSidebarHeader"] > *,div[data-testid="collapsedControl"], div[data-testid="collapsedControl"] > * {
     display: flex;
     align-items: center;
 }

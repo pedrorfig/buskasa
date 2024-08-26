@@ -1,8 +1,13 @@
 [mapbox]
 token = "pk.eyJ1IjoicGVkcm9yZiIsImEiOiJjbG1pOGhkM2YybmdsM2RscGNxNW9mN25yIn0.VeO6-38K7x_86607eH7bsw"
 
-[logger]
+[theme]
+base='light'
 
+[client]
+showErrorDetails = false
+
+[logger]
 # Level of logging: 'error', 'warning', 'info', or 'debug'.
 # Default: 'info'
 level = "info"

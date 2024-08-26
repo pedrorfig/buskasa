@@ -1,17 +1,16 @@
-from datetime import datetime
 import math
 import os
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 from dotenv import load_dotenv
-
-import src.extract as extract
-from sqlalchemy import  text
+from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
 
+import src.extract as extract
 
 load_dotenv()
 
@@ -29,10 +28,12 @@ class App:
         self.filtered_data = pd.DataFrame()
         self.city_price_per_area_distribution = []
         self._engine = extract.create_db_engine()
+
     def create_login_modal(self):
         @st.dialog("Bem-vindo(a) ao Buskasa!", width="small")
         def welcome():
             st.write("Buskasa usa AI para encontrar os melhores imóveis para você!")
+
         welcome()
 
     def get_listings(self):
@@ -43,9 +44,7 @@ class App:
         """
         engine = self._engine
         with engine.begin() as conn:
-            self.data = extract.get_listings(
-                conn
-            )
+            self.data = extract.get_listings(conn)
 
     def create_price_per_area_distribution_histogram(self):
         fig = go.Figure()
@@ -146,13 +145,9 @@ class App:
                     )
                     # Determine the condition based on the selection
                     if unit_type == ["Apartamentos"]:
-                        unit_type_filter = (
-                            self.data["unit_type"] == "APARTMENT"
-                        )
+                        unit_type_filter = self.data["unit_type"] == "APARTMENT"
                     elif unit_type == ["Casas"]:
-                        unit_type_filter = (
-                            self.data["unit_type"] == "HOME"
-                        )  
+                        unit_type_filter = self.data["unit_type"] == "HOME"
                     else:
                         unit_type_filter = True  # Show all rows
                     st.divider()
@@ -344,7 +339,7 @@ class App:
                 zoom=12,
             ),
         )
-        
+
         st.plotly_chart(
             fig,
             config={"displayModeBar": False},
@@ -367,7 +362,15 @@ class AppFormater:
         pass
 
     def format_page(self):
-        st.set_page_config(layout="wide", page_icon="🏘️", page_title="Buskasa", initial_sidebar_state='expanded', )
+        st.set_page_config(
+            layout="wide",
+            page_icon="🏘️",
+            page_title="Buskasa",
+            initial_sidebar_state="expanded",
+            menu_items={
+                "Get help": "https://www.linkedin.com/in/pedro-figueiredo-77377872/",
+            }
+        )
 
     def format_app_layout(self):
         with open("assets/style.css") as f:
