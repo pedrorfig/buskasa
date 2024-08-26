@@ -741,7 +741,7 @@ class ZapItem:
             image = extract.get_sat_image(min_lat, max_lat, min_lon, max_lon)
             green_density = transform.calculate_green_density(image)
         if is_next_to_park is None:
-            is_next_to_park = extract.is_next_to_park(self.latitude, self.longitude)
+            is_next_to_park = extract.is_next_to_park((min_lat+max_lat)/2, (min_lon+max_lon)/2)
             
             self.update_sat_image_analysis_to_add(
                 sat_image_analysis_to_add, green_density, is_next_to_park, min_lat, max_lat, min_lon, max_lon
