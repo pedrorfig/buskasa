@@ -33,7 +33,7 @@ jobs:
 
         run: python etl.py "São Paulo" "São Paulo" "HOME" "Paraíso,Cerqueira César,Consolação,Sumaré,Bela Vista,Jardins,Higienópolis,Jardim Paulista,Vila Mariana,Aclimação,Perdizes,Alto de Pinheiros,Itaim Bibi,Moema,Santa Cecília,Pinheiros,Vila Olímpia,República,Pacaembu,Barra Funda,Chácara Klabin,Cambuci,Sumarézinho,Vila Nova Conceição,Jardim Luzitânia,Vila Clementino,Jardim Paulistano"
 
-        - name: Search for real estate apartment listings # run main.py
+      - name: Search for real estate apartment listings # run main.py
         env:
           MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
           DB_USER: ${{ secrets.DB_USER }}
