@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 def main(
     business_type: str = "SALE",
     usage_type: str = "RESIDENTIAL",
-    unit_type: str = "APARTMENT",
     min_area: int = 30,
     min_price: int = 200000,
     max_price: int = 2000000,
@@ -34,7 +33,7 @@ def main(
     # Load credential values
     load_dotenv()
     # Get state, city and neighborhoods to be search through command prompt
-    state, city, neighborhoods = extract.get_search_parameters()
+    state, city, unit_type, neighborhoods = extract.get_search_parameters()
 
     for neighborhood in neighborhoods:
         print(f"Getting listings from neighborhood {neighborhood}")

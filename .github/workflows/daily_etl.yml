@@ -23,7 +23,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           
-      - name: execute py script # run main.py
+      - name: Search for real estate listings # run main.py
         env:
           MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
           DB_USER: ${{ secrets.DB_USER }}
@@ -31,4 +31,5 @@ jobs:
           BRASIL_ABERTO_API_KEY_PAID: ${{ secrets.BRASIL_ABERTO_API_KEY_PAID }}
           BRASIL_ABERTO_API_KEY_FREE: ${{ secrets.BRASIL_ABERTO_API_KEY_FREE }}
 
-        run: python etl.py "São Paulo" "São Paulo" "Paraíso,Cerqueira César,Consolação,Sumaré,Bela Vista,Jardins,Higienópolis,Jardim Paulista,Vila Mariana,Aclimação,Perdizes,Alto de Pinheiros,Itaim Bibi,Moema,Santa Cecília,Pinheiros,Vila Olímpia,República,Pacaembú,Barra Funda,Chácara Klabin,Cambuci,Sumarézinho,Vila Nova Conceição,Jardim Luzitânia,Vila Clementino,Jardim Paulistano"
+        run: python etl.py "São Paulo" "São Paulo" "HOME" "Paraíso,Cerqueira César,Consolação,Sumaré,Bela Vista,Jardins,Higienópolis,Jardim Paulista,Vila Mariana,Aclimação,Perdizes,Alto de Pinheiros,Itaim Bibi,Moema,Santa Cecília,Pinheiros,Vila Olímpia,República,Pacaembu,Barra Funda,Chácara Klabin,Cambuci,Sumarézinho,Vila Nova Conceição,Jardim Luzitânia,Vila Clementino,Jardim Paulistano"
+        run: python etl.py "São Paulo" "São Paulo" "APARTMENT" "Paraíso,Cerqueira César,Consolação,Sumaré,Bela Vista,Jardins,Higienópolis,Jardim Paulista,Vila Mariana,Aclimação,Perdizes,Alto de Pinheiros,Itaim Bibi,Moema,Santa Cecília,Pinheiros,Vila Olímpia,República,Pacaembu,Barra Funda,Chácara Klabin,Cambuci,Sumarézinho,Vila Nova Conceição,Jardim Luzitânia,Vila Clementino,Jardim Paulistano"
