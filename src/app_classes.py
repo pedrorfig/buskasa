@@ -65,14 +65,18 @@ class App:
         )
 
         fig.update_yaxes(showgrid=False, visible=False, showticklabels=False)
-
         fig.update_layout(
             margin=dict(l=0, r=0, t=0, b=0),
             plot_bgcolor="rgba(0,0,0,0)",
             paper_bgcolor="rgba(0,0,0,0)",
             height=150,
+            dragmode=False,
+            hovermode=False,
+            uirevision="constant",
+
         )
         with st.container(height=150, border=False):
+            
             st.plotly_chart(
                 fig,
                 config={"displayModeBar": False, "responsive": False},
@@ -176,6 +180,20 @@ class App:
                         label_visibility="collapsed",
                         key="area",
                     )
+                    st.divider()
+                    st.markdown("Preço (R$)")
+
+                    price = st.slider(
+                        "Price",
+                        min_value=math.floor(self.data["price"].min() / 100000)
+                        * 100000,
+                        max_value=math.ceil(self.data["price"].max() / 100000) * 100000,
+                        value=math.ceil(self.data["price"].max() / 100000) * 100000,
+                        step=100000,
+                        format="R$ %d",
+                        label_visibility="collapsed",
+                        key="price",
+                    )
                 with st.expander(
                     "Filtros inteligentes",
                     expanded=True,
@@ -198,30 +216,21 @@ class App:
                         key="price_per_area",
                     )
 
-                    st.divider()
-                    st.markdown("Preço (R$)")
-
-                    price = st.slider(
-                        "Price",
-                        min_value=math.floor(self.data["price"].min() / 100000)
-                        * 100000,
-                        max_value=math.ceil(self.data["price"].max() / 100000) * 100000,
-                        value=math.ceil(self.data["price"].max() / 100000) * 100000,
-                        step=100000,
-                        format="R$ %d",
-                        label_visibility="collapsed",
-                        key="price",
-                    )
 
                     st.divider()
-                    st.markdown("Densidade de verde")
+                    st.markdown("Arborização")
+                    green_density_map = {
+                        "Pouco Verde": 'Mais cinza',
+                        "Moderadamente Verde": 'Balanceado',
+                        "Bastante Verde": 'Arborizado',
+                    }
                     green_density = st.multiselect(
                         "Green Density",
-                        options=[
+                        options=(
                             "Pouco Verde",
                             "Moderadamente Verde",
-                            "Bastante Verde",
-                        ],
+                            "Bastante Verde"),
+                        format_func=lambda x: green_density_map[x],
                         label_visibility="collapsed",
                         key="green_density",
                     )
@@ -229,7 +238,7 @@ class App:
                         green_density = self.data["green_density_grouped"].unique()
 
                     st.divider()
-                    st.markdown("Nível de Movimentação")
+                    st.markdown("Movimentação")
                     movement_intensity = st.multiselect(
                         "Green Density",
                         options=["Muito Calmo", "Calmo", "Movimentado", "Agitado"],

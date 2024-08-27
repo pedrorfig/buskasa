@@ -6,6 +6,7 @@
 .stPlotlyChart {
         height: 100vh;
     }
+
 div[data-testid="stSidebarHeader"] > img, div[data-testid="collapsedControl"] > img {
     height: 5rem;
     width: auto;
@@ -15,6 +16,13 @@ div[data-testid="stSidebarHeader"], div[data-testid="stSidebarHeader"] > *,div[d
     align-items: center;
 }
 hr {
-    margin-top: 1rem;
-    margin-bottom: 1rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+h2 {
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+}
+div[data-testid="stForm"] {
+    padding-top: 5px;
 }
