@@ -30,9 +30,20 @@ class App:
         self._engine = extract.create_db_engine()
 
     def create_login_modal(self):
-        @st.dialog("Bem-vindo(a) ao Buskasa!", width="small")
+        @st.dialog("🎉 Bem-vindo(a) ao Buskasa!", width="small")
         def welcome():
-            st.write("Buskasa usa AI para encontrar os melhores imóveis para você!")
+            st.write("""
+                    Aqui, você encontra o lar ideal com os critérios que realmente importam! 🏡🌿
+
+                    🔍 Destaques que vão facilitar sua busca:
+
+                    - Custo-benefício otimizado: a gente já seleciona os melhores anúncios pra você.
+                    - Silêncio no entorno: veja quão tranquilo é o ambiente ao redor.
+                    - Mais verde: filtre por áreas com mais natureza e qualidade de vida.
+                    - Sem fraudes: bloqueamos anúncios suspeitos pra você não perder tempo.
+                    
+                    Vamos começar a busca? 🚀
+                     """)
 
         welcome()
 
