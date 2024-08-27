@@ -237,26 +237,29 @@ def get_search_parameters():
     """
     Get the search parameters from the command prompt
     Returns:
-        neighborhoods (list): Neighborhoods to scrape
         state (str): State to scrape
         city (str): City to scrape
+        unit_type (str): Type of construction, APARTMENT or HOME
+        neighborhoods (list): Neighborhoods to scrape
     """
 
     neighborhoods = [""]
+    assert len(sys.argv) >= 3, "Please provide at least the following \
+        arguments: state, city and unit type"
+    assert sys.argv[3] in ["APARTMENT", "HOME"], \
+        "Unit type must be APARTMENT or HOME"
 
-    if len(sys.argv) == 3:
-        print(f"Running for all neighborhoods in {sys.argv[1]} - {sys.argv[2]}")
+    if len(sys.argv) == 4:
+        print(f"Running for {sys.argv[3]} on all neighborhoods in {sys.argv[1]} - {sys.argv[2]}")
         neighborhoods = get_neighborhoods_from_city_and_state(sys.argv[1], sys.argv[2])
-    elif len(sys.argv) == 4:
-        print(f"Running for {sys.argv[3]} in {sys.argv[1]} - {sys.argv[2]}")
-        neighborhoods = sys.argv[3].split(",")
-    elif len(sys.argv) < 3:
-        print("Please provide at least the following arguments: state, city")
-        sys.exit(1)
+    elif len(sys.argv) == 5:
+        print(f"Running for {sys.argv[3]} at {sys.argv[4]} neighborhoods in {sys.argv[1]} - {sys.argv[2]}")
+        neighborhoods = sys.argv[4].split(",")
     else:
         print(
-            """Please provide at most the
-            following arguments:state, city, neighborhoods"""
+            f"""Please provide at most 4 search parameters, being the
+            following:state, city, unit type and neighborhoods.
+            Received {len(sys.argv)} parameters, which are: {sys.argv}"""
         )
         sys.exit(1)
-    return sys.argv[1], sys.argv[2], neighborhoods
+    return sys.argv[1], sys.argv[2], sys.argv[3], neighborhoods
