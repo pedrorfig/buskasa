@@ -138,12 +138,11 @@ class App:
 
                     st.divider()
                     # Type of street location filter
-                    st.markdown("Localização")
-                    location_type = st.selectbox(
+                    st.markdown("Tipo de Localização")
+                    location_type = st.multiselect(
                         "Location Type",
                         options=self.data["location_type"].unique(),
                         placeholder="Selecione um tipo de localização",
-                        index=None,
                         label_visibility="collapsed",
                     )
                     if not location_type:
