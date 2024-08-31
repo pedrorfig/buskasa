@@ -103,6 +103,7 @@ class App:
 
         with st.sidebar:
             # Create title for Filter sidebar
+            
 
             self.filtered_data = self.data.copy()
 
@@ -117,7 +118,7 @@ class App:
                         "city",
                         options=self.data["city"].unique(),
                         placeholder="Selecione uma cidade",
-                        index=0,
+                        index=None,
                         label_visibility="collapsed",
                     )
                     self.city_price_per_area_distribution = [
@@ -282,6 +283,8 @@ class App:
                         & (unit_type_filter)
                     )
                 ]
+            else:
+                self.filtered_data = self.data.loc[self.data["city"] == 'São Paulo']
 
     def create_listings_map(self):
 
