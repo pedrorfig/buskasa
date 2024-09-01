@@ -12,7 +12,9 @@ import requests as r
 from sqlalchemy import text
 
 # Configure logging
-logging.basicConfig(format="%(asctime)s %(name)-12s %(levelname)-8s %(message)s", level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s %(name)-12s %(levelname)-8s %(message)s", level=logging.INFO
+)
 # Create logger object
 logger = logging.getLogger(__name__)
 
@@ -68,7 +70,6 @@ class ZapNeighborhood:
         self.listings_to_add = pd.DataFrame()
         self.image_analysis_to_add = pd.DataFrame()
         self.traffic_analysis_to_add = pd.DataFrame()
-        
 
     def get_existing_ids(self):
         """
@@ -124,6 +125,7 @@ class ZapNeighborhood:
             zap_page.convert_zap_page_listing_to_df()
             listings = pd.concat([listings, zap_page.zap_page_listings])
         listings = listings.drop_duplicates(subset="listing_id")
+        logger.info(f"Found {listings.shape[0]} listings")
         self.listings_to_add = listings
 
     def append_zap_page(self, zap_page):
@@ -155,7 +157,6 @@ class ZapNeighborhood:
             "Claudia Cristina Ribeiro de Almeida",
         ]
         listings_from_known_fraudsters = pd.Series()
-        listings_from_recent_accounts = pd.Series()
         listings_with_total_area_typos = pd.Series()
         listings_with_unlicensed_accounts = pd.Series()
         if not listings.empty:
@@ -163,10 +164,6 @@ class ZapNeighborhood:
             listings_from_known_fraudsters = listings[
                 listings["advertizer"].isin(known_fraudsters)
             ]["listing_id"]
-            # Fraudsters by accounts that are too recent
-            listings_from_recent_accounts = listings[listings["recent_account"]][
-                "listing_id"
-            ]
             # Total area typos
             listings_with_total_area_typos = listings[listings["total_area_m2"] >= 500][
                 "listing_id"
@@ -179,7 +176,6 @@ class ZapNeighborhood:
             listing_ids_to_remove = pd.concat(
                 [
                     listings_from_known_fraudsters,
-                    listings_from_recent_accounts,
                     listings_with_total_area_typos,
                     listings_with_unlicensed_accounts,
                 ]
@@ -189,6 +185,7 @@ class ZapNeighborhood:
             cleaned_listings = listings.loc[
                 ~listings["listing_id"].isin(listing_ids_to_remove), :
             ]
+            logger.info(f"Removed {len(listing_ids_to_remove)} listings")
 
             self.listings_to_add = cleaned_listings
 
@@ -256,13 +253,16 @@ class ZapNeighborhood:
                 WHERE
                     city = %(city)s and
                     neighborhood = %(neighborhood)s and
-                    business_type = %(business_type)s
+                    business_type = %(business_type)s and
+                    price >= %(min_price)s and
+                    price <= %(max_price)s and
+                    total_area_m2 >= %(min_area)s
                 """
             listings_on_db = pd.read_sql(
                 listings_on_db_sql_statement, con=conn, params=filter_conditions
             )
         search_listings = self.listings_to_add
-        
+
         if search_listings.empty and listings_on_db.empty:
             all_listings = pd.DataFrame()
         elif search_listings.empty:
@@ -271,9 +271,8 @@ class ZapNeighborhood:
             all_listings = search_listings
         else:
             all_listings = pd.concat([listings_on_db, search_listings])
-        
-        if (not search_listings.empty) and (not listings_on_db.empty):
-            all_listings = pd.concat([listings_on_db, search_listings])            
+
+        if not all_listings.empty:
             # Calculate interquartile range
             q_low = all_listings["price_per_area"].quantile(0.25)
             q_hi = all_listings["price_per_area"].quantile(0.75)
@@ -294,6 +293,7 @@ class ZapNeighborhood:
             # Saving listings removed
             listing_ids_to_remove = self.listing_ids_to_remove
             listing_ids_to_remove.extend(outlier_listings.to_list())
+            logger.info(f"Removed {len(outlier_listings)} outliers")
         else:
             self.listings_to_add = search_listings
         return "Outliers removed"
@@ -311,7 +311,6 @@ class ZapNeighborhood:
                 subset=[
                     "bedrooms",
                     "bathrooms",
-                    "floor",
                     "total_area_m2",
                     "zip_code",
                     "street_address",
@@ -320,8 +319,12 @@ class ZapNeighborhood:
                 keep="first",
             )
             self.listings_to_add = deduplucated_listings
+            logger.info(
+                f"\t\tRemoved {listings.shape[0] - deduplucated_listings.shape[0]} duplicated listings"
+            )
         except KeyError:
-            print("No listings to deduplicate")
+            print("\t\tNo listings to deduplicate")
+
     def remove_old_listings(self):
         """
         Remove listings that haven't been updated for more than a week
@@ -336,9 +339,13 @@ class ZapNeighborhood:
                             WHERE
                                 updated_at < current_date - 1
                                 and neighborhood = :neighborhood
+                                and business_type = :business_type
                         """
                 ),
-                parameters={"neighborhood": self.neighborhood},
+                parameters={
+                    "neighborhood": self.neighborhood,
+                    "business_type": self.business_type,
+                },
             )
         return
 
@@ -384,6 +391,7 @@ class ZapNeighborhood:
                     index=True,
                     index_label="zip_code",
                 )
+
     def save_traffic_analysis_to_db(self):
         """ """
         print("\tSaving traffic analysis to database")
@@ -394,7 +402,9 @@ class ZapNeighborhood:
                     name="fact_traffic_analysis",
                     con=conn,
                     if_exists="append",
-                    index=False)
+                    index=False,
+                )
+
     def save_image_analysis_to_db(self):
         """ """
         print("\tSaving image analysis to database")
@@ -405,8 +415,8 @@ class ZapNeighborhood:
                     name="fact_image_analysis",
                     con=conn,
                     if_exists="append",
-                    index=False)
-
+                    index=False,
+                )
 
     def save_listings_to_db(self):
         """ """
@@ -435,6 +445,7 @@ class ZapNeighborhood:
                     index=True,
                     index_label="listing_id",
                 )
+                logger.info(f"Saved {listings_to_add.shape[0]} listings to the DB")
 
     def get_existing_zip_codes(self):
         """
@@ -463,6 +474,7 @@ class ZapNeighborhood:
                 "SELECT * from fact_image_analysis", con=conn, index_col="id"
             )
         self.existing_image_analysis = data
+
     def get_traffic_analysis(self):
         """
         Read image analysis db table
@@ -519,7 +531,7 @@ class ZapPage:
         initial_listing = number_of_listings_per_page * self.page_number
         headers = self.zap_search.get_request_headers()
         params = {
-            "user": "0d645541-36ea-45b4-9c59-deb2d736595c",
+            "user": "a521d36e-4582-4b70-8162-41d661323a54",
             "portal": "ZAP",
             "categoryPage": "RESULT",
             "developmentsSize": "0",
@@ -527,19 +539,21 @@ class ZapPage:
             "business": self.business_type,
             "parentId": "null",
             "listingType": "USED",
+            "priceMin": self.min_price,
+            "priceMax": self.max_price,
             "unitTypesV3": self.unit_type,
             "unitTypes": self.unit_type,
-            "usableAreasMin": self.min_area,
-            "priceMax": self.max_price,
-            "priceMin": self.min_price,
             "addressCity": self.city,
             "addressState": self.state,
             "addressNeighborhood": self.neighborhood,
+            "usableAreasMin": self.min_area,
             "page": "1",
             "from": initial_listing,
             "size": number_of_listings_per_page,
             "usageTypes": self.usage_type,
             "levels": "NEIGHBORHOOD",
+            'addressPointLat': '-23.563579',
+            'addressPointLon': '-46.691607',
         }
         scraper = cloudscraper.create_scraper()
         response = scraper.get(
@@ -675,7 +689,7 @@ class ZapItem:
 
     def is_quiet(self):
         return (self.location_type != "Avenida") & (self.floor >= 8)
-    
+
     def get_number_of_nearby_bus_lines(self):
         if np.isnan(self.latitude) or np.isnan(self.longitude):
             return None
@@ -683,7 +697,9 @@ class ZapItem:
         traffic_analysis = self._zap_page.zap_search.existing_traffic_analysis
         traffic_analysis_to_add = self._zap_page.zap_search.traffic_analysis_to_add
 
-        traffic_analysis = pd.concat([traffic_analysis, traffic_analysis_to_add], ignore_index=True, axis=0)
+        traffic_analysis = pd.concat(
+            [traffic_analysis, traffic_analysis_to_add], ignore_index=True, axis=0
+        )
 
         # Filter the DataFrame based on the latitude and longitude
         filtered_traffic_analysis = traffic_analysis[
@@ -695,7 +711,7 @@ class ZapItem:
 
         # Get the green_density value from the filtered DataFrame
         n_bus_lanes = (
-            filtered_traffic_analysis["n_nearby_bus_lanes"].values[0]
+            int(filtered_traffic_analysis["n_nearby_bus_lanes"].values[0])
             if not filtered_traffic_analysis.empty
             else None
         )
@@ -715,7 +731,6 @@ class ZapItem:
 
         return n_bus_lanes
 
-
     def get_sat_image_analysis_metrics(self):
 
         if np.isnan(self.latitude) or np.isnan(self.longitude):
@@ -724,7 +739,9 @@ class ZapItem:
         sat_image_analysis = self._zap_page.zap_search.existing_image_analysis
         sat_image_analysis_to_add = self._zap_page.zap_search.image_analysis_to_add
 
-        sat_image_analysis = pd.concat([sat_image_analysis, sat_image_analysis_to_add], ignore_index=True, axis=0)
+        sat_image_analysis = pd.concat(
+            [sat_image_analysis, sat_image_analysis_to_add], ignore_index=True, axis=0
+        )
 
         # Filter the DataFrame based on the latitude and longitude
         filtered_sat_image_analysis = sat_image_analysis[
@@ -753,17 +770,31 @@ class ZapItem:
             image = extract.get_sat_image(min_lat, max_lat, min_lon, max_lon)
             green_density = transform.calculate_green_density(image)
         if is_next_to_park is None:
-            is_next_to_park = extract.is_next_to_park((min_lat+max_lat)/2, (min_lon+max_lon)/2)
-            
+            is_next_to_park = extract.is_next_to_park(
+                (min_lat + max_lat) / 2, (min_lon + max_lon) / 2
+            )
+
             self.update_sat_image_analysis_to_add(
-                sat_image_analysis_to_add, green_density, is_next_to_park, min_lat, max_lat, min_lon, max_lon
+                sat_image_analysis_to_add,
+                green_density,
+                is_next_to_park,
+                min_lat,
+                max_lat,
+                min_lon,
+                max_lon,
             )
 
         return green_density, is_next_to_park
 
     def update_sat_image_analysis_to_add(
-        self, sat_image_analysis_to_add, green_density,
-        is_next_to_park, min_lat, max_lat, min_lon, max_lon
+        self,
+        sat_image_analysis_to_add,
+        green_density,
+        is_next_to_park,
+        min_lat,
+        max_lat,
+        min_lon,
+        max_lon,
     ):
         sat_image_analysis_entry = pd.DataFrame.from_dict(
             {
@@ -777,11 +808,12 @@ class ZapItem:
         )
         updated_sat_image_analysis = pd.concat(
             [sat_image_analysis_to_add, sat_image_analysis_entry],
-            ignore_index=True, axis=0
+            ignore_index=True,
+            axis=0,
         )
 
         self._zap_page.zap_search.image_analysis_to_add = updated_sat_image_analysis
-    
+
     def update_n_bus_lines_df(
         self, traffic_analysis_to_add, n_bus_lines, min_lat, max_lat, min_lon, max_lon
     ):
@@ -796,8 +828,7 @@ class ZapItem:
         )
 
         updated_n_bus_lines = pd.concat(
-            [traffic_analysis_to_add, n_bus_lines_entry],
-            ignore_index=True, axis=0
+            [traffic_analysis_to_add, n_bus_lines_entry], ignore_index=True, axis=0
         )
         self._zap_page.zap_search.traffic_analysis_to_add = updated_n_bus_lines
 
@@ -823,7 +854,7 @@ class ZapItem:
         """
         Get the primary phone number
         """
-        return self._listing_data["account"]["phones"]["primary"]
+        return self._listing_data.get("account", {}).get("phones", {}).get("primary")
 
     def get_advitizer_name(self):
         """
@@ -869,19 +900,19 @@ class ZapItem:
         """
         Get zip code from listing
         """
-        return self._listing_data["listing"]["address"]["zipCode"]
+        return self._listing_data.get("listing", {}).get("address", {}).get("zipCode", '00000000')
 
     def get_neighborhood(self):
         """
         Get neighborhood from listing
         """
-        return self._listing_data.get("listing").get("address").get("neighborhood")
+        return self._listing_data.get("listing",{}).get("address",{}).get("neighborhood")
 
     def get_city(self):
         """
         Get city from listing
         """
-        return self._listing_data["listing"]["address"]["city"]
+        return self._listing_data.get("listing",{}).get("address",{}).get("city")
 
     def get_state_acronym(self):
         """
@@ -893,39 +924,55 @@ class ZapItem:
         """
         Get country from listing
         """
-        return self._listing_data["listing"]["address"]["country"]
+        return (
+            self._listing_data.get("listing", {})
+            .get("address", {})
+            .get("country", "Brasil")
+        )
 
     def calculate_price_per_area(self):
         """
         Calculate price per area for a listing
         """
-        return self.price / self.total_area_m2
+        return round(self.price / self.total_area_m2,2)
 
     def get_usable_area(self):
         """
         Get first usable area for a listing
         """
-        return int(
+        usable_area = int(
             self._listing_data["listing"]["usableAreas"][0]
             if len(self._listing_data["listing"]["usableAreas"]) > 0
             else 0
         )
+        assert usable_area >= 0, "Usable area must be greater than or equal to 0"
+        assert usable_area <= 1000, "Usable area must be less than or equal to 1000"
+        return usable_area
 
     def get_floor_number(self):
         """
         Get floor number from listing
         """
-        return self._listing_data.get("listing", {}).get("unitFloor", None)
+        
+        floor_number = int(self._listing_data.get("listing", {}).get("unitFloor", 0))
+        assert floor_number >= 0, "Floor number must be greater than or equal to 0"
+        assert floor_number <= 100, "Floor number must be less than or equal to 100"
+        return floor_number
 
     def get_number_of_parking_spaces(self):
         """
         Get number of parking slots
         """
-        return (
+        
+        n_parking_spaces = int(
             self._listing_data["listing"]["parkingSpaces"][0]
             if len(self._listing_data["listing"]["parkingSpaces"]) > 0
             else 0
         )
+        assert n_parking_spaces >= 0, "Number of parking spaces must be greater than or equal to 0"
+        assert n_parking_spaces <= 5, "Number of parking spaces must be less than or equal to 5"
+
+        return n_parking_spaces
 
     def get_number_of_bathrooms(self):
         """
@@ -1020,6 +1067,8 @@ class ZapItem:
         assigned_number = self._listing_data["link"]["data"]["streetNumber"]
         # If assigned number looks like a number, return it
         if assigned_number.isnumeric():
+            assert int(assigned_number) >= 0, "Street number must be greater than or equal to 0"
+            assert int(assigned_number) <= 15000, "Street number must be less than or equal to 15000"
             return int(assigned_number)
         # if it is not empty, but not a number, return 13
         elif assigned_number:
@@ -1036,6 +1085,8 @@ class ZapItem:
             delivery_year = int(deliver_date[:4])
         else:
             delivery_year = 0
+        assert delivery_year >= 0, "Construction year must be greater than or equal to 0"
+        assert delivery_year <= 2030, "Construction year must be less than or equal to 2030"
         return delivery_year
 
     def get_random_street_number_from_zipcode(self):
@@ -1097,6 +1148,8 @@ class ZapItem:
             except (ConnectionError, TypeError) as error:
                 print(f"Found error: {error}")
                 random_number = 13
+            assert random_number >= 0, "Street number must be greater than or equal to 0"
+            assert random_number <= 15000, "Street number must be less than or equal to 15000"
         return random_number
 
     @backoff.on_exception(backoff.expo, r.exceptions.RequestException, max_tries=10)
