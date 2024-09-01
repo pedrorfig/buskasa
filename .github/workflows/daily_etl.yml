@@ -33,7 +33,7 @@ jobs:
 
         run: python etl.py "São Paulo" "São Paulo" "HOME" "SALE" "Ipiranga,Campo Belo,Brooklin Novo,Butantã,Cidade Jardim,Liberdade,Paraíso,Cerqueira César,Consolação,Sumaré,Bela Vista,Jardins,Higienópolis,Jardim Paulista,Jardim Europa,Jardim América,Vila Mariana,Aclimação,Perdizes,Alto de Pinheiros,Ibirapuera,Itaim Bibi,Moema,Santa Cecília,Pinheiros,Vila Olímpia,República,Pacaembu,Barra Funda,Chácara Klabin,Cambuci,Sumarézinho,Vila Nova Conceição,Jardim Luzitânia,Vila Clementino,Jardim Paulistano"
 
-        - name: Search for real estate house listings for rent in São Paulo # run main.py
+      - name: Search for real estate house listings for rent in São Paulo # run main.py
         env:
           MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
           DB_USER: ${{ secrets.DB_USER }}
@@ -53,7 +53,7 @@ jobs:
 
         run: python etl.py "São Paulo" "São Paulo" "APARTMENT" "SALE" "Ipiranga,Campo Belo,Brooklin Novo,Butantã,Cidade Jardim,Liberdade,Paraíso,Cerqueira César,Consolação,Sumaré,Bela Vista,Jardins,Higienópolis,Jardim Paulista,Jardim Europa,Jardim América,Vila Mariana,Aclimação,Perdizes,Alto de Pinheiros,Ibirapuera,Itaim Bibi,Moema,Santa Cecília,Pinheiros,Vila Olímpia,República,Pacaembu,Barra Funda,Chácara Klabin,Cambuci,Sumarézinho,Vila Nova Conceição,Jardim Luzitânia,Vila Clementino,Jardim Paulistano"
 
-        - name: Search for real estate apartment listings for rent in São Paulo # run main.py
+      - name: Search for real estate apartment listings for rent in São Paulo # run main.py
         env:
           MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
           DB_USER: ${{ secrets.DB_USER }}
