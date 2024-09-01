@@ -38,7 +38,7 @@ def main(
         min_price = int(min_price/100)        
 
     for neighborhood in neighborhoods:
-        print(f"Getting listings from neighborhood {neighborhood}")
+        logger.info(f"Getting listings from neighborhood {neighborhood}")
         # Start from page_number 0
         page_number = 0
         # Initialize a ZapSearch item that
@@ -66,7 +66,7 @@ def main(
         zap_neighborhood.get_traffic_analysis()
         # Iterate through all pages on a neighborhood
         while True:
-            print(f"\t\tPage #{page_number} on {neighborhood}")
+            logger.info(f"\tGetting page {page_number} on {neighborhood}")
             # Initialize a ZapPage object with data for each page_number
             # searched
             zap_page = ZapPage(page_number, zap_neighborhood)

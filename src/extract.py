@@ -81,9 +81,7 @@ def create_db_engine(
     assert isinstance(port, int), "Port must be numeric"
     assert user is not None, "Username is empty"
     assert password is not None, "Password is empty"
-    
-    logger.info("Creating database engine")
-    
+   
     db_uri = f"postgresql+psycopg2://{user}:{password}@aws-0-sa-east-1.pooler.supabase.com:{port}/postgres"
     engine = create_engine(db_uri, future=True)
 
@@ -140,7 +138,7 @@ def get_sat_image(min_lat, max_lat, min_lon, max_lon):
         # Process the response data
         image = Image.open(io.BytesIO(response.content))
     else:
-        print("API call failed with status code:", response)
+        logger.error("API call failed with status code:", response)
         image = None
     return image
 
@@ -254,15 +252,15 @@ def get_search_parameters():
         "Business type must be either SALE or RENTAL"
 
     if len(sys.argv) == 5:
-        print(f"Running for {sys.argv[3]} {sys.argv[4]} on all neighborhoods in {sys.argv[1]} - {sys.argv[2]}")
+        logger.info(f"Running for {sys.argv[3]} {sys.argv[4]} on all neighborhoods in {sys.argv[1]} - {sys.argv[2]}")
         neighborhoods = get_neighborhoods_from_city_and_state(sys.argv[1], sys.argv[2])
     elif len(sys.argv) == 6:
-        print(f"Running for {sys.argv[3]} {sys.argv[4]} at {sys.argv[5]} neighborhoods in {sys.argv[1]} - {sys.argv[2]}")
+        logger.info(f"Running for {sys.argv[3]} {sys.argv[4]} at {sys.argv[5]} neighborhoods in {sys.argv[1]} - {sys.argv[2]}")
         neighborhoods = sys.argv[5].split(",")
     else:
-        print(
-            f"""Please provide at most 4 search parameters, being the
-            following:state, city, unit type and neighborhoods.
+        logger.error(
+            f"""Please provide at most 5 search parameters, being the
+            following:state, city, unit type, listing business type and neighborhoods.
             Received {len(sys.argv)} parameters, which are: {sys.argv}"""
         )
         sys.exit(1)

@@ -75,7 +75,7 @@ class ZapNeighborhood:
         """
         Get existing listing ids for the specified conditions
         """
-        print("\tGetting existing listing ids")
+        logger.info("\tGetting existing listing ids")
         engine = self._engine
         with engine.begin() as conn:
             # Checking for existing listing_ids on the database
@@ -145,7 +145,6 @@ class ZapNeighborhood:
         Returns:
 
         """
-        print("\tRemoving fraudsters")
         listings = self.listings_to_add
         # Listing users known to be fraudsters
         known_fraudsters = [
@@ -185,8 +184,7 @@ class ZapNeighborhood:
             cleaned_listings = listings.loc[
                 ~listings["listing_id"].isin(listing_ids_to_remove), :
             ]
-            logger.info(f"Removed {len(listing_ids_to_remove)} listings")
-
+            logger.info(f"Removed {len(listing_ids_to_remove)} fraudster listings")
             self.listings_to_add = cleaned_listings
 
     def calculate_price_per_area_first_quartile(self):
@@ -235,8 +233,6 @@ class ZapNeighborhood:
             feature:
             data_with_outliers:
         """
-        # TODO: Change outlier calculation for boxplot
-        print("\tRemoving outliers on listing prices")
         engine = self._engine
         with engine.begin() as conn:
             filter_conditions = {
@@ -272,7 +268,7 @@ class ZapNeighborhood:
         else:
             all_listings = pd.concat([listings_on_db, search_listings])
 
-        if not all_listings.empty:
+        if all_listings.shape[0] >= 4:
             # Calculate interquartile range
             q_low = all_listings["price_per_area"].quantile(0.25)
             q_hi = all_listings["price_per_area"].quantile(0.75)
@@ -302,7 +298,6 @@ class ZapNeighborhood:
         """
         Remove listings that are already on the DB
         """
-        print("\tRemoving duplicated listings")
         listings = self.listings_to_add
         try:
             deduplucated_listings = listings.sort_values(
@@ -323,13 +318,13 @@ class ZapNeighborhood:
                 f"\t\tRemoved {listings.shape[0] - deduplucated_listings.shape[0]} duplicated listings"
             )
         except KeyError:
-            print("\t\tNo listings to deduplicate")
+            logger.info("\t\tNo listings to deduplicate")
 
     def remove_old_listings(self):
         """
         Remove listings that haven't been updated for more than a week
         """
-        print("\tRemoving old listings")
+        logger.info("\tRemoving old listings")
         engine = self._engine
         with engine.begin() as conn:
             conn.execute(
@@ -378,7 +373,7 @@ class ZapNeighborhood:
 
     def save_zip_codes_to_db(self):
         """ """
-        print("\tSaving ZIP codes to database")
+        logger.info("\tSaving zip codes to database")
         zip_to_add = self.zip_codes_to_add
         # Only new zip codes will be added
         zip_to_add = zip_to_add[~zip_to_add.index.isin(self.existing_zip_codes.index)]
@@ -394,7 +389,7 @@ class ZapNeighborhood:
 
     def save_traffic_analysis_to_db(self):
         """ """
-        print("\tSaving traffic analysis to database")
+        logger.info("\tSaving traffic analysis to database")
         traffic_analysis_to_add = self.traffic_analysis_to_add
         if not traffic_analysis_to_add.empty:
             with self._engine.begin() as conn:
@@ -407,7 +402,7 @@ class ZapNeighborhood:
 
     def save_image_analysis_to_db(self):
         """ """
-        print("\tSaving image analysis to database")
+        logger.info("Saving image analysis to database")
         image_analysis_to_add = self.image_analysis_to_add
         if not image_analysis_to_add.empty:
             with self._engine.begin() as conn:
@@ -420,7 +415,7 @@ class ZapNeighborhood:
 
     def save_listings_to_db(self):
         """ """
-        print("\tSaving records to database")
+        logger.info("\tSaving records to database")
         if not self.listings_to_add.empty:
             engine = self._engine
             with engine.begin() as conn:
@@ -453,7 +448,7 @@ class ZapNeighborhood:
         Returns:
 
         """
-        print("\tGetting existing zip codes")
+        logger.info("\tGetting existing zip codes")
         engine = self._engine
         with engine.begin() as conn:
             data = pd.read_sql(
@@ -467,7 +462,8 @@ class ZapNeighborhood:
         Returns:
 
         """
-        print("\tGetting image analysis")
+        logger.info("\tGetting image analysis")
+
         engine = self._engine
         with engine.begin() as conn:
             data = pd.read_sql(
@@ -481,7 +477,8 @@ class ZapNeighborhood:
         Returns:
 
         """
-        print("\tGetting traffic analysis")
+        logger.info("\tGetting traffic analysis")
+
         engine = self._engine
         with engine.begin() as conn:
             data = pd.read_sql(
@@ -717,9 +714,6 @@ class ZapItem:
         )
 
         if n_bus_lanes is None:
-            print(
-                f"Point is not in any bounding box on traffic analysis: {self.latitude}, {self.longitude}"
-            )
             min_lat, max_lat, min_lon, max_lon = transform.define_bounding_box(
                 self.latitude, self.longitude, height=0.001, width=0.001
             )
@@ -969,8 +963,8 @@ class ZapItem:
             if len(self._listing_data["listing"]["parkingSpaces"]) > 0
             else 0
         )
-        assert n_parking_spaces >= 0, "Number of parking spaces must be greater than or equal to 0"
-        assert n_parking_spaces <= 10, "Number of parking spaces must be less than or equal to 5"
+        assert n_parking_spaces >= 0, "\t\tNumber of parking spaces must be greater than or equal to 0"
+        assert n_parking_spaces <= 10, "\t\tNumber of parking spaces must be less than or equal to 10"
 
         return n_parking_spaces
 
@@ -1067,8 +1061,8 @@ class ZapItem:
         assigned_number = self._listing_data["link"]["data"]["streetNumber"]
         # If assigned number looks like a number, return it
         if assigned_number.isnumeric():
-            assert int(assigned_number) >= 0, "Street number must be greater than or equal to 0"
-            assert int(assigned_number) <= 15000, "Street number must be less than or equal to 15000"
+            assert int(assigned_number) >= 0, "\t\tStreet number must be greater than or equal to 0"
+            assert int(assigned_number) <= 15000, "\t\tStreet number must be less than or equal to 15000"
             return int(assigned_number)
         # if it is not empty, but not a number, return 13
         elif assigned_number:
@@ -1146,7 +1140,7 @@ class ZapItem:
             # If there is an error with connection
             # or data type street number will be 1
             except (ConnectionError, TypeError) as error:
-                print(f"Found error: {error}")
+                logger.info(f"Found error: {error}")
                 random_number = 13
             assert random_number >= 0, "Street number must be greater than or equal to 0"
             assert random_number <= 15000, "Street number must be less than or equal to 15000"
