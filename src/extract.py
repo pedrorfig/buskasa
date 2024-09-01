@@ -85,12 +85,12 @@ def create_db_engine(
     logger.info("Creating database engine")
     
     db_uri = f"postgresql+psycopg2://{user}:{password}@aws-0-sa-east-1.pooler.supabase.com:{port}/postgres"
-    engine = create_engine(db_uri, future=True, echo=True)
+    engine = create_engine(db_uri, future=True)
 
     return engine
 
 @st.cache_data(show_spinner=False)
-def get_listings(_conn):
+def get_listings(_conn, business_type):
     """
     Get listings
     """
@@ -99,9 +99,11 @@ def get_listings(_conn):
                 SELECT *
                 FROM fact_listings
                 WHERE price_per_area_in_first_quartile = True
+                AND business_type = %(business_type)s
                 """,
                 con=_conn,
-                index_col="listing_id"
+                index_col="listing_id",
+                params={"business_type": business_type}
             )
 
     return listings
@@ -244,17 +246,19 @@ def get_search_parameters():
     """
 
     neighborhoods = [""]
-    assert len(sys.argv) >= 3, "Please provide at least the following \
-        arguments: state, city and unit type"
+    assert len(sys.argv) >= 4, "Please provide at least the following \
+        arguments: state, city, unit and business type"
     assert sys.argv[3] in ["APARTMENT", "HOME"], \
         "Unit type must be APARTMENT or HOME"
+    assert sys.argv[4] in ["SALE", "RENTAL"], \
+        "Business type must be either SALE or RENTAL"
 
-    if len(sys.argv) == 4:
-        print(f"Running for {sys.argv[3]} on all neighborhoods in {sys.argv[1]} - {sys.argv[2]}")
+    if len(sys.argv) == 5:
+        print(f"Running for {sys.argv[3]} {sys.argv[4]} on all neighborhoods in {sys.argv[1]} - {sys.argv[2]}")
         neighborhoods = get_neighborhoods_from_city_and_state(sys.argv[1], sys.argv[2])
-    elif len(sys.argv) == 5:
-        print(f"Running for {sys.argv[3]} at {sys.argv[4]} neighborhoods in {sys.argv[1]} - {sys.argv[2]}")
-        neighborhoods = sys.argv[4].split(",")
+    elif len(sys.argv) == 6:
+        print(f"Running for {sys.argv[3]} {sys.argv[4]} at {sys.argv[5]} neighborhoods in {sys.argv[1]} - {sys.argv[2]}")
+        neighborhoods = sys.argv[5].split(",")
     else:
         print(
             f"""Please provide at most 4 search parameters, being the
@@ -262,4 +266,4 @@ def get_search_parameters():
             Received {len(sys.argv)} parameters, which are: {sys.argv}"""
         )
         sys.exit(1)
-    return sys.argv[1], sys.argv[2], sys.argv[3], neighborhoods
+    return sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], neighborhoods

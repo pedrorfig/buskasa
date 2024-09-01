@@ -26,26 +26,41 @@ class App:
         self.city = None
         self.data = pd.DataFrame()
         self.filtered_data = pd.DataFrame()
+        self.business_type = None
         self.city_price_per_area_distribution = []
         self._engine = extract.create_db_engine()
 
     def create_login_modal(self):
-        @st.dialog("🎉 Bem-vindo(a) ao Buskasa!", width="small")
-        def welcome():
-            st.write("""
-                    Aqui, você encontra o lar ideal com os critérios que realmente importam! 🏡🌿
+        if 'business_type' not in st.session_state:
+            @st.dialog("🎉 Bem-vindo(a) ao Buskasa!", width="small")
+            def welcome():
+                st.write("""
+                        Aqui, você encontra o lar ideal com os critérios que realmente importam! 🏡🌿
 
-                    🔍 Destaques que vão facilitar sua busca:
+                        🔍 Destaques que vão facilitar sua busca:
 
-                    - Custo-benefício otimizado: a gente já seleciona os melhores anúncios pra você.
-                    - Silêncio no entorno: veja quão tranquilo é o ambiente ao redor.
-                    - Mais verde: filtre por áreas com mais natureza e qualidade de vida.
-                    - Sem fraudes: bloqueamos anúncios suspeitos pra você não perder tempo.
-                    
-                    Vamos começar a busca? 🚀
-                     """)
+                        - Custo-benefício otimizado: a gente já seleciona os melhores anúncios pra você.
+                        - Silêncio no entorno: veja quão tranquilo é o ambiente ao redor.
+                        - Mais verde: filtre por áreas com mais natureza e qualidade de vida.
+                        - Sem fraudes: bloqueamos anúncios suspeitos pra você não perder tempo.
+                        
+                        O que você procura? 🚀
+                        """)
+                col1, col2, col3, col4 = st.columns([0.25,0.25,0.25,0.25], gap='small')
+                if 'business_type' not in st.session_state:
+                    st.session_state.business_type = None
+                with col2:
+                    if st.button("Comprar", type="primary"):
+                        st.session_state.business_type = 'SALE'
+                        self.business_type = 'SALE'
+                        st.rerun()
+                with col3:
+                    if st.button("Alugar", type="primary"):
+                        st.session_state.business_type = 'RENTAL'
+                        self.business_type = 'RENTAL'
+                        st.rerun()
 
-        welcome()
+            welcome()
 
     def get_listings(self):
         """
@@ -55,7 +70,8 @@ class App:
         """
         engine = self._engine
         with engine.begin() as conn:
-            self.data = extract.get_listings(conn)
+            self.data = extract.get_listings(conn,
+                                             st.session_state.business_type)
 
     def create_price_per_area_distribution_histogram(self):
         fig = go.Figure()
@@ -103,7 +119,6 @@ class App:
 
         with st.sidebar:
             # Create title for Filter sidebar
-            
 
             self.filtered_data = self.data.copy()
 
@@ -124,6 +139,8 @@ class App:
                     self.city_price_per_area_distribution = [
                         *self.data["price_per_area"]
                     ]
+                    if not city:
+                        city = 'São Paulo'
                     st.divider()
 
                     # Create neighborhood filter
@@ -196,11 +213,10 @@ class App:
 
                     price = st.slider(
                         "Price",
-                        min_value=math.floor(self.data["price"].min() / 100000)
-                        * 100000,
-                        max_value=math.ceil(self.data["price"].max() / 100000) * 100000,
-                        value=math.ceil(self.data["price"].max() / 100000) * 100000,
-                        step=100000,
+                        min_value=math.floor(self.data["price"].min() / 100000) * 100000 if st.session_state.business_type == 'SALE' else math.floor(self.data["price"].min() / 1000) * 1000,
+                        max_value=math.ceil(self.data["price"].max() / 100000) * 100000 if st.session_state.business_type == 'SALE' else math.floor(self.data["price"].max() / 1000) * 1000,
+                        value=math.ceil(self.data["price"].max() / 100000) * 100000 if st.session_state.business_type == 'SALE' else math.floor(self.data["price"].max() / 1000) * 1000,
+                        step=100000 if st.session_state.business_type == 'SALE' else 1000,
                         format="R$ %d",
                         label_visibility="collapsed",
                         key="price",
@@ -220,7 +236,7 @@ class App:
                         * 100,
                         max_value=math.ceil(self.data["price_per_area"].max() / 100)
                         * 100,
-                        step=100,
+                        step=100 if st.session_state.business_type == 'SALE' else 10,
                         value=math.ceil(self.data["price_per_area"].max() / 100) * 100,
                         format="R$/m² %d",
                         label_visibility="collapsed",
@@ -334,7 +350,7 @@ class App:
                     sizemin=6,
                     symbol="circle",
                     colorscale="Jet",
-                    color=(data["price_per_area"] // 100) * 100,
+                    color=(data["price_per_area"] // 100) * 100 if self.business_type == 'SALE' else (data["price_per_area"] // 10) * 10,
                     cmin=min(price_per_area_colorbar),
                     cmax=max(price_per_area_colorbar),
                     opacity=1,

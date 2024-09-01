@@ -15,8 +15,10 @@ st.toast(
             os apartamentos que mais combinam com você""",
     icon=":material/cookie:",
 )
-with st.spinner("Carregando anúncios..."):
-    app.get_listings()
-    app.create_side_bar_with_filters()
-    app.load_listings_map()
-    app_formater.format_app_layout()
+
+if st.session_state.business_type is not None:
+    with st.spinner("Carregando anúncios..."):
+        app.get_listings()
+        app.create_side_bar_with_filters()
+        app.load_listings_map()
+        app_formater.format_app_layout()

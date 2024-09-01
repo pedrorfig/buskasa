@@ -11,7 +11,6 @@ logging.basicConfig(format="%(asctime)s %(name)-12s %(levelname)-8s %(message)s"
 logger = logging.getLogger(__name__)
 
 def main(
-    business_type: str = "SALE",
     usage_type: str = "RESIDENTIAL",
     min_area: int = 30,
     min_price: int = 200000,
@@ -21,7 +20,7 @@ def main(
     Perform a search on ZapImvoeis based on filters, scraping listings,
     processing them and saving the output to a database
     Args:
-        business_type (str): Type of business, SALE or RENT
+        business_type (str): Type of business, SALE or RENTAL
         max_price (int): Max price to scrape
         min_area (int): Min area to scrape
         min_price (int): Min listing price to scrape
@@ -33,7 +32,10 @@ def main(
     # Load credential values
     load_dotenv()
     # Get state, city and neighborhoods to be search through command prompt
-    state, city, unit_type, neighborhoods = extract.get_search_parameters()
+    state, city, unit_type, business_type, neighborhoods = extract.get_search_parameters()
+    if business_type == "RENTAL":
+        max_price = int(max_price/100)
+        min_price = int(min_price/100)        
 
     for neighborhood in neighborhoods:
         print(f"Getting listings from neighborhood {neighborhood}")
@@ -74,8 +76,12 @@ def main(
             zap_page.get_listings()
             # Create ZapItem object for each item in a page
             for listing in zap_page.listings:
-                item = ZapItem(listing, zap_page)
-                zap_page.add_zap_item(item)
+                try:
+                    item = ZapItem(listing, zap_page)
+                    zap_page.add_zap_item(item)
+                except Exception as e:
+                    logger.error(e)
+                    continue
             # Save items to ZapSearch
             zap_neighborhood.append_zap_page(zap_page)
             # If there number of listings reached the total, finish the search

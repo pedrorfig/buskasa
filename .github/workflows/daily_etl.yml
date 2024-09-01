@@ -23,7 +23,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           
-      - name: Search for real estate house listings in São Paulo # run main.py
+      - name: Search for real estate house listings for sale in São Paulo # run main.py
         env:
           MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
           DB_USER: ${{ secrets.DB_USER }}
@@ -31,9 +31,9 @@ jobs:
           BRASIL_ABERTO_API_KEY_PAID: ${{ secrets.BRASIL_ABERTO_API_KEY_PAID }}
           BRASIL_ABERTO_API_KEY_FREE: ${{ secrets.BRASIL_ABERTO_API_KEY_FREE }}
 
-        run: python etl.py "São Paulo" "São Paulo" "HOME" "Ipiranga,Campo Belo,Brooklin Novo,Butantã,Cidade Jardim,Liberdade,Paraíso,Cerqueira César,Consolação,Sumaré,Bela Vista,Jardins,Higienópolis,Jardim Paulista,Jardim Europa,Jardim América,Vila Mariana,Aclimação,Perdizes,Alto de Pinheiros,Ibirapuera,Itaim Bibi,Moema,Santa Cecília,Pinheiros,Vila Olímpia,República,Pacaembu,Barra Funda,Chácara Klabin,Cambuci,Sumarézinho,Vila Nova Conceição,Jardim Luzitânia,Vila Clementino,Jardim Paulistano"
+        run: python etl.py "São Paulo" "São Paulo" "HOME" "SALE" "Ipiranga,Campo Belo,Brooklin Novo,Butantã,Cidade Jardim,Liberdade,Paraíso,Cerqueira César,Consolação,Sumaré,Bela Vista,Jardins,Higienópolis,Jardim Paulista,Jardim Europa,Jardim América,Vila Mariana,Aclimação,Perdizes,Alto de Pinheiros,Ibirapuera,Itaim Bibi,Moema,Santa Cecília,Pinheiros,Vila Olímpia,República,Pacaembu,Barra Funda,Chácara Klabin,Cambuci,Sumarézinho,Vila Nova Conceição,Jardim Luzitânia,Vila Clementino,Jardim Paulistano"
 
-      - name: Search for real estate apartment listings in São Paulo # run main.py
+        - name: Search for real estate house listings for rent in São Paulo # run main.py
         env:
           MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
           DB_USER: ${{ secrets.DB_USER }}
@@ -41,9 +41,9 @@ jobs:
           BRASIL_ABERTO_API_KEY_PAID: ${{ secrets.BRASIL_ABERTO_API_KEY_PAID }}
           BRASIL_ABERTO_API_KEY_FREE: ${{ secrets.BRASIL_ABERTO_API_KEY_FREE }}
 
-        run: python etl.py "São Paulo" "São Paulo" "APARTMENT" "Ipiranga,Campo Belo,Brooklin Novo,Butantã,Cidade Jardim,Liberdade,Paraíso,Cerqueira César,Consolação,Sumaré,Bela Vista,Jardins,Higienópolis,Jardim Paulista,Jardim Europa,Jardim América,Vila Mariana,Aclimação,Perdizes,Alto de Pinheiros,Ibirapuera,Itaim Bibi,Moema,Santa Cecília,Pinheiros,Vila Olímpia,República,Pacaembu,Barra Funda,Chácara Klabin,Cambuci,Sumarézinho,Vila Nova Conceição,Jardim Luzitânia,Vila Clementino,Jardim Paulistano"
+        run: python etl.py "São Paulo" "São Paulo" "HOME" "RENTAL" "Ipiranga,Campo Belo,Brooklin Novo,Butantã,Cidade Jardim,Liberdade,Paraíso,Cerqueira César,Consolação,Sumaré,Bela Vista,Jardins,Higienópolis,Jardim Paulista,Jardim Europa,Jardim América,Vila Mariana,Aclimação,Perdizes,Alto de Pinheiros,Ibirapuera,Itaim Bibi,Moema,Santa Cecília,Pinheiros,Vila Olímpia,República,Pacaembu,Barra Funda,Chácara Klabin,Cambuci,Sumarézinho,Vila Nova Conceição,Jardim Luzitânia,Vila Clementino,Jardim Paulistano"
 
-      - name: Search for real estate apartment listings in Rio de Janeiro # run main.py
+      - name: Search for real estate apartment listings for sale in São Paulo # run main.py
         env:
           MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
           DB_USER: ${{ secrets.DB_USER }}
@@ -51,4 +51,34 @@ jobs:
           BRASIL_ABERTO_API_KEY_PAID: ${{ secrets.BRASIL_ABERTO_API_KEY_PAID }}
           BRASIL_ABERTO_API_KEY_FREE: ${{ secrets.BRASIL_ABERTO_API_KEY_FREE }}
 
-        run: python etl.py "Rio de Janeiro" "Rio de Janeiro" "APARTMENT" "Botafogo, Flamengo, Catete, Leblon, Ipanema, Laranjeiras, Gávea, Humaitá, Lagoa, Jardim Botânico, Copacabana"
+        run: python etl.py "São Paulo" "São Paulo" "APARTMENT" "SALE" "Ipiranga,Campo Belo,Brooklin Novo,Butantã,Cidade Jardim,Liberdade,Paraíso,Cerqueira César,Consolação,Sumaré,Bela Vista,Jardins,Higienópolis,Jardim Paulista,Jardim Europa,Jardim América,Vila Mariana,Aclimação,Perdizes,Alto de Pinheiros,Ibirapuera,Itaim Bibi,Moema,Santa Cecília,Pinheiros,Vila Olímpia,República,Pacaembu,Barra Funda,Chácara Klabin,Cambuci,Sumarézinho,Vila Nova Conceição,Jardim Luzitânia,Vila Clementino,Jardim Paulistano"
+
+        - name: Search for real estate apartment listings for rent in São Paulo # run main.py
+        env:
+          MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASS: ${{ secrets.DB_PASS }}
+          BRASIL_ABERTO_API_KEY_PAID: ${{ secrets.BRASIL_ABERTO_API_KEY_PAID }}
+          BRASIL_ABERTO_API_KEY_FREE: ${{ secrets.BRASIL_ABERTO_API_KEY_FREE }}
+
+        run: python etl.py "São Paulo" "São Paulo" "APARTMENT" "RENTAL" "Ipiranga,Campo Belo,Brooklin Novo,Butantã,Cidade Jardim,Liberdade,Paraíso,Cerqueira César,Consolação,Sumaré,Bela Vista,Jardins,Higienópolis,Jardim Paulista,Jardim Europa,Jardim América,Vila Mariana,Aclimação,Perdizes,Alto de Pinheiros,Ibirapuera,Itaim Bibi,Moema,Santa Cecília,Pinheiros,Vila Olímpia,República,Pacaembu,Barra Funda,Chácara Klabin,Cambuci,Sumarézinho,Vila Nova Conceição,Jardim Luzitânia,Vila Clementino,Jardim Paulistano"
+
+      - name: Search for real estate apartment listings for sale in Rio de Janeiro # run main.py
+        env:
+          MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASS: ${{ secrets.DB_PASS }}
+          BRASIL_ABERTO_API_KEY_PAID: ${{ secrets.BRASIL_ABERTO_API_KEY_PAID }}
+          BRASIL_ABERTO_API_KEY_FREE: ${{ secrets.BRASIL_ABERTO_API_KEY_FREE }}
+
+        run: python etl.py "Rio de Janeiro" "Rio de Janeiro" "SALE" "APARTMENT" "Botafogo, Flamengo, Catete, Leblon, Ipanema, Laranjeiras, Gávea, Humaitá, Lagoa, Jardim Botânico, Copacabana"
+
+        - name: Search for real estate apartment listings for rent in Rio de Janeiro # run main.py
+        env:
+          MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASS: ${{ secrets.DB_PASS }}
+          BRASIL_ABERTO_API_KEY_PAID: ${{ secrets.BRASIL_ABERTO_API_KEY_PAID }}
+          BRASIL_ABERTO_API_KEY_FREE: ${{ secrets.BRASIL_ABERTO_API_KEY_FREE }}
+
+        run: python etl.py "Rio de Janeiro" "Rio de Janeiro" "RENTAL" "APARTMENT" "Botafogo, Flamengo, Catete, Leblon, Ipanema, Laranjeiras, Gávea, Humaitá, Lagoa, Jardim Botânico, Copacabana"
