@@ -73,7 +73,7 @@ jobs:
 
         run: python etl.py "Rio de Janeiro" "Rio de Janeiro" "SALE" "APARTMENT" "Botafogo, Flamengo, Catete, Leblon, Ipanema, Laranjeiras, Gávea, Humaitá, Lagoa, Jardim Botânico, Copacabana"
 
-        - name: Search for real estate apartment listings for rent in Rio de Janeiro # run main.py
+      - name: Search for real estate apartment listings for rent in Rio de Janeiro # run main.py
         env:
           MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
           DB_USER: ${{ secrets.DB_USER }}
