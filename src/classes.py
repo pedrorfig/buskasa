@@ -970,7 +970,7 @@ class ZapItem:
             else 0
         )
         assert n_parking_spaces >= 0, "Number of parking spaces must be greater than or equal to 0"
-        assert n_parking_spaces <= 5, "Number of parking spaces must be less than or equal to 5"
+        assert n_parking_spaces <= 10, "Number of parking spaces must be less than or equal to 5"
 
         return n_parking_spaces
 
