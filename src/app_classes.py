@@ -31,10 +31,12 @@ class App:
         self._engine = extract.create_db_engine()
 
     def create_login_modal(self):
-        if 'business_type' not in st.session_state:
+        if "business_type" not in st.session_state and "city" not in st.session_state:
+
             @st.dialog("🎉 Bem-vindo(a) ao Buskasa!", width="small")
             def welcome():
-                st.write("""
+                st.write(
+                    """
                         Aqui, você encontra o lar ideal com os critérios que realmente importam! 🏡🌿
 
                         🔍 Destaques que vão facilitar sua busca:
@@ -43,21 +45,36 @@ class App:
                         - Silêncio no entorno: veja quão tranquilo é o ambiente ao redor.
                         - Mais verde: filtre por áreas com mais natureza e qualidade de vida.
                         - Sem fraudes: bloqueamos anúncios suspeitos pra você não perder tempo.
-                        
+
                         O que você procura? 🚀
-                        """)
-                col1, col2, col3, col4 = st.columns([0.25,0.25,0.25,0.25], gap='small')
-                if 'business_type' not in st.session_state:
+                        """
+                )
+                col1, col2, col3, col4 = st.columns(
+                    [0.25, 0.25, 0.25, 0.25], gap="small"
+                )
+                if "business_type" not in st.session_state:
                     st.session_state.business_type = None
+                if "city" not in st.session_state:
+                    st.session_state.city = None
+
+                city = st.selectbox(
+                    "Cidade",
+                    options=["São Paulo", "Rio de Janeiro"],
+                    key="city_modal",
+                    index=0
+                )
+
                 with col2:
                     if st.button("Comprar", type="primary"):
-                        st.session_state.business_type = 'SALE'
-                        self.business_type = 'SALE'
+                        st.session_state.business_type = "SALE"
+                        st.session_state.city = city
+                        self.business_type = "SALE"
                         st.rerun()
                 with col3:
                     if st.button("Alugar", type="primary"):
-                        st.session_state.business_type = 'RENTAL'
-                        self.business_type = 'RENTAL'
+                        st.session_state.business_type = "RENTAL"
+                        st.session_state.city = city
+                        self.business_type = "RENTAL"
                         st.rerun()
 
             welcome()
@@ -71,7 +88,8 @@ class App:
         engine = self._engine
         with engine.begin() as conn:
             self.data = extract.get_listings(conn,
-                                             st.session_state.business_type)
+                                             st.session_state.business_type,
+                                             st.session_state.city)
 
     def create_price_per_area_distribution_histogram(self):
         fig = go.Figure()
@@ -100,10 +118,9 @@ class App:
             dragmode=False,
             hovermode=False,
             uirevision="constant",
-
         )
         with st.container(height=150, border=False):
-            
+
             st.plotly_chart(
                 fig,
                 config={"displayModeBar": False, "responsive": False},
@@ -128,19 +145,19 @@ class App:
                     "Localização", expanded=False, icon=":material/location_on:"
                 ):
                     # Create filter for city
-                    st.markdown("Cidade")
-                    city = st.selectbox(
-                        "city",
-                        options=self.data["city"].unique(),
-                        placeholder="Selecione uma cidade",
-                        index=None,
-                        label_visibility="collapsed",
-                    )
+                    # st.markdown("Cidade")
+                    # city = st.selectbox(
+                    #     "city",
+                    #     options=self.data["city"].unique(),
+                    #     placeholder="Selecione uma cidade",
+                    #     index=None,
+                    #     label_visibility="collapsed",
+                    # )
+                    # if not city:
+                    #     city = "São Paulo"
                     self.city_price_per_area_distribution = [
                         *self.data["price_per_area"]
                     ]
-                    if not city:
-                        city = 'São Paulo'
                     st.divider()
 
                     # Create neighborhood filter
@@ -213,10 +230,24 @@ class App:
 
                     price = st.slider(
                         "Price",
-                        min_value=math.floor(self.data["price"].min() / 100000) * 100000 if st.session_state.business_type == 'SALE' else math.floor(self.data["price"].min() / 1000) * 1000,
-                        max_value=math.ceil(self.data["price"].max() / 100000) * 100000 if st.session_state.business_type == 'SALE' else math.floor(self.data["price"].max() / 1000) * 1000,
-                        value=math.ceil(self.data["price"].max() / 100000) * 100000 if st.session_state.business_type == 'SALE' else math.floor(self.data["price"].max() / 1000) * 1000,
-                        step=100000 if st.session_state.business_type == 'SALE' else 1000,
+                        min_value=(
+                            math.floor(self.data["price"].min() / 100000) * 100000
+                            if st.session_state.business_type == "SALE"
+                            else math.floor(self.data["price"].min() / 1000) * 1000
+                        ),
+                        max_value=(
+                            math.ceil(self.data["price"].max() / 100000) * 100000
+                            if st.session_state.business_type == "SALE"
+                            else math.floor(self.data["price"].max() / 1000) * 1000
+                        ),
+                        value=(
+                            math.ceil(self.data["price"].max() / 100000) * 100000
+                            if st.session_state.business_type == "SALE"
+                            else math.floor(self.data["price"].max() / 1000) * 1000
+                        ),
+                        step=(
+                            100000 if st.session_state.business_type == "SALE" else 1000
+                        ),
                         format="R$ %d",
                         label_visibility="collapsed",
                         key="price",
@@ -236,27 +267,27 @@ class App:
                         * 100,
                         max_value=math.ceil(self.data["price_per_area"].max() / 100)
                         * 100,
-                        step=100 if st.session_state.business_type == 'SALE' else 10,
+                        step=100 if st.session_state.business_type == "SALE" else 10,
                         value=math.ceil(self.data["price_per_area"].max() / 100) * 100,
                         format="R$/m² %d",
                         label_visibility="collapsed",
                         key="price_per_area",
                     )
 
-
                     st.divider()
                     st.markdown("Arborização")
                     green_density_map = {
-                        "Pouco Verde": 'Mais cinza',
-                        "Moderadamente Verde": 'Balanceado',
-                        "Bastante Verde": 'Arborizado',
+                        "Pouco Verde": "Mais cinza",
+                        "Moderadamente Verde": "Balanceado",
+                        "Bastante Verde": "Arborizado",
                     }
                     green_density = st.multiselect(
                         "Green Density",
                         options=(
                             "Pouco Verde",
                             "Moderadamente Verde",
-                            "Bastante Verde"),
+                            "Bastante Verde",
+                        ),
                         format_func=lambda x: green_density_map[x],
                         label_visibility="collapsed",
                         key="green_density",
@@ -283,7 +314,6 @@ class App:
                 self.filtered_data = self.data.loc[
                     (
                         (self.data["neighborhood"].isin(neighborhood))
-                        & (self.data["city"] == city)
                         & (self.data["location_type"].isin(location_type))
                         & (self.data["bedrooms"] >= number_bedrooms)
                         & (self.data["price_per_area"] <= price_per_area)
@@ -300,7 +330,7 @@ class App:
                     )
                 ]
             else:
-                self.filtered_data = self.data.loc[self.data["city"] == 'São Paulo']
+                self.filtered_data = self.data.loc[self.data["city"] == st.session_state.city]
 
     def create_listings_map(self):
 
@@ -322,11 +352,10 @@ class App:
 
         hover_template = (
             "<b>%{customdata[0]}</b> <br>"
-            + "<b>Price   </b>               R$%{customdata[1]:,.0f}<br>"
-            + "<b>Price per Area </b> R$/m<sup>2</sup> %{customdata[2]:,.2f} <br>"
-            + "<b>Condo Fee  </b>       R$ %{customdata[3]:,.2f} <br>"
-            + "<b>Usable Area</b>      %{customdata[4]} m<sup>2</sup> <br>"
-            # dinamically wrap text of customdata[0] in <br> tags for line breaks
+            + "<b>Preço   </b>               R$%{customdata[1]:,.0f}<br>"
+            + "<b>Preço por Área </b> R$/m<sup>2</sup> %{customdata[2]:,.2f} <br>"
+            + "<b>Condomínio </b>       R$ %{customdata[3]:,.2f} <br>"
+            + "<b>Área útil</b>      %{customdata[4]} m<sup>2</sup> <br>"
             + "<extra></extra>"
         )
 
@@ -350,7 +379,11 @@ class App:
                     sizemin=6,
                     symbol="circle",
                     colorscale="Jet",
-                    color=(data["price_per_area"] // 100) * 100 if self.business_type == 'SALE' else (data["price_per_area"] // 10) * 10,
+                    color=(
+                        (data["price_per_area"] // 100) * 100
+                        if self.business_type == "SALE"
+                        else (data["price_per_area"] // 10) * 10
+                    ),
                     cmin=min(price_per_area_colorbar),
                     cmax=max(price_per_area_colorbar),
                     opacity=1,
@@ -364,17 +397,15 @@ class App:
             hoverlabel_align="left",
             hoverlabel=dict(font_size=12, font_family="Aptos", bordercolor="silver"),
             autosize=True,
-            # style={"height": "100vh"},
-            # height='100vh',
             margin=dict(l=0, r=0, t=0, b=0),
             showlegend=False,
             mapbox=dict(
                 style="streets",
                 accesstoken=mapbox_token,
                 bearing=0,
-                center=dict(lat=data["latitude"].mean(), lon=data["longitude"].mean()),
+                center=dict(lat=data["latitude"].median(), lon=data["longitude"].median()),
                 pitch=0,
-                zoom=12,
+                zoom=12.5,
             ),
         )
 
@@ -407,7 +438,7 @@ class AppFormater:
             initial_sidebar_state="expanded",
             menu_items={
                 "Get help": "https://www.linkedin.com/in/pedro-figueiredo-77377872/",
-            }
+            },
         )
 
     def format_app_layout(self):
