@@ -88,7 +88,7 @@ def create_db_engine(
     return engine
 
 @st.cache_data(show_spinner=False)
-def get_listings(_conn, business_type):
+def get_listings(_conn, business_type, city):
     """
     Get listings
     """
@@ -98,10 +98,12 @@ def get_listings(_conn, business_type):
                 FROM fact_listings
                 WHERE price_per_area_in_first_quartile = True
                 AND business_type = %(business_type)s
+                AND city = %(city)s
                 """,
                 con=_conn,
                 index_col="listing_id",
-                params={"business_type": business_type}
+                params={"business_type": business_type,
+                        "city": city}
             )
 
     return listings
