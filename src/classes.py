@@ -242,6 +242,7 @@ class ZapNeighborhood:
                 "min_area": self.min_area,
                 "min_price": self.min_price,
                 "max_price": self.max_price,
+                "unit_type": self.unit_type,
             }
             listings_on_db_sql_statement = """
                 SELECT *
@@ -250,6 +251,7 @@ class ZapNeighborhood:
                     city = %(city)s and
                     neighborhood = %(neighborhood)s and
                     business_type = %(business_type)s and
+                    unit_type = %(unit_type)s and
                     price >= %(min_price)s and
                     price <= %(max_price)s and
                     total_area_m2 >= %(min_area)s
@@ -587,7 +589,10 @@ class ZapPage:
         number_of_page_listings_less_than_maximum = (
             len(self.listings) < self.zap_search.number_of_listings_per_page
         )
-        return number_of_page_listings_less_than_maximum
+        no_listings_found = len(self.listings) == 0
+        # If there are no listings or the number of listings is less than the maximum
+        # allowed, the search has ended
+        return no_listings_found or number_of_page_listings_less_than_maximum
 
     def convert_zap_page_zip_code_to_df(self):
         """
