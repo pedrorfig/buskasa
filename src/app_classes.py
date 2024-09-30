@@ -87,9 +87,9 @@ class App:
         """
         engine = self._engine
         with engine.begin() as conn:
-            self.data = extract.get_listings(conn,
-                                             st.session_state.business_type,
-                                             st.session_state.city)
+            self.data = extract.get_listings(
+                conn, st.session_state.business_type, st.session_state.city
+            )
 
     def create_price_per_area_distribution_histogram(self):
         fig = go.Figure()
@@ -144,17 +144,7 @@ class App:
                 with st.expander(
                     "Localização", expanded=False, icon=":material/location_on:"
                 ):
-                    # Create filter for city
-                    # st.markdown("Cidade")
-                    # city = st.selectbox(
-                    #     "city",
-                    #     options=self.data["city"].unique(),
-                    #     placeholder="Selecione uma cidade",
-                    #     index=None,
-                    #     label_visibility="collapsed",
-                    # )
-                    # if not city:
-                    #     city = "São Paulo"
+
                     self.city_price_per_area_distribution = [
                         *self.data["price_per_area"]
                     ]
@@ -307,6 +297,13 @@ class App:
                         movement_intensity = self.data[
                             "n_nearby_bus_lanes_grouped"
                         ].unique()
+                    st.divider()
+                    st.markdown("Reformado")
+                    is_remodeled = st.checkbox("Reformado", key="is_remodeled")
+                    if is_remodeled:
+                        is_remodeled_filter = self.data["is_remodeled"] == True
+                    else:
+                        is_remodeled_filter = True
 
                 submit = st.form_submit_button("Filtrar anúncios", type="primary")
 
@@ -327,10 +324,13 @@ class App:
                             )
                         )
                         & (unit_type_filter)
+                        & (is_remodeled_filter)
                     )
                 ]
             else:
-                self.filtered_data = self.data.loc[self.data["city"] == st.session_state.city]
+                self.filtered_data = self.data.loc[
+                    self.data["city"] == st.session_state.city
+                ]
 
     def create_listings_map(self):
 
@@ -373,6 +373,7 @@ class App:
                 name="All listings",
                 customdata=custom_data,
                 hovertemplate=hover_template,
+                showlegend=False,
                 marker=go.scattermapbox.Marker(
                     allowoverlap=True,
                     size=marker_size,
@@ -398,16 +399,69 @@ class App:
             hoverlabel=dict(font_size=12, font_family="Aptos", bordercolor="silver"),
             autosize=True,
             margin=dict(l=0, r=0, t=0, b=0),
-            showlegend=False,
+            legend=dict(
+                        yanchor="top", 
+                        y=0.99,
+                        xanchor="left",
+                        x=0.01,
+                        bgcolor="LightYellow"),
+            legend_title_text='Custo-benefício',
+            showlegend=True,
             mapbox=dict(
                 style="streets",
                 accesstoken=mapbox_token,
                 bearing=0,
-                center=dict(lat=data["latitude"].median(), lon=data["longitude"].median()),
+                center=dict(
+                    lat=data["latitude"].median(), lon=data["longitude"].median()
+                ),
                 pitch=0,
                 zoom=12.5,
             ),
         )
+
+        # Add a customized legend item with a filled circle
+        fig.add_trace(go.Scatter(
+            x=[None],  # No actual data
+            y=[None],  # No actual data
+            mode='markers',  # Marker mode to display as circle
+            name='Ótimo',  # Custom name in legend
+            marker=dict(
+                size=10,  # Size of the circle
+                color='blue',  # Fill color of the circle
+                symbol='circle'  # Use 'circle' symbol for a filled circle
+            ),
+            showlegend=True
+        ))
+
+        # Add a customized legend item with a filled circle
+        fig.add_trace(go.Scatter(
+            x=[None],  # No actual data
+            y=[None],  # No actual data
+            mode='markers',  # Marker mode to display as circle
+            name='Excelente',  # Custom name in legend
+            marker=dict(
+                size=10,  # Size of the circle
+                color='green',  # Fill color of the circle
+                symbol='circle'  # Use 'circle' symbol for a filled circle
+            ),
+            showlegend=True
+        ))
+        # Add a customized legend item with a filled circle
+        fig.add_trace(go.Scatter(
+            x=[None],  # No actual data
+            y=[None],  # No actual data
+            mode='markers',  # Marker mode to display as circle
+            name='Bom',  # Custom name in legend
+            marker=dict(
+                size=10,  # Size of the circle
+                color='red',  # Fill color of the circle
+                symbol='circle'  # Use 'circle' symbol for a filled circle
+            ),
+            showlegend=True
+        ))
+
+        fig.update_yaxes(showgrid=False, visible=False, showticklabels=False)
+        fig.update_xaxes(showgrid=False, visible=False, showticklabels=False)
 
         st.plotly_chart(
             fig,

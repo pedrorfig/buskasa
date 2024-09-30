@@ -14,7 +14,7 @@ def main(
     usage_type: str = "RESIDENTIAL",
     min_area: int = 30,
     min_price: int = 200000,
-    max_price: int = 2000000,
+    max_price: int = 10000000,
 ):
     """
     Perform a search on ZapImvoeis based on filters, scraping listings,
@@ -107,6 +107,7 @@ def main(
         zap_neighborhood.close_engine()
     transform.group_green_density()
     transform.group_n_bus_lanes()
+    transform.flag_remodeled_properties()
 
 if __name__ == "__main__":
 

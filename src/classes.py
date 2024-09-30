@@ -164,7 +164,7 @@ class ZapNeighborhood:
                 listings["advertizer"].isin(known_fraudsters)
             ]["listing_id"]
             # Total area typos
-            listings_with_total_area_typos = listings[listings["total_area_m2"] >= 500][
+            listings_with_total_area_typos = listings[listings["total_area_m2"] >= 700][
                 "listing_id"
             ]
             # Listings that don't have a complete account
@@ -184,7 +184,7 @@ class ZapNeighborhood:
             cleaned_listings = listings.loc[
                 ~listings["listing_id"].isin(listing_ids_to_remove), :
             ]
-            logger.info(f"Removed {len(listing_ids_to_remove)} fraudster listings")
+            logger.info(f"\tRemoved {len(listing_ids_to_remove)} fraudster listings")
             self.listings_to_add = cleaned_listings
 
     def calculate_price_per_area_first_quartile(self):
@@ -291,7 +291,7 @@ class ZapNeighborhood:
             # Saving listings removed
             listing_ids_to_remove = self.listing_ids_to_remove
             listing_ids_to_remove.extend(outlier_listings.to_list())
-            logger.info(f"Removed {len(outlier_listings)} outliers")
+            logger.info(f"\tRemoved {len(outlier_listings)} outliers")
         else:
             self.listings_to_add = search_listings
         return "Outliers removed"
@@ -317,7 +317,7 @@ class ZapNeighborhood:
             )
             self.listings_to_add = deduplucated_listings
             logger.info(
-                f"\t\tRemoved {listings.shape[0] - deduplucated_listings.shape[0]} duplicated listings"
+                f"\tRemoved {listings.shape[0] - deduplucated_listings.shape[0]} duplicated listings"
             )
         except KeyError:
             logger.info("\t\tNo listings to deduplicate")
@@ -954,8 +954,8 @@ class ZapItem:
         """
         
         floor_number = int(self._listing_data.get("listing", {}).get("unitFloor", 0))
-        assert floor_number >= 0, "Floor number must be greater than or equal to 0"
-        assert floor_number <= 100, "Floor number must be less than or equal to 100"
+        assert floor_number >= 0, f"\tFloor number must be greater than or equal to 0, got {floor_number}"
+        assert floor_number <= 100, f"\tFloor number must be less than or equal to 100, got {floor_number}"
         return floor_number
 
     def get_number_of_parking_spaces(self):
@@ -968,8 +968,8 @@ class ZapItem:
             if len(self._listing_data["listing"]["parkingSpaces"]) > 0
             else 0
         )
-        assert n_parking_spaces >= 0, "\t\tNumber of parking spaces must be greater than or equal to 0"
-        assert n_parking_spaces <= 10, "\t\tNumber of parking spaces must be less than or equal to 10"
+        assert n_parking_spaces >= 0, f"\tNumber of parking spaces must be greater than or equal to 0, got {n_parking_spaces}"
+        assert n_parking_spaces <= 15, f"\tNumber of parking spaces must be less than or equal to 10, got {n_parking_spaces}"
 
         return n_parking_spaces
 

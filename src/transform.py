@@ -1,8 +1,14 @@
+import logging
 import textwrap
 import pandas as pd
 from sqlalchemy import text
 
 import src.extract as extract
+
+# Configure logging
+logging.basicConfig(format="%(asctime)s %(name)-12s %(levelname)-8s %(message)s", level=logging.INFO)
+# Create logger object
+logger = logging.getLogger(__name__)
 
 
 def convert_to_dataframe(data):
@@ -82,6 +88,7 @@ def calculate_green_density(image):
 def group_green_density():
     # Connect to the PostgreSQL database
     engine = extract.create_db_engine()
+    logger.info("Grouping green_density into quartiles")
     with engine.begin() as conn:
         query = text(
             """with quartile_green_density as (select
@@ -109,9 +116,11 @@ def group_green_density():
                 """)
         conn.execute(query)
     return
+
 def group_n_bus_lanes():
     # Connect to the PostgreSQL database
     engine = extract.create_db_engine()
+    logger.info("Grouping n_nearby_bus_lanes into quartiles")
     with engine.begin() as conn:
         query = text(
             """WITH quartile_n_nearby_bus_lanes AS (
@@ -126,6 +135,21 @@ def group_n_bus_lanes():
                     UPDATE fact_listings SET n_nearby_bus_lanes_grouped = quartile_n_nearby_bus_lanes.n_nearby_bus_lanes_grouped
                     FROM quartile_n_nearby_bus_lanes
                     WHERE fact_listings.listing_id = quartile_n_nearby_bus_lanes.listing_id;
+                """)
+        conn.execute(query)
+    return
+
+def flag_remodeled_properties():
+    # Connect to the PostgreSQL database
+    engine = extract.create_db_engine()
+    logger.info("Flagging remodeled properties")
+    with engine.begin() as conn:
+        query = text(
+            """
+            UPDATE 
+            fact_listings 
+            SET is_remodeled = True
+            WHERE description ILIKE '%reformado%' OR description ILIKE '%reformada%';
                 """)
         conn.execute(query)
     return
