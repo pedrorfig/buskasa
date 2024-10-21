@@ -14,7 +14,7 @@ def main(
     usage_type: str = "RESIDENTIAL",
     min_area: int = 30,
     min_price: int = 200000,
-    max_price: int = 10000000,
+    max_price: int = 2000000,
 ):
     """
     Perform a search on ZapImvoeis based on filters, scraping listings,
@@ -35,7 +35,7 @@ def main(
     state, city, unit_type, business_type, neighborhoods = extract.get_search_parameters()
     if business_type == "RENTAL":
         max_price = int(max_price/100)
-        min_price = int(min_price/100)        
+        min_price = int(min_price/100)
 
     for neighborhood in neighborhoods:
         logger.info(f"Getting listings from neighborhood {neighborhood}")
