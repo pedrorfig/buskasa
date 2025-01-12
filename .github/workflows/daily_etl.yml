@@ -2,7 +2,7 @@ name: Run ETL for main neighborhoods in São Paulo
 
 on:
   schedule:
-    - cron: '0 3 * * *' # At 00:00 on Monday
+    - cron: '0 3 */2 * *' # At 03:00 every other day
   workflow_dispatch:
 
 jobs:
