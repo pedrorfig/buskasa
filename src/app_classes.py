@@ -402,9 +402,9 @@ class App:
             legend=dict(
                         yanchor="top", 
                         y=0.99,
-                        xanchor="left",
-                        x=0.01,
-                        bgcolor="LightYellow"),
+                        xanchor="right",
+                        x=0.95,
+                        bgcolor="White"),
             legend_title_text='Custo-benefício',
             showlegend=True,
             mapbox=dict(
@@ -424,7 +424,7 @@ class App:
             x=[None],  # No actual data
             y=[None],  # No actual data
             mode='markers',  # Marker mode to display as circle
-            name='Ótimo',  # Custom name in legend
+            name='Excelente',  # Custom name in legend
             marker=dict(
                 size=10,  # Size of the circle
                 color='blue',  # Fill color of the circle
@@ -438,7 +438,7 @@ class App:
             x=[None],  # No actual data
             y=[None],  # No actual data
             mode='markers',  # Marker mode to display as circle
-            name='Excelente',  # Custom name in legend
+            name='Ótimo',  # Custom name in legend
             marker=dict(
                 size=10,  # Size of the circle
                 color='green',  # Fill color of the circle

@@ -374,75 +374,96 @@ class ZapNeighborhood:
         return headers
 
     def save_zip_codes_to_db(self):
-        """ """
+        """Save zip codes to database using batch processing"""
         logger.info("\tSaving zip codes to database")
         zip_to_add = self.zip_codes_to_add
         # Only new zip codes will be added
         zip_to_add = zip_to_add[~zip_to_add.index.isin(self.existing_zip_codes.index)]
         if not zip_to_add.empty:
             with self._engine.begin() as conn:
+                # Use chunksize for better memory management
                 zip_to_add.to_sql(
                     name="dim_zip_code",
                     con=conn,
                     if_exists="append",
                     index=True,
                     index_label="zip_code",
+                    method='multi',
+                    chunksize=1000
                 )
 
     def save_traffic_analysis_to_db(self):
-        """ """
+        """Save traffic analysis to database using batch processing"""
         logger.info("\tSaving traffic analysis to database")
         traffic_analysis_to_add = self.traffic_analysis_to_add
         if not traffic_analysis_to_add.empty:
             with self._engine.begin() as conn:
+                # Use chunksize for better memory management
                 traffic_analysis_to_add.to_sql(
                     name="fact_traffic_analysis",
                     con=conn,
                     if_exists="append",
                     index=False,
+                    method='multi',
+                    chunksize=1000
                 )
 
     def save_image_analysis_to_db(self):
-        """ """
+        """Save image analysis to database using batch processing"""
         logger.info("Saving image analysis to database")
         image_analysis_to_add = self.image_analysis_to_add
         if not image_analysis_to_add.empty:
             with self._engine.begin() as conn:
+                # Use chunksize for better memory management
                 image_analysis_to_add.to_sql(
                     name="fact_image_analysis",
                     con=conn,
                     if_exists="append",
                     index=False,
+                    method='multi',
+                    chunksize=1000
                 )
 
     def save_listings_to_db(self):
-        """ """
+        """Save listings to database using batch processing"""
         logger.info("\tSaving records to database")
         if not self.listings_to_add.empty:
             engine = self._engine
             with engine.begin() as conn:
                 # Set listing_id as index
                 listings_to_add = self.listings_to_add.set_index("listing_id")
-                # Delete all listings from db that are in the new search
-                conn.execute(
-                    text(
-                        """
+                
+                # Split listing IDs into chunks for better performance
+                chunk_size = 1000
+                listing_ids = tuple(listings_to_add.index)
+                for i in range(0, len(listing_ids), chunk_size):
+                    chunk = listing_ids[i:i + chunk_size]
+                    # Delete listings in chunks
+                    conn.execute(
+                        text(
+                            """
                             DELETE FROM fact_listings
-                            WHERE
-                                listing_id in :listing_ids
-                        """
-                    ),
-                    {"listing_ids": tuple(listings_to_add.index)},
-                )
-                # Save new listings from the neighborhood search
-                listings_to_add.to_sql(
-                    name="fact_listings",
-                    con=conn,
-                    if_exists="append",
-                    index=True,
-                    index_label="listing_id",
-                )
-                logger.info(f"Saved {listings_to_add.shape[0]} listings to the DB")
+                            WHERE listing_id in :listing_ids
+                            """
+                        ),
+                        {"listing_ids": chunk},
+                    )
+                
+                # Save new listings in chunks
+                try:
+                    listings_to_add.to_sql(
+                        name="fact_listings",
+                        con=conn,
+                        if_exists="append",
+                        index=True,
+                        index_label="listing_id",
+                        method='multi',
+                        chunksize=1000
+                    )
+                    logger.info(f"Saved {listings_to_add.shape[0]} listings to the DB")
+                except Exception as e:
+                    logger.error(f"Error saving listings to DB: {str(e)}")
+                    raise
 
     def get_existing_zip_codes(self):
         """
