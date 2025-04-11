@@ -581,8 +581,13 @@ class ZapPage:
             params=params,
             headers=headers,
         )
-        page_data = response.json()
-        self.page_data = page_data
+        try:
+            page_data = response.json()
+            self.page_data = page_data
+        except r.exceptions.JSONDecodeError:
+            print(f"Response status code: {response.status_code}")
+            print(f"Response content: {response.text[:500]}...")  # Print first 500 chars
+            raise
 
     def get_listings(self):
         """
