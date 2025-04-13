@@ -1,8 +1,7 @@
 #MainMenu, header, footer {visibility: hidden;}
+
 .element-container:has(iframe[height="0"]) {display: none;}
-.st-emotion-cache-1jicfl2 {
-    padding: 0rem;
-    }
+
 .stPlotlyChart {
         height: 100vh;
     }
@@ -22,6 +21,13 @@ hr {
 h2 {
     padding-top: 0.3rem;
     padding-bottom: 0.3rem;
+}
+
+div[data-testid="stMainBlockContainer"] {
+    padding: 0px;}
+
+div[class="js-plotly-plot"] {
+    height: 100%;
 }
 div[data-testid="stForm"] {
     padding-top: 5px;

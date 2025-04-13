@@ -6,7 +6,7 @@ MANIFEST
 
 # IDE
 .idea/
-venv/
+.venv/
 
 
 # Packages

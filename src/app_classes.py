@@ -465,7 +465,7 @@ class App:
 
         st.plotly_chart(
             fig,
-            config={"displayModeBar": False},
+            config={"displayModeBar": False, "scrollZoom": True},
             use_container_width=True,
         )
 
