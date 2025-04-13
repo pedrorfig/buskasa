@@ -586,7 +586,7 @@ class ZapPage:
             self.page_data = page_data
         except r.exceptions.JSONDecodeError:
             print(f"Response status code: {response.status_code}")
-            print(f"Response content: {response.text[:500]}...")  # Print first 500 chars
+            print(f"Response content: {response.text}...")
             raise
 
     def get_listings(self):
