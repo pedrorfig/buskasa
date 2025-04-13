@@ -390,8 +390,8 @@ class ZapNeighborhood:
                     if_exists="append",
                     index=True,
                     index_label="zip_code",
-                    method='multi',
-                    chunksize=1000
+                    method="multi",
+                    chunksize=1000,
                 )
 
     def save_traffic_analysis_to_db(self):
@@ -406,8 +406,8 @@ class ZapNeighborhood:
                     con=conn,
                     if_exists="append",
                     index=False,
-                    method='multi',
-                    chunksize=1000
+                    method="multi",
+                    chunksize=1000,
                 )
 
     def save_image_analysis_to_db(self):
@@ -422,8 +422,8 @@ class ZapNeighborhood:
                     con=conn,
                     if_exists="append",
                     index=False,
-                    method='multi',
-                    chunksize=1000
+                    method="multi",
+                    chunksize=1000,
                 )
 
     def save_listings_to_db(self):
@@ -434,12 +434,12 @@ class ZapNeighborhood:
             with engine.begin() as conn:
                 # Set listing_id as index
                 listings_to_add = self.listings_to_add.set_index("listing_id")
-                
+
                 # Split listing IDs into chunks for better performance
                 chunk_size = 1000
                 listing_ids = tuple(listings_to_add.index)
                 for i in range(0, len(listing_ids), chunk_size):
-                    chunk = listing_ids[i:i + chunk_size]
+                    chunk = listing_ids[i : i + chunk_size]
                     # Delete listings in chunks
                     conn.execute(
                         text(
@@ -450,7 +450,7 @@ class ZapNeighborhood:
                         ),
                         {"listing_ids": chunk},
                     )
-                
+
                 # Save new listings in chunks
                 try:
                     listings_to_add.to_sql(
@@ -459,8 +459,8 @@ class ZapNeighborhood:
                         if_exists="append",
                         index=True,
                         index_label="listing_id",
-                        method='multi',
-                        chunksize=1000
+                        method="multi",
+                        chunksize=1000,
                     )
                     logger.info(f"Saved {listings_to_add.shape[0]} listings to the DB")
                 except Exception as e:
@@ -541,8 +541,11 @@ class ZapPage:
         self.existing_zip_codes = None
         self.listings = []
 
-    @backoff.on_exception(backoff.expo, (r.exceptions.RequestException, 
-                       r.exceptions.JSONDecodeError), max_tries=8)
+    @backoff.on_exception(
+        backoff.expo,
+        (r.exceptions.RequestException, r.exceptions.JSONDecodeError),
+        max_tries=8,
+    )
     def get_page(self):
         """
         Get results from a house search at Zap Imoveis
@@ -552,10 +555,9 @@ class ZapPage:
         """
         number_of_listings_per_page = self.zap_search.number_of_listings_per_page
         initial_listing = number_of_listings_per_page * self.page_number
-        
+
         headers = self.zap_search.get_request_headers()
-        headers['User-Agent'] = UserAgent().random
-        
+
         params = {
             "user": "a521d36e-4582-4b70-8162-41d661323a54",
             "portal": "ZAP",
@@ -578,14 +580,16 @@ class ZapPage:
             "size": number_of_listings_per_page,
             "usageTypes": self.usage_type,
             "levels": "NEIGHBORHOOD",
-            'addressPointLat': '-23.563579',
-            'addressPointLon': '-46.691607',
+            "addressPointLat": "-23.563579",
+            "addressPointLon": "-46.691607",
         }
-        scraper = cloudscraper.create_scraper(
-            browser={'browser': 'chrome',
-            'platform': 'windows',
-            'mobile': False})
-        response = scraper.get(
+
+        # Create a persistent session with cookies
+        session = cloudscraper.create_scraper(
+            browser={"browser": "chrome", "platform": "windows", "mobile": False}
+        )
+
+        response = session.get(
             "https://glue-api.zapimoveis.com.br/v2/listings",
             params=params,
             headers=headers,
@@ -934,19 +938,25 @@ class ZapItem:
         """
         Get zip code from listing
         """
-        return self._listing_data.get("listing", {}).get("address", {}).get("zipCode", '00000000')
+        return (
+            self._listing_data.get("listing", {})
+            .get("address", {})
+            .get("zipCode", "00000000")
+        )
 
     def get_neighborhood(self):
         """
         Get neighborhood from listing
         """
-        return self._listing_data.get("listing",{}).get("address",{}).get("neighborhood")
+        return (
+            self._listing_data.get("listing", {}).get("address", {}).get("neighborhood")
+        )
 
     def get_city(self):
         """
         Get city from listing
         """
-        return self._listing_data.get("listing",{}).get("address",{}).get("city")
+        return self._listing_data.get("listing", {}).get("address", {}).get("city")
 
     def get_state_acronym(self):
         """
@@ -968,7 +978,7 @@ class ZapItem:
         """
         Calculate price per area for a listing
         """
-        return round(self.price / self.total_area_m2,2)
+        return round(self.price / self.total_area_m2, 2)
 
     def get_usable_area(self):
         """
@@ -987,24 +997,32 @@ class ZapItem:
         """
         Get floor number from listing
         """
-        
+
         floor_number = int(self._listing_data.get("listing", {}).get("unitFloor", 0))
-        assert floor_number >= 0, f"\tFloor number must be greater than or equal to 0, got {floor_number}"
-        assert floor_number <= 100, f"\tFloor number must be less than or equal to 100, got {floor_number}"
+        assert (
+            floor_number >= 0
+        ), f"\tFloor number must be greater than or equal to 0, got {floor_number}"
+        assert (
+            floor_number <= 100
+        ), f"\tFloor number must be less than or equal to 100, got {floor_number}"
         return floor_number
 
     def get_number_of_parking_spaces(self):
         """
         Get number of parking slots
         """
-        
+
         n_parking_spaces = int(
             self._listing_data["listing"]["parkingSpaces"][0]
             if len(self._listing_data["listing"]["parkingSpaces"]) > 0
             else 0
         )
-        assert n_parking_spaces >= 0, f"\tNumber of parking spaces must be greater than or equal to 0, got {n_parking_spaces}"
-        assert n_parking_spaces <= 15, f"\tNumber of parking spaces must be less than or equal to 10, got {n_parking_spaces}"
+        assert (
+            n_parking_spaces >= 0
+        ), f"\tNumber of parking spaces must be greater than or equal to 0, got {n_parking_spaces}"
+        assert (
+            n_parking_spaces <= 15
+        ), f"\tNumber of parking spaces must be less than or equal to 10, got {n_parking_spaces}"
 
         return n_parking_spaces
 
@@ -1101,8 +1119,12 @@ class ZapItem:
         assigned_number = self._listing_data["link"]["data"]["streetNumber"]
         # If assigned number looks like a number, return it
         if assigned_number.isnumeric():
-            assert int(assigned_number) >= 0, "\t\tStreet number must be greater than or equal to 0"
-            assert int(assigned_number) <= 15000, "\t\tStreet number must be less than or equal to 15000"
+            assert (
+                int(assigned_number) >= 0
+            ), "\t\tStreet number must be greater than or equal to 0"
+            assert (
+                int(assigned_number) <= 15000
+            ), "\t\tStreet number must be less than or equal to 15000"
             return int(assigned_number)
         # if it is not empty, but not a number, return 13
         elif assigned_number:
@@ -1119,8 +1141,12 @@ class ZapItem:
             delivery_year = int(deliver_date[:4])
         else:
             delivery_year = 0
-        assert delivery_year >= 0, "Construction year must be greater than or equal to 0"
-        assert delivery_year <= 2030, "Construction year must be less than or equal to 2030"
+        assert (
+            delivery_year >= 0
+        ), "Construction year must be greater than or equal to 0"
+        assert (
+            delivery_year <= 2030
+        ), "Construction year must be less than or equal to 2030"
         return delivery_year
 
     def get_random_street_number_from_zipcode(self):
@@ -1182,8 +1208,12 @@ class ZapItem:
             except (ConnectionError, TypeError) as error:
                 logger.info(f"Found error: {error}")
                 random_number = 13
-            assert random_number >= 0, "Street number must be greater than or equal to 0"
-            assert random_number <= 15000, "Street number must be less than or equal to 15000"
+            assert (
+                random_number >= 0
+            ), "Street number must be greater than or equal to 0"
+            assert (
+                random_number <= 15000
+            ), "Street number must be less than or equal to 15000"
         return random_number
 
     @backoff.on_exception(backoff.expo, r.exceptions.RequestException, max_tries=10)
