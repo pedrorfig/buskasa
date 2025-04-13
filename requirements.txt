@@ -169,7 +169,7 @@ SQLAlchemy==2.0.40
 sqlglot==25.8.1
 st-theme==1.2.3
 stack-data==0.6.3
-streamlit==1.37.1
+streamlit==1.44.1
 streamlit-authenticator==0.3.2
 streamlit-navigation-bar==3.3.0
 tenacity==9.1.2
