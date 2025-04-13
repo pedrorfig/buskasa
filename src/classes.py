@@ -73,6 +73,8 @@ class ZapNeighborhood:
         self.image_analysis_to_add = pd.DataFrame()
         self.traffic_analysis_to_add = pd.DataFrame()
 
+        self.session = r.Session()
+
     def get_existing_ids(self):
         """
         Get existing listing ids for the specified conditions
@@ -586,7 +588,9 @@ class ZapPage:
 
         # Create a persistent session with cookies
         session = cloudscraper.create_scraper(
-            browser={"browser": "chrome", "platform": "windows", "mobile": False}
+            browser={"browser": "chrome", "platform": "windows", "mobile": False},
+            sess=self.zap_search.session,
+            delay=3
         )
 
         response = session.get(
