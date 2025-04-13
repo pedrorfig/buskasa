@@ -6,6 +6,8 @@ from datetime import datetime, timedelta
 
 import backoff
 import cloudscraper
+from fake_useragent import UserAgent
+
 import numpy as np
 import pandas as pd
 import requests as r
@@ -539,7 +541,8 @@ class ZapPage:
         self.existing_zip_codes = None
         self.listings = []
 
-    @backoff.on_exception(backoff.expo, r.exceptions.RequestException, max_tries=8)
+    @backoff.on_exception(backoff.expo, (r.exceptions.RequestException, 
+                       r.exceptions.JSONDecodeError), max_tries=8)
     def get_page(self):
         """
         Get results from a house search at Zap Imoveis
@@ -549,7 +552,10 @@ class ZapPage:
         """
         number_of_listings_per_page = self.zap_search.number_of_listings_per_page
         initial_listing = number_of_listings_per_page * self.page_number
+        
         headers = self.zap_search.get_request_headers()
+        headers['User-Agent'] = UserAgent().random
+        
         params = {
             "user": "a521d36e-4582-4b70-8162-41d661323a54",
             "portal": "ZAP",
@@ -575,7 +581,10 @@ class ZapPage:
             'addressPointLat': '-23.563579',
             'addressPointLon': '-46.691607',
         }
-        scraper = cloudscraper.create_scraper()
+        scraper = cloudscraper.create_scraper(
+            browser={'browser': 'chrome',
+            'platform': 'windows',
+            'mobile': False})
         response = scraper.get(
             "https://glue-api.zapimoveis.com.br/v2/listings",
             params=params,
