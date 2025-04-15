@@ -105,8 +105,8 @@ def main(
         zap_neighborhood.save_zip_codes_to_db()
         # Close engine
         zap_neighborhood.close_engine()
-    transform.group_green_density()
-    transform.group_n_bus_lanes()
+    transform.group_green_density(city)
+    transform.group_n_bus_lanes(city)
     transform.flag_remodeled_properties()
 
 if __name__ == "__main__":

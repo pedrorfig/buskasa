@@ -85,7 +85,7 @@ def calculate_green_density(image):
 
 
 
-def group_green_density():
+def group_green_density(city):
     # Connect to the PostgreSQL database
     engine = extract.create_db_engine()
     logger.info("Grouping green_density into quartiles")
@@ -109,15 +109,21 @@ def group_green_density():
                         END as green_density_grouped,
                         listing_id
                         from
-                        fact_listings)
+                        fact_listings
+                        where city = :city
+                        )
                         UPDATE fact_listings SET green_density_grouped = quartile_green_density.green_density_grouped
                         FROM quartile_green_density
-                        WHERE fact_listings.listing_id = quartile_green_density.listing_id;
-                """)
-        conn.execute(query)
+                        WHERE fact_listings.listing_id = quartile_green_density.listing_id
+                        and city = :city;
+        """)
+        parameters = {
+            "city": city,
+        }
+        conn.execute(query, parameters)
     return
 
-def group_n_bus_lanes():
+def group_n_bus_lanes(city):
     # Connect to the PostgreSQL database
     engine = extract.create_db_engine()
     logger.info("Grouping n_nearby_bus_lanes into quartiles")
@@ -131,12 +137,18 @@ def group_n_bus_lanes():
                                     WHEN NTILE(4) OVER (ORDER BY n_nearby_bus_lanes) = 4 THEN 'Agitado'
                                 END as n_nearby_bus_lanes_grouped,
                                 listing_id
-                        from fact_listings) 
+                        from fact_listings
+                        where city = :city
+                        ) 
                     UPDATE fact_listings SET n_nearby_bus_lanes_grouped = quartile_n_nearby_bus_lanes.n_nearby_bus_lanes_grouped
                     FROM quartile_n_nearby_bus_lanes
-                    WHERE fact_listings.listing_id = quartile_n_nearby_bus_lanes.listing_id;
+                    WHERE fact_listings.listing_id = quartile_n_nearby_bus_lanes.listing_id
+                    and city = :city;
                 """)
-        conn.execute(query)
+        parameters = {
+            "city": city,
+        }
+        conn.execute(query, parameters)
     return
 
 def flag_remodeled_properties():

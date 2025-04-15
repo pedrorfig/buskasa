@@ -62,7 +62,7 @@ class ZapNeighborhood:
         # so it is also deleted on the DB
         self.all_listing_from_search = []
         # Placeholder for retrieving records on the DB
-        self.existing_zip_codes = None
+        self.existing_zip_codes = pd.DataFrame()
         self.listing_ids_to_remove = []
         self.existing_listing_ids_in_db = None
         self.existing_image_analysis = pd.DataFrame()
@@ -335,17 +335,19 @@ class ZapNeighborhood:
         with engine.begin() as conn:
             conn.execute(
                 text(
-                    """
-                            DELETE FROM fact_listings
-                            WHERE
-                                updated_at < current_date - 1
-                                and neighborhood = :neighborhood
-                                and business_type = :business_type
-                        """
+                """
+                DELETE FROM fact_listings
+                WHERE
+                    updated_at < current_date
+                    and neighborhood = :neighborhood
+                    and business_type = :business_type
+                    and city = :city
+                """
                 ),
                 parameters={
                     "neighborhood": self.neighborhood,
                     "business_type": self.business_type,
+                    "city": self.city,
                 },
             )
         return
@@ -590,7 +592,7 @@ class ZapPage:
         session = cloudscraper.create_scraper(
             browser={"browser": "chrome", "platform": "windows", "mobile": False},
             sess=self.zap_search.session,
-            delay=3
+            delay=3,
         )
 
         response = session.get(
@@ -712,7 +714,7 @@ class ZapItem:
         self.precision = None
         self.green_density, self.is_next_to_park = self.get_sat_image_analysis_metrics()
         self.n_nearby_bus_lanes = self.get_number_of_nearby_bus_lines()
-        self.is_quiet = self.is_quiet()
+        self.is_quiet = self.is_quiet_location()
         # Getting cost data
         self.price = self.get_listing_price()
         self.condo_fee = self.get_condo_fee()
@@ -732,8 +734,22 @@ class ZapItem:
         )
         return no_license_number
 
-    def is_quiet(self):
-        return (self.location_type != "Avenida") & (self.floor >= 8)
+    def is_quiet_location(self) -> bool:
+        """
+        Determines if a property is considered quiet based on location type and floor number.
+        
+        Returns:
+            bool: True if the property is not on an avenue and is on the 8th floor or higher,
+                 False otherwise.
+        """
+        is_quiet = False
+        try:
+            # Check both conditions and return a boolean result
+            is_quiet = (self.location_type != "Avenida") and (self.floor >= 8)
+            return is_quiet
+        except (ValueError, TypeError):
+            # Return False if there's any error in conversion
+            return is_quiet
 
     def get_number_of_nearby_bus_lines(self):
         if np.isnan(self.latitude) or np.isnan(self.longitude):
@@ -804,6 +820,7 @@ class ZapItem:
             if not filtered_sat_image_analysis.empty
             else None
         )
+        min_lat, max_lat, min_lon, max_lon = 0,0,0,0
 
         if green_density is None:
             min_lat, max_lat, min_lon, max_lon = transform.define_bounding_box(
@@ -812,9 +829,10 @@ class ZapItem:
             image = extract.get_sat_image(min_lat, max_lat, min_lon, max_lon)
             green_density = transform.calculate_green_density(image)
         if is_next_to_park is None:
-            is_next_to_park = extract.is_next_to_park(
-                (min_lat + max_lat) / 2, (min_lon + max_lon) / 2
-            )
+            # Calculate center coordinates using float values to avoid type errors
+            center_lat = float(min_lat + max_lat) / 2
+            center_lon = float(min_lon + max_lon) / 2
+            is_next_to_park = extract.is_next_to_park(center_lat, center_lon)
 
             self.update_sat_image_analysis_to_add(
                 sat_image_analysis_to_add,
@@ -1113,7 +1131,7 @@ class ZapItem:
         """
         street_address_split = self.street_address.split()
         if street_address_split:
-            return self.street_address.split()[0]
+            return str(self.street_address.split()[0])
         return "N/A"
 
     def get_street_number(self):

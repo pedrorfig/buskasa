@@ -72,7 +72,7 @@ jobs:
           BRASIL_ABERTO_API_KEY_PAID: ${{ secrets.BRASIL_ABERTO_API_KEY_PAID }}
           BRASIL_ABERTO_API_KEY_FREE: ${{ secrets.BRASIL_ABERTO_API_KEY_FREE }}
 
-        run: python etl.py "Rio de Janeiro" "Rio de Janeiro" "APARTMENT" "SALE" "Botafogo, Flamengo, Catete, Leblon, Ipanema, Laranjeiras, Gávea, Humaitá, Lagoa, Jardim Botânico, Copacabana"
+        run: python etl.py "Rio de Janeiro" "Rio de Janeiro" "APARTMENT" "SALE" "Botafogo, Flamengo, Catete, Leblon, Ipanema, Laranjeiras, Gávea, Humaitá, Lagoa, Jardim Botânico, Copacabana, Urca, Leme"
 
       - name: Search for real estate apartment listings for rent in Rio de Janeiro # run main.py
         env:
@@ -82,4 +82,4 @@ jobs:
           BRASIL_ABERTO_API_KEY_PAID: ${{ secrets.BRASIL_ABERTO_API_KEY_PAID }}
           BRASIL_ABERTO_API_KEY_FREE: ${{ secrets.BRASIL_ABERTO_API_KEY_FREE }}
 
-        run: python etl.py "Rio de Janeiro" "Rio de Janeiro" "APARTMENT" "RENTAL" "Botafogo, Flamengo, Catete, Leblon, Ipanema, Laranjeiras, Gávea, Humaitá, Lagoa, Jardim Botânico, Copacabana"
+        run: python etl.py "Rio de Janeiro" "Rio de Janeiro" "APARTMENT" "RENTAL" "Botafogo, Flamengo, Catete, Leblon, Ipanema, Laranjeiras, Gávea, Humaitá, Lagoa, Jardim Botânico, Copacabana, Urca, Leme"
