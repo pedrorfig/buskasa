@@ -73,7 +73,11 @@ class ZapNeighborhood:
         self.image_analysis_to_add = pd.DataFrame()
         self.traffic_analysis_to_add = pd.DataFrame()
 
-        self.session = r.Session()
+        self.session = cloudscraper.create_scraper(
+            browser={"browser": "chrome", "platform": "windows", "mobile": False},
+            sess=r.Session(),
+            delay=3,
+        )
 
     def get_existing_ids(self):
         """
@@ -588,14 +592,9 @@ class ZapPage:
             "addressPointLon": "-46.691607",
         }
 
-        # Create a persistent session with cookies
-        session = cloudscraper.create_scraper(
-            browser={"browser": "chrome", "platform": "windows", "mobile": False},
-            sess=self.zap_search.session,
-            delay=3,
-        )
 
-        response = session.get(
+
+        response = self.zap_search.session.get(
             "https://glue-api.zapimoveis.com.br/v2/listings",
             params=params,
             headers=headers,
