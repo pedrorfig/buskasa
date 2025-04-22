@@ -42,3 +42,4 @@ google_credentials.json
 settings.json
 .vscode/launch.json
 notebooks/checking_anvisa_api.ipynb
+notebooks/testing_cookies_retireval.ipynb

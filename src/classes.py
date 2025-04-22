@@ -72,12 +72,17 @@ class ZapNeighborhood:
         self.listings_to_add = pd.DataFrame()
         self.image_analysis_to_add = pd.DataFrame()
         self.traffic_analysis_to_add = pd.DataFrame()
-
-        self.session = cloudscraper.create_scraper(
+        self.session = self.create_scraper_session()
+    
+    def create_scraper_session(self):
+        """
+        Create a scraper session
+        """
+        
+        return cloudscraper.create_scraper(
             browser={"browser": "chrome", "platform": "windows", "mobile": False},
-            sess=r.Session(),
-            delay=3,
-        )
+            sess=r.Session()
+            )
 
     def get_existing_ids(self):
         """
@@ -566,6 +571,10 @@ class ZapPage:
 
         headers = self.zap_search.get_request_headers()
 
+        proxies = {
+            "http": f"http://scraperapi.keep_headers=true:{os.getenv('SCRAPER_APIKEY')}@proxy-server.scraperapi.com:8001"
+        }
+
         params = {
             "user": "a521d36e-4582-4b70-8162-41d661323a54",
             "portal": "ZAP",
@@ -590,14 +599,15 @@ class ZapPage:
             "levels": "NEIGHBORHOOD",
             "addressPointLat": "-23.563579",
             "addressPointLon": "-46.691607",
+            "__zt": "mtc:deduplication2023"
         }
 
-
-
         response = self.zap_search.session.get(
-            "https://glue-api.zapimoveis.com.br/v2/listings",
+            "http://glue-api.zapimoveis.com.br/v2/listings",
             params=params,
             headers=headers,
+            proxies=proxies,
+            verify=False,
         )
         try:
             page_data = response.json()
