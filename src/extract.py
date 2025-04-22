@@ -105,6 +105,8 @@ def get_listings(_conn, business_type, city):
                 params={"business_type": business_type,
                         "city": city}
             )
+    
+    logger.info(f"Found {len(listings)} listings for {city} and {business_type} business type")
 
     return listings
 

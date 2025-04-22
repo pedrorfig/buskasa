@@ -36,12 +36,11 @@ class ZapNeighborhood:
         city: str,
         neighborhood: str,
         unit_type: str,
-        usage_type: str,
         business_type: str,
         max_price: int,
         min_price: int,
         min_area: int,
-        session_number: int,
+        session_number: int
     ):
         # Create SQLalchemy engine for connections with DB
         self._engine = extract.create_db_engine()
@@ -51,7 +50,7 @@ class ZapNeighborhood:
         self.neighborhood = neighborhood
         self.business_type = business_type
         self.unit_type = unit_type
-        self.usage_type = usage_type
+        self.usage_type = 'RESIDENTIAL'
         self.max_price = max_price
         self.min_price = min_price
         self.min_area = min_area
@@ -611,6 +610,7 @@ class ZapPage:
             params=params,
             headers=headers,
             proxies=proxies,
+            verify=False
         )
         try:
             page_data = response.json()
@@ -1155,10 +1155,10 @@ class ZapItem:
         if assigned_number.isnumeric():
             assert (
                 int(assigned_number) >= 0
-            ), "\t\tStreet number must be greater than or equal to 0"
+            ), f"\t\tStreet number must be greater than or equal to 0, found {assigned_number}"
             assert (
                 int(assigned_number) <= 15000
-            ), "\t\tStreet number must be less than or equal to 15000"
+            ), f"\t\tStreet number must be less than or equal to 15000, found {assigned_number}"
             return int(assigned_number)
         # if it is not empty, but not a number, return 13
         elif assigned_number:
@@ -1272,13 +1272,23 @@ class ZapItem:
 
         latitude = (
             self._listing_data.get("listing", {})
-            .get("displayAddressGeolocation", {})
-            .get("lat", np.nan)
+            .get("address", {})
+            .get("point")
+            .get("lat") or
+            self._listing_data.get("listing", {})
+            .get("address", {})
+            .get("point")
+            .get("approximateLat", np.nan)
         )
         longitude = (
             self._listing_data.get("listing", {})
-            .get("displayAddressGeolocation", {})
-            .get("lon", np.nan)
+            .get("address", {})
+            .get("point")
+            .get("lon") or
+            self._listing_data.get("listing", {})
+            .get("address", {})
+            .get("point")
+            .get("approximateLon")
         )
         if not (np.isnan(latitude) or np.isnan(longitude)):
             self.precision = "exact"

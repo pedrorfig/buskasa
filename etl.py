@@ -51,7 +51,6 @@ def main(
             city,
             neighborhood,
             unit_type,
-            usage_type,
             business_type,
             max_price,
             min_price,

@@ -267,7 +267,7 @@ class App:
                     st.divider()
                     st.markdown("Arborização")
                     green_density_map = {
-                        "Pouco Verde": "Mais cinza",
+                        "Pouco Verde": "Urbano",
                         "Moderadamente Verde": "Balanceado",
                         "Bastante Verde": "Arborizado",
                     }
