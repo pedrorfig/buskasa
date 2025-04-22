@@ -573,9 +573,11 @@ class ZapPage:
 
         headers = self.zap_search.get_request_headers()
 
-        proxies = {
-            "http": f"http://scraperapi.session_number={self.zap_search.session_number}.keep_headers=true:{os.getenv('SCRAPER_APIKEY')}@proxy-server.scraperapi.com:8001"
-        }
+        # proxies = {
+        #     "http": f"http://scraperapi.session_number={self.zap_search.session_number}.keep_headers=true:{os.getenv('SCRAPER_APIKEY')}@proxy-server.scraperapi.com:8001"
+        # }
+
+        proxies = {"https": f"https://user-{os.getenv('OX_USERNAME')}-country-US:{os.getenv('OX_PASSWORD')}@{os.getenv('OX_PROXY')}"}
 
         params = {
             "user": "a521d36e-4582-4b70-8162-41d661323a54",
@@ -605,11 +607,10 @@ class ZapPage:
         }
 
         response = self.zap_search.session.get(
-            "http://glue-api.zapimoveis.com.br/v2/listings",
+            "https://glue-api.zapimoveis.com.br/v2/listings",
             params=params,
             headers=headers,
             proxies=proxies,
-            verify=False,
         )
         try:
             page_data = response.json()

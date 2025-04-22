@@ -31,7 +31,9 @@ jobs:
           BRASIL_ABERTO_API_KEY_PAID: ${{ secrets.BRASIL_ABERTO_API_KEY_PAID }}
           BRASIL_ABERTO_API_KEY_FREE: ${{ secrets.BRASIL_ABERTO_API_KEY_FREE }}
           SCRAPER_APIKEY: ${{ secrets.SCRAPER_APIKEY }}
-          
+          OX_USERNAME: ${{ secrets.OX_USERNAME }}
+          OX_PASSWORD: ${{ secrets.OX_PASSWORD }}
+          OX_PROXY: ${{ secrets.OX_PROXY }}
 
         run: python etl.py "São Paulo" "São Paulo" "APARTMENT" "SALE" "Ipiranga,Campo Belo,Brooklin Novo,Butantã,Cidade Jardim,Liberdade,Paraíso,Cerqueira César,Consolação,Sumaré,Bela Vista,Jardins,Higienópolis,Jardim Paulista,Jardim Europa,Jardim América,Vila Mariana,Aclimação,Perdizes,Alto de Pinheiros,Ibirapuera,Itaim Bibi,Moema,Santa Cecília,Pinheiros,Vila Olímpia,República,Pacaembu,Barra Funda,Chácara Klabin,Cambuci,Sumarézinho,Vila Nova Conceição,Jardim Luzitânia,Vila Clementino,Jardim Paulistano"
 
@@ -43,6 +45,10 @@ jobs:
           BRASIL_ABERTO_API_KEY_PAID: ${{ secrets.BRASIL_ABERTO_API_KEY_PAID }}
           BRASIL_ABERTO_API_KEY_FREE: ${{ secrets.BRASIL_ABERTO_API_KEY_FREE }}
           SCRAPER_APIKEY: ${{ secrets.SCRAPER_APIKEY }}
+          OX_USERNAME: ${{ secrets.OX_USERNAME }}
+          OX_PASSWORD: ${{ secrets.OX_PASSWORD }}
+          OX_PROXY: ${{ secrets.OX_PROXY }}
+
 
         run: python etl.py "São Paulo" "São Paulo" "APARTMENT" "RENTAL" "Ipiranga,Campo Belo,Brooklin Novo,Butantã,Cidade Jardim,Liberdade,Paraíso,Cerqueira César,Consolação,Sumaré,Bela Vista,Jardins,Higienópolis,Jardim Paulista,Jardim Europa,Jardim América,Vila Mariana,Aclimação,Perdizes,Alto de Pinheiros,Ibirapuera,Itaim Bibi,Moema,Santa Cecília,Pinheiros,Vila Olímpia,República,Pacaembu,Barra Funda,Chácara Klabin,Cambuci,Sumarézinho,Vila Nova Conceição,Jardim Luzitânia,Vila Clementino,Jardim Paulistano"
 
@@ -54,6 +60,10 @@ jobs:
           BRASIL_ABERTO_API_KEY_PAID: ${{ secrets.BRASIL_ABERTO_API_KEY_PAID }}
           BRASIL_ABERTO_API_KEY_FREE: ${{ secrets.BRASIL_ABERTO_API_KEY_FREE }}
           SCRAPER_APIKEY: ${{ secrets.SCRAPER_APIKEY }}
+          OX_USERNAME: ${{ secrets.OX_USERNAME }}
+          OX_PASSWORD: ${{ secrets.OX_PASSWORD }}
+          OX_PROXY: ${{ secrets.OX_PROXY }}
+
 
         run: python etl.py "São Paulo" "São Paulo" "HOME" "SALE" "Ipiranga,Campo Belo,Brooklin Novo,Butantã,Cidade Jardim,Liberdade,Paraíso,Cerqueira César,Consolação,Sumaré,Bela Vista,Jardins,Higienópolis,Jardim Paulista,Jardim Europa,Jardim América,Vila Mariana,Aclimação,Perdizes,Alto de Pinheiros,Ibirapuera,Itaim Bibi,Moema,Santa Cecília,Pinheiros,Vila Olímpia,República,Pacaembu,Barra Funda,Chácara Klabin,Cambuci,Sumarézinho,Vila Nova Conceição,Jardim Luzitânia,Vila Clementino,Jardim Paulistano"
 
@@ -65,6 +75,9 @@ jobs:
           BRASIL_ABERTO_API_KEY_PAID: ${{ secrets.BRASIL_ABERTO_API_KEY_PAID }}
           BRASIL_ABERTO_API_KEY_FREE: ${{ secrets.BRASIL_ABERTO_API_KEY_FREE }}
           SCRAPER_APIKEY: ${{ secrets.SCRAPER_APIKEY }}
+          OX_USERNAME: ${{ secrets.OX_USERNAME }}
+          OX_PASSWORD: ${{ secrets.OX_PASSWORD }}
+          OX_PROXY: ${{ secrets.OX_PROXY }}
 
         run: python etl.py "São Paulo" "São Paulo" "HOME" "RENTAL" "Ipiranga,Campo Belo,Brooklin Novo,Butantã,Cidade Jardim,Liberdade,Paraíso,Cerqueira César,Consolação,Sumaré,Bela Vista,Jardins,Higienópolis,Jardim Paulista,Jardim Europa,Jardim América,Vila Mariana,Aclimação,Perdizes,Alto de Pinheiros,Ibirapuera,Itaim Bibi,Moema,Santa Cecília,Pinheiros,Vila Olímpia,República,Pacaembu,Barra Funda,Chácara Klabin,Cambuci,Sumarézinho,Vila Nova Conceição,Jardim Luzitânia,Vila Clementino,Jardim Paulistano"
 
@@ -77,6 +90,9 @@ jobs:
           BRASIL_ABERTO_API_KEY_PAID: ${{ secrets.BRASIL_ABERTO_API_KEY_PAID }}
           BRASIL_ABERTO_API_KEY_FREE: ${{ secrets.BRASIL_ABERTO_API_KEY_FREE }}
           SCRAPER_APIKEY: ${{ secrets.SCRAPER_APIKEY }}
+          OX_USERNAME: ${{ secrets.OX_USERNAME }} 
+          OX_PASSWORD: ${{ secrets.OX_PASSWORD }}
+          OX_PROXY: ${{ secrets.OX_PROXY }}
 
         run: python etl.py "Rio de Janeiro" "Rio de Janeiro" "APARTMENT" "SALE" "Botafogo, Flamengo, Catete, Leblon, Ipanema, Laranjeiras, Gávea, Humaitá, Lagoa, Jardim Botânico, Copacabana, Urca, Leme"
 
@@ -88,5 +104,8 @@ jobs:
           BRASIL_ABERTO_API_KEY_PAID: ${{ secrets.BRASIL_ABERTO_API_KEY_PAID }}
           BRASIL_ABERTO_API_KEY_FREE: ${{ secrets.BRASIL_ABERTO_API_KEY_FREE }}
           SCRAPER_APIKEY: ${{ secrets.SCRAPER_APIKEY }}
-          
+          OX_USERNAME: ${{ secrets.OX_USERNAME }}
+          OX_PASSWORD: ${{ secrets.OX_PASSWORD }}
+          OX_PROXY: ${{ secrets.OX_PROXY }}
+
         run: python etl.py "Rio de Janeiro" "Rio de Janeiro" "APARTMENT" "RENTAL" "Botafogo, Flamengo, Catete, Leblon, Ipanema, Laranjeiras, Gávea, Humaitá, Lagoa, Jardim Botânico, Copacabana, Urca, Leme"
