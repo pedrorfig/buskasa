@@ -183,14 +183,17 @@ class ZapNeighborhood:
             listings_from_known_fraudsters = listings[
                 listings["advertizer"].isin(known_fraudsters)
             ]["listing_id"]
+            logger.info(f"\tFound {len(listings_from_known_fraudsters)} known fraudster listings")
             # Total area typos
             listings_with_total_area_typos = listings[listings["total_area_m2"] >= 700][
                 "listing_id"
             ]
+            logger.info(f"\tFound {len(listings_with_total_area_typos)} listings with total area typos")
             # Listings that don't have a complete account
             listings_with_unlicensed_accounts = listings[
                 listings["account_is_unlicensed"]
             ]["listing_id"]
+            logger.info(f"\tFound {len(listings_with_unlicensed_accounts)} listings with unlicensed accounts")
             # Populating series of listings to be removed
             listing_ids_to_remove = pd.concat(
                 [
@@ -329,9 +332,9 @@ class ZapNeighborhood:
                     "bedrooms",
                     "bathrooms",
                     "total_area_m2",
-                    "zip_code",
                     "street_address",
                     "street_number",
+                    "floor"
                 ],
                 keep="first",
             )
