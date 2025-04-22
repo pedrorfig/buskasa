@@ -33,7 +33,7 @@ def main(
     # Load credential values
     load_dotenv()
     # Get state, city and neighborhoods to be search through command prompt
-    state, city, unit_type, business_type, neighborhoods = extract.get_search_parameters()
+    state, city, unit_type, unit_type_v3, unit_subtype, business_type, neighborhoods = extract.get_search_parameters()
     # Generate a random integer between 0 and 1000000 for session number
     session_number = random.randint(0, 1000000)
     if business_type == "RENTAL":
@@ -51,6 +51,8 @@ def main(
             city,
             neighborhood,
             unit_type,
+            unit_type_v3,
+            unit_subtype,
             business_type,
             max_price,
             min_price,

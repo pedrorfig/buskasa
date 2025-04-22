@@ -36,11 +36,13 @@ class ZapNeighborhood:
         city: str,
         neighborhood: str,
         unit_type: str,
+        unit_type_v3: str,
+        unit_subtype: str,
         business_type: str,
         max_price: int,
         min_price: int,
         min_area: int,
-        session_number: int
+        session_number: int,
     ):
         # Create SQLalchemy engine for connections with DB
         self._engine = extract.create_db_engine()
@@ -50,7 +52,9 @@ class ZapNeighborhood:
         self.neighborhood = neighborhood
         self.business_type = business_type
         self.unit_type = unit_type
-        self.usage_type = 'RESIDENTIAL'
+        self.unit_type_v3 = unit_type_v3
+        self.unit_subtype = unit_subtype
+        self.usage_type = "RESIDENTIAL,RESIDENTIAL,RESIDENTIAL,RESIDENTIAL,RESIDENTIAL"
         self.max_price = max_price
         self.min_price = min_price
         self.min_area = min_area
@@ -74,16 +78,18 @@ class ZapNeighborhood:
         self.image_analysis_to_add = pd.DataFrame()
         self.traffic_analysis_to_add = pd.DataFrame()
         self.session = self.create_scraper_session()
-    
+
+
+
     def create_scraper_session(self):
         """
         Create a scraper session
         """
-        
+
         return cloudscraper.create_scraper(
             browser={"browser": "chrome", "platform": "windows", "mobile": False},
-            sess=r.Session()
-            )
+            sess=r.Session(),
+        )
 
     def get_existing_ids(self):
         """
@@ -345,7 +351,7 @@ class ZapNeighborhood:
         with engine.begin() as conn:
             conn.execute(
                 text(
-                """
+                    """
                 DELETE FROM fact_listings
                 WHERE
                     updated_at < current_date
@@ -544,6 +550,8 @@ class ZapPage:
         self.neighborhood = zap_search.neighborhood
         self.usage_type = zap_search.usage_type
         self.unit_type = zap_search.unit_type
+        self.unit_subtype = zap_search.unit_subtype
+        self.unit_type_v3 = zap_search.unit_type_v3
         self.min_area = zap_search.min_area
         self.min_price = zap_search.min_price
         self.max_price = zap_search.max_price
@@ -576,7 +584,9 @@ class ZapPage:
         #     "http": f"http://scraperapi.session_number={self.zap_search.session_number}.keep_headers=true:{os.getenv('SCRAPER_APIKEY')}@proxy-server.scraperapi.com:8001"
         # }
 
-        proxies = {"https": f"https://user-{os.getenv('OX_USERNAME')}-country-US:{os.getenv('OX_PASSWORD')}@{os.getenv('OX_PROXY')}"}
+        proxies = {
+            "https": f"https://user-{os.getenv('OX_USERNAME')}-country-US:{os.getenv('OX_PASSWORD')}@{os.getenv('OX_PROXY')}"
+        }
 
         params = {
             "user": "a521d36e-4582-4b70-8162-41d661323a54",
@@ -589,8 +599,9 @@ class ZapPage:
             "listingType": "USED",
             "priceMin": self.min_price,
             "priceMax": self.max_price,
-            "unitTypesV3": self.unit_type,
+            "unitTypesV3": self.unit_type_v3,
             "unitTypes": self.unit_type,
+            "unitSubTypes": self.unit_subtype,
             "addressCity": self.city,
             "addressState": self.state,
             "addressNeighborhood": self.neighborhood,
@@ -602,7 +613,7 @@ class ZapPage:
             "levels": "NEIGHBORHOOD",
             "addressPointLat": "-23.563579",
             "addressPointLon": "-46.691607",
-            "__zt": "mtc:deduplication2023"
+            "__zt": "mtc:deduplication2023",
         }
 
         response = self.zap_search.session.get(
@@ -610,7 +621,7 @@ class ZapPage:
             params=params,
             headers=headers,
             proxies=proxies,
-            verify=False
+            verify=False,
         )
         try:
             page_data = response.json()
@@ -749,7 +760,7 @@ class ZapItem:
     def is_quiet_location(self) -> bool:
         """
         Determines if a property is considered quiet based on location type and floor number.
-        
+
         Returns:
             bool: True if the property is not on an avenue and is on the 8th floor or higher,
                  False otherwise.
@@ -832,7 +843,7 @@ class ZapItem:
             if not filtered_sat_image_analysis.empty
             else None
         )
-        min_lat, max_lat, min_lon, max_lon = 0,0,0,0
+        min_lat, max_lat, min_lon, max_lon = 0, 0, 0, 0
 
         if green_density is None:
             min_lat, max_lat, min_lon, max_lon = transform.define_bounding_box(
@@ -1270,25 +1281,19 @@ class ZapItem:
         Get latitude, if not available calculate it based on the street address
         """
 
-        latitude = (
-            self._listing_data.get("listing", {})
-            .get("address", {})
-            .get("point")
-            .get("lat") or
-            self._listing_data.get("listing", {})
-            .get("address", {})
-            .get("point")
-            .get("approximateLat", np.nan)
+        latitude = self._listing_data.get("listing", {}).get("address", {}).get(
+            "point"
+        ).get("lat") or self._listing_data.get("listing", {}).get("address", {}).get(
+            "point"
+        ).get(
+            "approximateLat", np.nan
         )
-        longitude = (
-            self._listing_data.get("listing", {})
-            .get("address", {})
-            .get("point")
-            .get("lon") or
-            self._listing_data.get("listing", {})
-            .get("address", {})
-            .get("point")
-            .get("approximateLon")
+        longitude = self._listing_data.get("listing", {}).get("address", {}).get(
+            "point"
+        ).get("lon") or self._listing_data.get("listing", {}).get("address", {}).get(
+            "point"
+        ).get(
+            "approximateLon"
         )
         if not (np.isnan(latitude) or np.isnan(longitude)):
             self.precision = "exact"

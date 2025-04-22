@@ -19,7 +19,6 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-
 def get_neighborhoods_from_city_and_state(state, city):
     """
     Downloads all neighborhood names for a given city
@@ -93,19 +92,19 @@ def get_listings(_conn, business_type, city):
     Get listings
     """
     listings = pd.read_sql(
-                """
+        """
                 SELECT *
                 FROM fact_listings
                 WHERE price_per_area_in_first_quartile = True
                 AND business_type = %(business_type)s
                 AND city = %(city)s
+                AND unit_type not in ('BUILDING', 'BUSINESS', 'COMMERCIAL_BUILDING', 'COMMERCIAL_PROPERTY', 'FARM', 'RESIDENTIAL_ALLOTMENT_LAND', 'OFFICE', 'SHED_DEPOSIT_WAREHOUSE')
                 """,
-                con=_conn,
-                index_col="listing_id",
-                params={"business_type": business_type,
-                        "city": city}
-            )
-    
+        con=_conn,
+        index_col="listing_id",
+        params={"business_type": business_type, "city": city},
+    )
+
     logger.info(f"Found {len(listings)} listings for {city} and {business_type} business type")
 
     return listings
@@ -236,6 +235,38 @@ def delete_listings_from_db(unavailable_ids, engine):
         conn.commit()
     return
 
+def get_unit_type(unit_type):
+    """
+    Get the unity type
+    """
+    if unit_type == "APARTMENT":
+        return ",".join(["APARTMENT"] * 5)
+    elif unit_type == "HOME":
+        return ",".join(["HOME"] * 4)
+    else:
+        raise ValueError(f"Invalid unit type: {unit_type}")
+
+def get_unit_type_v3(unit_type):
+    """
+    Get the unit type v3
+    """
+    if unit_type == 'APARTMENT':
+        return 'APARTMENT,UnitType_NONE,PENTHOUSE,FLAT,LOFT'
+    elif unit_type == 'HOME':
+        return 'HOME,TWO_STORY_HOUSE,CONDOMINIUM,VILLAGE_HOUSE'
+    else:
+        raise ValueError(f"Invalid unit type: {unit_type}")
+
+def get_unit_subtype(unit_type):
+    """
+    Get the unity subtype
+    """
+    if unit_type == "APARTMENT":
+        return "APARTMENT,UnitSubType_NONE,DUPLEX,TRIPLEX|STUDIO|PENTHOUSE|FLAT"
+    elif unit_type == "HOME":
+        return "UnitSubType_NONE,TWO_STORY_HOUSE,SINGLE_STOREY_HOUSE,KITNET|TWO_STORY_HOUSE|CONDOMINIUM|VILLAGE_HOUSE"
+    else:
+        raise ValueError(f"Invalid unit type: {unit_type}")
 
 def get_search_parameters():
     """
@@ -268,4 +299,9 @@ def get_search_parameters():
             Received {len(sys.argv)} parameters, which are: {sys.argv}"""
         )
         sys.exit(1)
-    return sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], neighborhoods
+    
+    unit_type = get_unit_type(sys.argv[3])
+    unit_type_v3 = get_unit_type_v3(sys.argv[3])
+    unit_subtype = get_unit_subtype(sys.argv[3])
+
+    return sys.argv[1], sys.argv[2], unit_type, unit_type_v3, unit_subtype, sys.argv[4], neighborhoods
