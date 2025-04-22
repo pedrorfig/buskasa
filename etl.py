@@ -4,6 +4,7 @@ from src.classes import ZapPage, ZapNeighborhood, ZapItem
 from dotenv import load_dotenv
 from src import extract, transform
 import logging
+import random
 
 # Configure logging
 logging.basicConfig(format="%(asctime)s %(name)-12s %(levelname)-8s %(message)s", level=logging.INFO)
@@ -33,6 +34,8 @@ def main(
     load_dotenv()
     # Get state, city and neighborhoods to be search through command prompt
     state, city, unit_type, business_type, neighborhoods = extract.get_search_parameters()
+    # Generate a random integer between 0 and 1000000 for session number
+    session_number = random.randint(0, 1000000)
     if business_type == "RENTAL":
         max_price = int(max_price/100)
         min_price = int(min_price/100)
@@ -53,6 +56,7 @@ def main(
             max_price,
             min_price,
             min_area,
+            session_number
         )
         # Delete listings that are not available
         zap_neighborhood.remove_old_listings()

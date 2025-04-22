@@ -41,6 +41,7 @@ class ZapNeighborhood:
         max_price: int,
         min_price: int,
         min_area: int,
+        session_number: int,
     ):
         # Create SQLalchemy engine for connections with DB
         self._engine = extract.create_db_engine()
@@ -54,6 +55,7 @@ class ZapNeighborhood:
         self.max_price = max_price
         self.min_price = min_price
         self.min_area = min_area
+        self.session_number = session_number
         self.number_of_listings_per_page = 100
 
         # Placeholder to save results from pages
@@ -572,7 +574,7 @@ class ZapPage:
         headers = self.zap_search.get_request_headers()
 
         proxies = {
-            "http": f"http://scraperapi.keep_headers=true:{os.getenv('SCRAPER_APIKEY')}@proxy-server.scraperapi.com:8001"
+            "http": f"http://scraperapi.session_number={self.zap_search.session_number}.keep_headers=true:{os.getenv('SCRAPER_APIKEY')}@proxy-server.scraperapi.com:8001"
         }
 
         params = {
