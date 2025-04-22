@@ -11,7 +11,12 @@ from fake_useragent import UserAgent
 import numpy as np
 import pandas as pd
 import requests as r
+import urllib3
+
 from sqlalchemy import text
+
+import src.extract as extract
+import src.transform as transform
 
 # Configure logging
 logging.basicConfig(
@@ -20,10 +25,7 @@ logging.basicConfig(
 # Create logger object
 logger = logging.getLogger(__name__)
 
-
-import src.extract as extract
-import src.transform as transform
-
+urllib3.disable_warnings()
 
 class ZapNeighborhood:
     """
@@ -54,7 +56,7 @@ class ZapNeighborhood:
         self.unit_type = unit_type
         self.unit_type_v3 = unit_type_v3
         self.unit_subtype = unit_subtype
-        self.usage_type = "RESIDENTIAL,RESIDENTIAL,RESIDENTIAL,RESIDENTIAL,RESIDENTIAL"
+        self.usage_type = "RESIDENTIAL"
         self.max_price = max_price
         self.min_price = min_price
         self.min_area = min_area
