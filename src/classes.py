@@ -180,6 +180,8 @@ class ZapNeighborhood:
         listings_from_known_fraudsters = pd.Series()
         listings_with_total_area_typos = pd.Series()
         listings_with_unlicensed_accounts = pd.Series()
+        listings_with_inconsistent_areas_and_numbers_of_bedrooms = pd.Series()
+
         if not listings.empty:
             # Known fraudster
             listings_from_known_fraudsters = listings[
@@ -196,12 +198,19 @@ class ZapNeighborhood:
                 listings["account_is_unlicensed"]
             ]["listing_id"]
             logger.info(f"\tFound {len(listings_with_unlicensed_accounts)} listings with unlicensed accounts")
+            # Listings with inconsistent areas and numbers of bedrooms
+            listings_with_inconsistent_areas_and_numbers_of_bedrooms = listings[
+                (listings["total_area_m2"] >= 150)
+                & (listings["bedrooms"] <= 1)
+            ]["listing_id"]
+            logger.info(f"\tFound {len(listings_with_inconsistent_areas_and_numbers_of_bedrooms)} listings with inconsistent areas and numbers of bedrooms")
             # Populating series of listings to be removed
             listing_ids_to_remove = pd.concat(
                 [
                     listings_from_known_fraudsters,
                     listings_with_total_area_typos,
                     listings_with_unlicensed_accounts,
+                    listings_with_inconsistent_areas_and_numbers_of_bedrooms,
                 ]
             )
             self.listing_ids_to_remove = listing_ids_to_remove.to_list()

@@ -61,7 +61,7 @@ class App:
                     "Cidade",
                     options=["São Paulo", "Rio de Janeiro"],
                     key="city_modal",
-                    index=0
+                    index=0,
                 )
 
                 with col2:
@@ -318,11 +318,7 @@ class App:
                         & (self.data["total_area_m2"] >= area[0])
                         & (self.data["total_area_m2"] <= area[1])
                         & (self.data["green_density_grouped"].isin(green_density))
-                        & (
-                            self.data["n_nearby_bus_lanes_grouped"].isin(
-                                movement_intensity
-                            )
-                        )
+                        & (self.data["n_nearby_bus_lanes_grouped"].isin(movement_intensity))
                         & (unit_type_filter)
                         & (is_remodeled_filter)
                     )
@@ -331,6 +327,7 @@ class App:
                 self.filtered_data = self.data.loc[
                     self.data["city"] == st.session_state.city
                 ]
+            st.write(len(self.filtered_data))
 
     def create_listings_map(self):
 
@@ -400,12 +397,9 @@ class App:
             autosize=True,
             margin=dict(l=0, r=0, t=0, b=0),
             legend=dict(
-                        yanchor="top", 
-                        y=0.99,
-                        xanchor="right",
-                        x=0.95,
-                        bgcolor="White"),
-            legend_title_text='Custo-benefício',
+                yanchor="top", y=0.99, xanchor="right", x=0.95, bgcolor="White"
+            ),
+            legend_title_text="Custo-benefício",
             showlegend=True,
             mapbox=dict(
                 style="streets",
@@ -420,45 +414,51 @@ class App:
         )
 
         # Add a customized legend item with a filled circle
-        fig.add_trace(go.Scatter(
-            x=[None],  # No actual data
-            y=[None],  # No actual data
-            mode='markers',  # Marker mode to display as circle
-            name='Excelente',  # Custom name in legend
-            marker=dict(
-                size=10,  # Size of the circle
-                color='blue',  # Fill color of the circle
-                symbol='circle'  # Use 'circle' symbol for a filled circle
-            ),
-            showlegend=True
-        ))
+        fig.add_trace(
+            go.Scatter(
+                x=[None],  # No actual data
+                y=[None],  # No actual data
+                mode="markers",  # Marker mode to display as circle
+                name="Excelente",  # Custom name in legend
+                marker=dict(
+                    size=10,  # Size of the circle
+                    color="blue",  # Fill color of the circle
+                    symbol="circle",  # Use 'circle' symbol for a filled circle
+                ),
+                showlegend=True,
+            )
+        )
 
         # Add a customized legend item with a filled circle
-        fig.add_trace(go.Scatter(
-            x=[None],  # No actual data
-            y=[None],  # No actual data
-            mode='markers',  # Marker mode to display as circle
-            name='Ótimo',  # Custom name in legend
-            marker=dict(
-                size=10,  # Size of the circle
-                color='green',  # Fill color of the circle
-                symbol='circle'  # Use 'circle' symbol for a filled circle
-            ),
-            showlegend=True
-        ))
+        fig.add_trace(
+            go.Scatter(
+                x=[None],  # No actual data
+                y=[None],  # No actual data
+                mode="markers",  # Marker mode to display as circle
+                name="Ótimo",  # Custom name in legend
+                marker=dict(
+                    size=10,  # Size of the circle
+                    color="green",  # Fill color of the circle
+                    symbol="circle",  # Use 'circle' symbol for a filled circle
+                ),
+                showlegend=True,
+            )
+        )
         # Add a customized legend item with a filled circle
-        fig.add_trace(go.Scatter(
-            x=[None],  # No actual data
-            y=[None],  # No actual data
-            mode='markers',  # Marker mode to display as circle
-            name='Bom',  # Custom name in legend
-            marker=dict(
-                size=10,  # Size of the circle
-                color='red',  # Fill color of the circle
-                symbol='circle'  # Use 'circle' symbol for a filled circle
-            ),
-            showlegend=True
-        ))
+        fig.add_trace(
+            go.Scatter(
+                x=[None],  # No actual data
+                y=[None],  # No actual data
+                mode="markers",  # Marker mode to display as circle
+                name="Bom",  # Custom name in legend
+                marker=dict(
+                    size=10,  # Size of the circle
+                    color="red",  # Fill color of the circle
+                    symbol="circle",  # Use 'circle' symbol for a filled circle
+                ),
+                showlegend=True,
+            )
+        )
 
         fig.update_yaxes(showgrid=False, visible=False, showticklabels=False)
         fig.update_xaxes(showgrid=False, visible=False, showticklabels=False)

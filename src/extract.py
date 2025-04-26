@@ -93,13 +93,13 @@ def get_listings(_conn, business_type, city):
     """
     listings = pd.read_sql(
         """
-                SELECT *
-                FROM fact_listings
-                WHERE price_per_area_in_first_quartile = True
-                AND business_type = %(business_type)s
-                AND city = %(city)s
-                AND unit_type not in ('BUILDING', 'BUSINESS', 'COMMERCIAL_BUILDING', 'COMMERCIAL_PROPERTY', 'FARM', 'RESIDENTIAL_ALLOTMENT_LAND', 'OFFICE', 'SHED_DEPOSIT_WAREHOUSE')
-                """,
+        SELECT *
+        FROM fact_listings
+        WHERE price_per_area_in_first_quartile = True
+        AND business_type = %(business_type)s
+        AND city = %(city)s
+        AND unit_type not in ('BUILDING', 'BUSINESS', 'COMMERCIAL_BUILDING', 'COMMERCIAL_PROPERTY', 'FARM', 'RESIDENTIAL_ALLOTMENT_LAND', 'OFFICE', 'SHED_DEPOSIT_WAREHOUSE')
+        """,
         con=_conn,
         index_col="listing_id",
         params={"business_type": business_type, "city": city},
