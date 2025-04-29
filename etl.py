@@ -12,7 +12,6 @@ logging.basicConfig(format="%(asctime)s %(name)-12s %(levelname)-8s %(message)s"
 logger = logging.getLogger(__name__)
 
 def main(
-    usage_type: str = "RESIDENTIAL",
     min_area: int = 30,
     min_price: int = 200000,
     max_price: int = 2000000,
@@ -26,8 +25,6 @@ def main(
         min_area (int): Min area to scrape
         min_price (int): Min listing price to scrape
         unit_type (str): Type of construction, APARTMENT or HOME
-        usage_type (str): Type of usage, RESIDENTIAL
-
     """
 
     # Load credential values

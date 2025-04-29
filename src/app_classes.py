@@ -184,9 +184,13 @@ class App:
                     )
                     # Determine the condition based on the selection
                     if unit_type == ["Apartamentos"]:
-                        unit_type_filter = self.data["unit_type"] == "APARTMENT"
+                        unit_type_filter = self.data["unit_type"].isin(
+                            ["APARTMENT", "FLAT", "PENTHOUSE"]
+                        )
                     elif unit_type == ["Casas"]:
-                        unit_type_filter = self.data["unit_type"] == "HOME"
+                        unit_type_filter = self.data["unit_type"].isin(
+                            ["HOME", "CONDOMINIUM"]
+                        )
                     else:
                         unit_type_filter = True  # Show all rows
                     st.divider()

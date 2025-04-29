@@ -231,22 +231,24 @@ class ZapNeighborhood:
                 "min_area": self.min_area,
                 "min_price": self.min_price,
                 "max_price": self.max_price,
+                "unit_type": self.unit_type,
             }
-            listingd_on_db_sql_statement = """SELECT *
-                        from fact_listings
-                    WHERE
-                        city = %(city)s and
-                        neighborhood = %(neighborhood)s and
-                        business_type = %(business_type)s
-                    """
+            listingd_on_db_sql_statement = """
+            SELECT *
+                    from fact_listings
+            WHERE
+                    city = %(city)s and
+                    neighborhood = %(neighborhood)s and
+                    business_type = %(business_type)s and
+                    unit_type = %(unit_type)s
+            """
             listings_on_db = pd.read_sql(
                 listingd_on_db_sql_statement, con=conn, params=filter_conditions
             )
-        search_listings = self.listings_to_add
-        if (not search_listings.empty) and (not listings_on_db.empty):
-            all_listings = pd.concat([search_listings, listings_on_db])
-        elif not search_listings.empty:
-            all_listings = search_listings
+        if (not self.listings_to_add.empty) and (not listings_on_db.empty):
+            all_listings = pd.concat([self.listings_to_add, listings_on_db])
+        elif not self.listings_to_add.empty:
+            all_listings = self.listings_to_add
         elif not listings_on_db.empty:
             all_listings = listings_on_db
         else:
@@ -254,9 +256,9 @@ class ZapNeighborhood:
         # Calculate first quartile on price per area
         q_low = all_listings["price_per_area"].quantile(0.25)
         self.neighborhood_price_per_area_first_quartile = q_low
-        if not search_listings.empty:
+        if not self.listings_to_add.empty:
             self.listings_to_add["price_per_area_in_first_quartile"] = (
-                search_listings["price_per_area"] <= q_low
+                self.listings_to_add["price_per_area"] <= q_low
             )
 
     def remove_outliers(self):
