@@ -374,12 +374,14 @@ class ZapNeighborhood:
                     and neighborhood = :neighborhood
                     and business_type = :business_type
                     and city = :city
+                    and unit_type = :unit_type
                 """
                 ),
                 parameters={
                     "neighborhood": self.neighborhood,
                     "business_type": self.business_type,
                     "city": self.city,
+                    "unit_type": self.unit_type,
                 },
             )
         return
