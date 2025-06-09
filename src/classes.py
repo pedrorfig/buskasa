@@ -602,8 +602,13 @@ class ZapPage:
         #     "http": f"http://scraperapi.session_number={self.zap_search.session_number}.keep_headers=true:{os.getenv('SCRAPER_APIKEY')}@proxy-server.scraperapi.com:8001"
         # }
 
+        # proxies = {
+        #     "https": f"https://user-{os.getenv('OX_USERNAME')}-country-US:{os.getenv('OX_PASSWORD')}@{os.getenv('OX_PROXY')}"
+        # }
+
         proxies = {
-            "https": f"https://user-{os.getenv('OX_USERNAME')}-country-US:{os.getenv('OX_PASSWORD')}@{os.getenv('OX_PROXY')}"
+            "http": "http://xtjcvrfm-rotate:vohuv76br2qq@p.webshare.io:80/",
+            "https": "http://xtjcvrfm-rotate:vohuv76br2qq@p.webshare.io:80/",
         }
 
         params = {
