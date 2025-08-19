@@ -11,6 +11,7 @@ from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
 
 import src.extract as extract
+from src.database import db_manager
 
 load_dotenv()
 
@@ -28,7 +29,7 @@ class App:
         self.filtered_data = pd.DataFrame()
         self.business_type = None
         self.city_price_per_area_distribution = []
-        self._engine = extract.create_db_engine()
+        self._engine = db_manager.get_engine()
 
     def create_login_modal(self):
         if "business_type" not in st.session_state and "city" not in st.session_state:
@@ -85,11 +86,9 @@ class App:
         Returns:
 
         """
-        engine = self._engine
-        with engine.begin() as conn:
-            self.data = extract.get_listings(
-                conn, st.session_state.business_type, st.session_state.city
-            )
+        self.data = extract.get_listings(
+            st.session_state.business_type, st.session_state.city
+        )
 
     def create_price_per_area_distribution_histogram(self):
         fig = go.Figure()

@@ -2,7 +2,7 @@ import logging
 import textwrap
 import pandas as pd
 from sqlalchemy import text
-
+from src.database import db_manager
 import src.extract as extract
 
 # Configure logging
@@ -86,10 +86,9 @@ def calculate_green_density(image):
 
 
 def group_green_density(city):
-    # Connect to the PostgreSQL database
-    engine = extract.create_db_engine()
+    """Group green density into quartiles with optimized database access"""
     logger.info("Grouping green_density into quartiles")
-    with engine.begin() as conn:
+    with db_manager.get_transaction() as conn:
         query = text(
             """with quartile_green_density as (select
                         CASE
@@ -124,10 +123,9 @@ def group_green_density(city):
     return
 
 def group_n_bus_lanes(city):
-    # Connect to the PostgreSQL database
-    engine = extract.create_db_engine()
+    """Group nearby bus lanes into quartiles with optimized database access"""
     logger.info("Grouping n_nearby_bus_lanes into quartiles")
-    with engine.begin() as conn:
+    with db_manager.get_transaction() as conn:
         query = text(
             """WITH quartile_n_nearby_bus_lanes AS (
                         select CASE
@@ -152,10 +150,9 @@ def group_n_bus_lanes(city):
     return
 
 def flag_remodeled_properties():
-    # Connect to the PostgreSQL database
-    engine = extract.create_db_engine()
+    """Flag remodeled properties with optimized database access"""
     logger.info("Flagging remodeled properties")
-    with engine.begin() as conn:
+    with db_manager.get_transaction() as conn:
         query = text(
             """
             UPDATE 

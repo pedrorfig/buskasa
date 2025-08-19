@@ -3,10 +3,11 @@ import os
 import random
 import re
 from datetime import datetime, timedelta
+from typing import Generator, Optional, Dict, Any
+import time
 
 import backoff
 import cloudscraper
-from fake_useragent import UserAgent
 
 import numpy as np
 import pandas as pd
@@ -18,6 +19,8 @@ from sqlalchemy import text
 import src.extract as extract
 import src.transform as transform
 
+from src.database import db_manager, bulk_ops
+
 # Configure logging
 logging.basicConfig(
     format="%(asctime)s %(name)-12s %(levelname)-8s %(message)s", level=logging.INFO
@@ -26,6 +29,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 urllib3.disable_warnings()
+
+
+
+
 
 class ZapNeighborhood:
     """
@@ -46,8 +53,8 @@ class ZapNeighborhood:
         min_area: int,
         session_number: int,
     ):
-        # Create SQLalchemy engine for connections with DB
-        self._engine = extract.create_db_engine()
+        # Use the shared database manager instead of creating individual engines
+        self._db_manager = db_manager
         # Define filters used on the search
         self.state = state
         self.city = city
@@ -95,11 +102,10 @@ class ZapNeighborhood:
 
     def get_existing_ids(self):
         """
-        Get existing listing ids for the specified conditions
+        Get existing listing ids for the specified conditions with optimized database access
         """
         logger.info("\tGetting existing listing ids")
-        engine = self._engine
-        with engine.begin() as conn:
+        with self._db_manager.get_connection() as conn:
             # Checking for existing listing_ids on the database
             # according to specified filters
             filter_conditions = {
@@ -222,8 +228,8 @@ class ZapNeighborhood:
             self.listings_to_add = cleaned_listings
 
     def calculate_price_per_area_first_quartile(self):
-        engine = self._engine
-        with engine.begin() as conn:
+        """Calculate price per area first quartile with optimized database access"""
+        with self._db_manager.get_connection() as conn:
             filter_conditions = {
                 "neighborhood": self.neighborhood,
                 "city": self.city,
@@ -233,8 +239,9 @@ class ZapNeighborhood:
                 "max_price": self.max_price,
                 "unit_type": self.unit_type,
             }
+            # Only select necessary columns for quartile calculation
             listingd_on_db_sql_statement = """
-            SELECT *
+            SELECT price_per_area
                     from fact_listings
             WHERE
                     city = %(city)s and
@@ -263,14 +270,13 @@ class ZapNeighborhood:
 
     def remove_outliers(self):
         """
-        Removing outlier on assigned feature
+        Removing outlier on assigned feature with optimized database access
 
         Args:
             feature:
             data_with_outliers:
         """
-        engine = self._engine
-        with engine.begin() as conn:
+        with self._db_manager.get_connection() as conn:
             filter_conditions = {
                 "neighborhood": self.neighborhood,
                 "city": self.city,
@@ -280,8 +286,9 @@ class ZapNeighborhood:
                 "max_price": self.max_price,
                 "unit_type": self.unit_type,
             }
+            # Only select price_per_area for outlier detection
             listings_on_db_sql_statement = """
-                SELECT *
+                SELECT price_per_area
                     from fact_listings
                 WHERE
                     city = %(city)s and
@@ -360,11 +367,10 @@ class ZapNeighborhood:
 
     def remove_old_listings(self):
         """
-        Remove listings that haven't been updated for more than a week
+        Remove listings that haven't been updated for more than a week with optimized database access
         """
         logger.info("\tRemoving old listings")
-        engine = self._engine
-        with engine.begin() as conn:
+        with self._db_manager.get_transaction() as conn:
             conn.execute(
                 text(
                     """
@@ -414,13 +420,13 @@ class ZapNeighborhood:
         return headers
 
     def save_zip_codes_to_db(self):
-        """Save zip codes to database using batch processing"""
+        """Save zip codes to database using batch processing with optimized connection"""
         logger.info("\tSaving zip codes to database")
         zip_to_add = self.zip_codes_to_add
         # Only new zip codes will be added
         zip_to_add = zip_to_add[~zip_to_add.index.isin(self.existing_zip_codes.index)]
         if not zip_to_add.empty:
-            with self._engine.begin() as conn:
+            with self._db_manager.get_transaction() as conn:
                 # Use chunksize for better memory management
                 zip_to_add.to_sql(
                     name="dim_zip_code",
@@ -433,11 +439,11 @@ class ZapNeighborhood:
                 )
 
     def save_traffic_analysis_to_db(self):
-        """Save traffic analysis to database using batch processing"""
+        """Save traffic analysis to database using batch processing with optimized connection"""
         logger.info("\tSaving traffic analysis to database")
         traffic_analysis_to_add = self.traffic_analysis_to_add
         if not traffic_analysis_to_add.empty:
-            with self._engine.begin() as conn:
+            with self._db_manager.get_transaction() as conn:
                 # Use chunksize for better memory management
                 traffic_analysis_to_add.to_sql(
                     name="fact_traffic_analysis",
@@ -449,11 +455,11 @@ class ZapNeighborhood:
                 )
 
     def save_image_analysis_to_db(self):
-        """Save image analysis to database using batch processing"""
+        """Save image analysis to database using batch processing with optimized connection"""
         logger.info("Saving image analysis to database")
         image_analysis_to_add = self.image_analysis_to_add
         if not image_analysis_to_add.empty:
-            with self._engine.begin() as conn:
+            with self._db_manager.get_transaction() as conn:
                 # Use chunksize for better memory management
                 image_analysis_to_add.to_sql(
                     name="fact_image_analysis",
@@ -465,28 +471,24 @@ class ZapNeighborhood:
                 )
 
     def save_listings_to_db(self):
-        """Save listings to database using batch processing"""
+        """Save listings to database using batch processing with optimized connection"""
         logger.info("\tSaving records to database")
         if not self.listings_to_add.empty:
-            engine = self._engine
-            with engine.begin() as conn:
+            with self._db_manager.get_transaction() as conn:
                 # Set listing_id as index
                 listings_to_add = self.listings_to_add.set_index("listing_id")
 
-                # Split listing IDs into chunks for better performance
-                chunk_size = 1000
-                listing_ids = tuple(listings_to_add.index)
-                for i in range(0, len(listing_ids), chunk_size):
-                    chunk = listing_ids[i : i + chunk_size]
-                    # Delete listings in chunks
+                # Use single batch delete with ANY operator for better performance
+                listing_ids = list(listings_to_add.index)
+                if listing_ids:
                     conn.execute(
                         text(
                             """
                             DELETE FROM fact_listings
-                            WHERE listing_id in :listing_ids
+                            WHERE listing_id = ANY(:listing_ids)
                             """
                         ),
-                        {"listing_ids": chunk},
+                        {"listing_ids": listing_ids},
                     )
 
                 # Save new listings in chunks
@@ -507,50 +509,41 @@ class ZapNeighborhood:
 
     def get_existing_zip_codes(self):
         """
-        Read db table
+        Read db table with optimized database access and caching
         Returns:
 
         """
         logger.info("\tGetting existing zip codes")
-        engine = self._engine
-        with engine.begin() as conn:
-            data = pd.read_sql(
-                "SELECT * from dim_zip_code", con=conn, index_col="zip_code"
-            )
-        self.existing_zip_codes = data
+        # Use bulk operations with caching for better performance
+        self.existing_zip_codes = bulk_ops.bulk_get_zip_codes()
 
     def get_image_analysis(self):
         """
-        Read image analysis db table
+        Read image analysis db table with optimized database access and caching
         Returns:
 
         """
         logger.info("\tGetting image analysis")
-
-        engine = self._engine
-        with engine.begin() as conn:
-            data = pd.read_sql(
-                "SELECT * from fact_image_analysis", con=conn, index_col="id"
-            )
-        self.existing_image_analysis = data
+        # Use bulk operations to get both image and traffic analysis in one call
+        analysis_data = bulk_ops.bulk_get_analysis_data()
+        self.existing_image_analysis = analysis_data["image_analysis"]
 
     def get_traffic_analysis(self):
         """
-        Read image analysis db table
+        Read traffic analysis db table with optimized database access and caching
         Returns:
 
         """
         logger.info("\tGetting traffic analysis")
-
-        engine = self._engine
-        with engine.begin() as conn:
-            data = pd.read_sql(
-                "SELECT * from fact_traffic_analysis", con=conn, index_col="id"
-            )
-        self.existing_traffic_analysis = data
+        # Use bulk operations to get both image and traffic analysis in one call
+        analysis_data = bulk_ops.bulk_get_analysis_data()
+        self.existing_traffic_analysis = analysis_data["traffic_analysis"]
 
     def close_engine(self):
-        self._engine.dispose()
+        """Close database connections - now handled by DatabaseManager"""
+        # The DatabaseManager handles connection pooling and cleanup
+        # Individual instances no longer need to dispose engines
+        pass
 
 
 class ZapPage:
@@ -606,11 +599,6 @@ class ZapPage:
         #     "https": f"https://user-{os.getenv('OX_USERNAME')}-country-US:{os.getenv('OX_PASSWORD')}@{os.getenv('OX_PROXY')}"
         # }
 
-        proxies = {
-            "http": "http://xtjcvrfm-rotate:vohuv76br2qq@p.webshare.io:80/",
-            "https": "http://xtjcvrfm-rotate:vohuv76br2qq@p.webshare.io:80/",
-        }
-
         params = {
             "user": "a521d36e-4582-4b70-8162-41d661323a54",
             "portal": "ZAP",
@@ -639,12 +627,17 @@ class ZapPage:
             "__zt": "mtc:deduplication2023",
         }
 
+        proxies={
+            "http": "http://xtjcvrfm:vohuv76br2qq@91.123.10.72:6614/",
+            "https": "http://xtjcvrfm:vohuv76br2qq@91.123.10.72:6614/"
+        }
+
         response = self.zap_search.session.get(
             "https://glue-api.zapimoveis.com.br/v2/listings",
             params=params,
             headers=headers,
             proxies=proxies,
-            verify=False,
+            # verify=False,
         )
         try:
             page_data = response.json()
@@ -728,7 +721,7 @@ class ZapItem:
     def __init__(self, listing, zap_page):
         # Getting ZapPage object
         self._zap_page = zap_page
-        self._db_engine = zap_page.zap_search._engine
+        self._db_manager = zap_page.zap_search._db_manager
         # Getting listing data
         self._listing_data = listing
         self.listing_id = self.get_listing_id()
@@ -1338,3 +1331,6 @@ class ZapItem:
             return True
         else:
             return False
+
+
+

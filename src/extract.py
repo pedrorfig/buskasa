@@ -7,9 +7,11 @@ import requests as r
 import streamlit as st
 from dotenv import load_dotenv
 from PIL import Image
-from sqlalchemy import create_engine, text
+from sqlalchemy import  text
 import overpy
 import logging
+
+from src.database import db_manager
 
 # Configure logging
 logging.basicConfig(format="%(asctime)s %(name)-12s %(levelname)-8s %(message)s", level=logging.INFO)
@@ -36,8 +38,8 @@ def get_neighborhoods_from_city_and_state(state, city):
 
 
 def get_city_id_from_city_and_state_names(state, city):
-    engine = create_db_engine()
-    with engine.begin() as conn:
+    """Get city ID from city and state names with optimized database access"""
+    with db_manager.get_transaction() as conn:
         # Checking for existing listing_ids on the database according
         # to the specified filters
         filter_conditions = {"city": city, "state": state}
@@ -65,6 +67,7 @@ def create_db_engine(
     user=os.environ["DB_USER"], password=os.environ["DB_PASS"], port=6543
 ):
     """
+    DEPRECATED: Use db_manager.get_engine() instead.
     Creates engine needed to create connections to the database
     with the credentials and parameters provided.
 
@@ -75,35 +78,30 @@ def create_db_engine(
     Returns:
         SQLAlchemy engine object
     Notes:
+        This function is deprecated in favor of the DatabaseManager singleton
     """
-
-    assert isinstance(port, int), "Port must be numeric"
-    assert user is not None, "Username is empty"
-    assert password is not None, "Password is empty"
-   
-    db_uri = f"postgresql+psycopg2://{user}:{password}@aws-0-sa-east-1.pooler.supabase.com:{port}/postgres"
-    engine = create_engine(db_uri, future=True)
-
-    return engine
+    logger.warning("create_db_engine is deprecated. Use db_manager.get_engine() instead.")
+    return db_manager.get_engine()
 
 @st.cache_data(show_spinner=False)
-def get_listings(_conn, business_type, city):
+def get_listings(business_type, city):
     """
-    Get listings
+    Get listings with optimized database access
     """
-    listings = pd.read_sql(
-        """
-        SELECT *
-        FROM fact_listings
-        WHERE price_per_area_in_first_quartile = True
-        AND business_type = %(business_type)s
-        AND city = %(city)s
-        AND unit_type not in ('BUILDING', 'BUSINESS', 'COMMERCIAL_BUILDING', 'COMMERCIAL_PROPERTY', 'FARM', 'RESIDENTIAL_ALLOTMENT_LAND', 'OFFICE', 'SHED_DEPOSIT_WAREHOUSE')
-        """,
-        con=_conn,
-        index_col="listing_id",
-        params={"business_type": business_type, "city": city},
-    )
+    with db_manager.get_connection() as conn:
+        listings = pd.read_sql(
+            """
+            SELECT *
+            FROM fact_listings
+            WHERE price_per_area_in_first_quartile = True
+            AND business_type = %(business_type)s
+            AND city = %(city)s
+            AND unit_type not in ('BUILDING', 'BUSINESS', 'COMMERCIAL_BUILDING', 'COMMERCIAL_PROPERTY', 'FARM', 'RESIDENTIAL_ALLOTMENT_LAND', 'OFFICE', 'SHED_DEPOSIT_WAREHOUSE')
+            """,
+            con=conn,
+            index_col="listing_id",
+            params={"business_type": business_type, "city": city},
+        )
 
     logger.info(f"Found {len(listings)} listings for {city} and {business_type} business type")
 
@@ -178,8 +176,10 @@ def is_next_to_park(lat, lon):
     return next_to_park
 
 
-def add_green_density_to_db(db_engine, min_lat, max_lat, min_lon, max_lon, green_density):
-    with db_engine.begin() as conn:
+def add_green_density_to_db(min_lat, max_lat, min_lon, max_lon, green_density):
+    """Add green density analysis to database using optimized connection"""
+
+    with db_manager.get_transaction() as conn:
         query = text(
         """
         INSERT INTO fact_image_analysis (min_lat, max_lat, min_lon, max_lon, green_density)
@@ -199,12 +199,11 @@ def add_green_density_to_db(db_engine, min_lat, max_lat, min_lon, max_lon, green
 
 def get_unique_cities_from_db():
     """
-    Read house listings from db table
+    Read house listings from db table with optimized database access
     Returns:
-
+        DataFrame with unique cities
     """
-    engine = create_db_engine()
-    with engine.begin() as conn:
+    with db_manager.get_connection() as conn:
         unique_cities = pd.read_sql(
             """
             SELECT DISTINCT city
@@ -212,28 +211,24 @@ def get_unique_cities_from_db():
             """,
             con=conn,
         )
-    engine.dispose()
     return unique_cities
 
 
-def delete_listings_from_db(unavailable_ids, engine):
-
-    if len(unavailable_ids) > 1:
-        unavailable_ids = tuple(unavailable_ids)
-    elif len(unavailable_ids) == 1:
-        unavailable_ids = f"('{unavailable_ids[0]}')"
-    else:
-        return f"No unavailable ids found"
-    query = text(
-        f"""
-            DELETE FROM fact_listings
-            WHERE listing_id IN {unavailable_ids}
+def delete_listings_from_db(unavailable_ids):
+    """Delete listings from database with optimized batch processing"""
+    if not unavailable_ids:
+        return "No unavailable ids found"
+    
+    # Use parameterized query for better security and performance
+    with db_manager.get_transaction() as conn:
+        query = text(
             """
-    )
-    with engine.begin() as conn:
-        conn.execute(query)
-        conn.commit()
-    return
+            DELETE FROM fact_listings
+            WHERE listing_id = ANY(:ids)
+            """
+        )
+        conn.execute(query, {"ids": unavailable_ids})
+    return f"Deleted {len(unavailable_ids)} listings"
 
 def get_unit_type(unit_type):
     """
