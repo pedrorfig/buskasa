@@ -628,8 +628,8 @@ class ZapPage:
         }
 
         proxies={
-            "http": "http://xtjcvrfm:vohuv76br2qq@91.123.10.72:6614/",
-            "https": "http://xtjcvrfm:vohuv76br2qq@91.123.10.72:6614/"
+        "http": "http://xtjcvrfm:vohuv76br2qq@45.38.67.123:7055/",
+        "https": "http://xtjcvrfm:vohuv76br2qq@45.38.67.123:7055/"
         }
 
         response = self.zap_search.session.get(
