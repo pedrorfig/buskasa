@@ -21,7 +21,7 @@ This repository contains an app that helps future home owners to find the best r
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/buskasa.git
+git clone https://github.com/pedrorfig/buskasa.git
 cd buskasa
 ```
 
