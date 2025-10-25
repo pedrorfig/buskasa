@@ -376,8 +376,7 @@ class ZapNeighborhood:
                     """
                 DELETE FROM fact_listings
                 WHERE
-                    updated_at < current_date
-                    and neighborhood = :neighborhood
+                    neighborhood = :neighborhood
                     and business_type = :business_type
                     and city = :city
                     and unit_type = :unit_type

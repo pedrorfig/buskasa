@@ -213,23 +213,6 @@ def get_unique_cities_from_db():
         )
     return unique_cities
 
-
-def delete_listings_from_db(unavailable_ids):
-    """Delete listings from database with optimized batch processing"""
-    if not unavailable_ids:
-        return "No unavailable ids found"
-    
-    # Use parameterized query for better security and performance
-    with db_manager.get_transaction() as conn:
-        query = text(
-            """
-            DELETE FROM fact_listings
-            WHERE listing_id = ANY(:ids)
-            """
-        )
-        conn.execute(query, {"ids": unavailable_ids})
-    return f"Deleted {len(unavailable_ids)} listings"
-
 def get_unit_type(unit_type):
     """
     Get the unity type
