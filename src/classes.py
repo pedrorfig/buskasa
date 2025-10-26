@@ -376,10 +376,10 @@ class ZapNeighborhood:
                     """
                 DELETE FROM fact_listings
                 WHERE
-                    neighborhood = :neighborhood
-                    and business_type = :business_type
-                    and city = :city
-                    and unit_type = :unit_type
+                    neighborhood ilike :neighborhood
+                    and business_type ilike :business_type
+                    and city ilike :city
+                    and unit_type ilike '%' || :unit_type || '%'
                 """
                 ),
                 parameters={
