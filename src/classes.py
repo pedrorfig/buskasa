@@ -378,7 +378,6 @@ class ZapNeighborhood:
                     and business_type ilike :business_type
                     and city ilike :city
                     and unit_type ilike '%' || :unit_type || '%'
-                    and updated_at::date < current_date
             """
             result = conn.execute(
                 text(delete_statement),
