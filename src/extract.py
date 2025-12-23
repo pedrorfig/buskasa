@@ -217,12 +217,16 @@ def get_unit_type(unit_type):
     """
     Get the unity type
     """
-    if unit_type == "APARTMENT":
-        return ",".join(["APARTMENT"] * 5)
-    elif unit_type == "HOME":
-        return ",".join(["HOME"] * 4)
+    if unit_type in ["APARTMENT", "HOME"]:
+        return unit_type
     else:
         raise ValueError(f"Invalid unit type: {unit_type}")
+    # if unit_type == "APARTMENT":
+    #     return ",".join(["APARTMENT"] * 5)
+    # elif unit_type == "HOME":
+    #     return ",".join(["HOME"] * 4)
+    # else:
+    #     raise ValueError(f"Invalid unit type: {unit_type}")
 
 def get_unit_type_v3(unit_type):
     """

@@ -371,17 +371,17 @@ class ZapNeighborhood:
         """
         logger.info("\tRemoving old listings")
         with self._db_manager.get_transaction() as conn:
-            conn.execute(
-                text(
-                    """
+            delete_statement = """
                 DELETE FROM fact_listings
                 WHERE
                     neighborhood ilike :neighborhood
                     and business_type ilike :business_type
                     and city ilike :city
                     and unit_type ilike '%' || :unit_type || '%'
-                """
-                ),
+                    and updated_at::date < current_date
+            """
+            result = conn.execute(
+                text(delete_statement),
                 parameters={
                     "neighborhood": self.neighborhood,
                     "business_type": self.business_type,
@@ -389,6 +389,9 @@ class ZapNeighborhood:
                     "unit_type": self.unit_type,
                 },
             )
+            deleted_count = result.rowcount
+            logger.info(f"\tExecuted statement: {delete_statement} with parameters: neighborhood={self.neighborhood}, business_type={self.business_type}, city={self.city}, unit_type={self.unit_type}")
+            logger.info(f"\tDeleted {deleted_count} old listings (older than today)")
         return
 
     def get_request_headers(self):
