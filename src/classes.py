@@ -68,13 +68,18 @@ class ZapNeighborhood:
         self.min_price = min_price
         self.min_area = min_area
         self.session_number = session_number
-        self.number_of_listings_per_page = 100
+        # The API rejects anything above 30 with
+        # "Size is above acceptable limit" (HTTP 400)
+        self.number_of_listings_per_page = 30
 
         # Placeholder to save results from pages
         self.zap_pages = []
         # Save all listings from search to check if any was deleted on the web,
         # so it is also deleted on the DB
         self.all_listing_from_search = []
+        # Set when the API refuses to paginate any further, meaning the search
+        # only saw part of the matching listings
+        self.search_was_truncated = False
         # Placeholder for retrieving records on the DB
         self.existing_zip_codes = pd.DataFrame()
         self.listing_ids_to_remove = []
@@ -95,10 +100,14 @@ class ZapNeighborhood:
         Create a scraper session
         """
 
-        return cloudscraper.create_scraper(
+        session = cloudscraper.create_scraper(
             browser={"browser": "chrome", "platform": "windows", "mobile": False},
             sess=r.Session(),
         )
+        # Ignore HTTP_PROXY/HTTPS_PROXY from the environment so the proxy is
+        # only ever the one selected explicitly via ZAP_PROXY_URL in get_page
+        session.trust_env = False
+        return session
 
     def get_existing_ids(self):
         """
@@ -365,32 +374,53 @@ class ZapNeighborhood:
         except KeyError:
             logger.info("\t\tNo listings to deduplicate")
 
-    def remove_old_listings(self):
+    def remove_stale_listings(self):
         """
-        Remove listings that haven't been updated for more than a week with optimized database access
+        Remove listings that are on the DB but that this search no longer keeps,
+        because they are gone from the website or were filtered out as junk.
+
+        Must run after the search has finished, so that a failed scrape leaves
+        the existing rows untouched instead of wiping them.
         """
-        logger.info("\tRemoving old listings")
+        logger.info("\tRemoving stale listings")
+        # Listings past the pagination cap were never seen by this search, so
+        # missing rows cannot be told apart from listings that are still online
+        if self.search_was_truncated:
+            logger.info(
+                "\t\tSkipped: the search was truncated by the API pagination cap"
+            )
+            return
+        listings_to_keep = (
+            self.listings_to_add["listing_id"].tolist()
+            if not self.listings_to_add.empty
+            else []
+        )
+        # An empty search would match every row, so never delete on one
+        if not listings_to_keep:
+            logger.info("\t\tSkipped: the search returned no listings")
+            return
         with self._db_manager.get_transaction() as conn:
-            delete_statement = """
-                DELETE FROM fact_listings
-                WHERE
-                    neighborhood ilike :neighborhood
-                    and business_type ilike :business_type
-                    and city ilike :city
-                    and unit_type ilike '%' || :unit_type || '%'
-            """
             result = conn.execute(
-                text(delete_statement),
-                parameters={
+                text(
+                    """
+                    DELETE FROM fact_listings
+                    WHERE
+                        neighborhood ilike :neighborhood
+                        and business_type ilike :business_type
+                        and city ilike :city
+                        and unit_type ilike '%' || :unit_type || '%'
+                        and listing_id <> ALL(:listings_to_keep)
+                    """
+                ),
+                {
                     "neighborhood": self.neighborhood,
                     "business_type": self.business_type,
                     "city": self.city,
                     "unit_type": self.unit_type,
+                    "listings_to_keep": listings_to_keep,
                 },
             )
-            deleted_count = result.rowcount
-            logger.info(f"\tExecuted statement: {delete_statement} with parameters: neighborhood={self.neighborhood}, business_type={self.business_type}, city={self.city}, unit_type={self.unit_type}")
-            logger.info(f"\tDeleted {deleted_count} old listings (older than today)")
+            logger.info(f"\t\tDeleted {result.rowcount} stale listings")
         return
 
     def get_request_headers(self):
@@ -628,10 +658,10 @@ class ZapPage:
             "__zt": "mtc:deduplication2023",
         }
 
-        proxies={
-        "http": "http://xtjcvrfm:vohuv76br2qq@108.165.205.60:5297/",
-        "https": "http://xtjcvrfm:vohuv76br2qq@108.165.205.60:5297/"
-        }
+        # Only route through a proxy when one is configured. Hardcoding it meant
+        # that once the proxy went offline every request failed with an SSL EOF.
+        proxy_url = os.getenv("ZAP_PROXY_URL")
+        proxies = {"http": proxy_url, "https": proxy_url} if proxy_url else {}
 
         response = self.zap_search.session.get(
             "https://glue-api.zapimoveis.com.br/v2/listings",
@@ -640,6 +670,16 @@ class ZapPage:
             proxies=proxies,
             # verify=False,
         )
+        # The API refuses to page past from + size = 1500. That is the end of
+        # what the search can reach, not a failure, but the caller has to know
+        # the results are incomplete before it deletes anything.
+        if response.status_code == 404 and "above acceptable limit" in response.text:
+            logger.info(
+                f"\t\tReached the API pagination cap at offset {initial_listing}"
+            )
+            self.zap_search.search_was_truncated = True
+            self.page_data = {}
+            return
         try:
             page_data = response.json()
             self.page_data = page_data

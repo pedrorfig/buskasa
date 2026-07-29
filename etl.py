@@ -56,8 +56,6 @@ def main(
             min_area,
             session_number
         )
-        # Delete listings that are not available
-        zap_neighborhood.remove_old_listings()
         # Get existing listing ids from a neighborhood
         zap_neighborhood.get_existing_ids()
         # Get existing zip codes from a neighborhood
@@ -98,6 +96,9 @@ def main(
         zap_neighborhood.remove_fraudsters()
         zap_neighborhood.remove_outliers()
         zap_neighborhood.remove_duplicated_listings()
+        # Delete listings that are no longer available, now that the search has
+        # finished and the listings it keeps are known
+        zap_neighborhood.remove_stale_listings()
         # highlight good deals
         zap_neighborhood.calculate_price_per_area_first_quartile()
         # Save results to db

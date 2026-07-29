@@ -143,27 +143,48 @@ def get_sat_image(min_lat, max_lat, min_lon, max_lon):
         image = None
     return image
 
-def get_n_bus_lines(min_lat, max_lat, min_lon, max_lon):
-    # Import the overpy module
-    
-    api = overpy.Overpass()
+OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+# Overpass rejects requests without a meaningful User-Agent
+OVERPASS_HEADERS = {"User-Agent": "buskasa-etl/1.0 (real estate research)"}
 
+
+def query_overpass(query):
+    """
+    Run an Overpass QL query and return the parsed overpy Result.
+
+    overpy 0.7 sends its requests through urllib, whose default User-Agent is
+    now refused by Overpass with HTTP 406, so the request is issued with
+    requests (carrying an explicit User-Agent) and only the parsing is
+    delegated to overpy.
+
+    Args:
+        query (str): Query body in Overpass QL
+    """
+    response = r.post(
+        OVERPASS_URL,
+        data=f"[out:json];{query}".encode("utf-8"),
+        headers=OVERPASS_HEADERS,
+        timeout=180,
+    )
+    response.raise_for_status()
+    return overpy.Overpass().parse_json(response.text)
+
+
+def get_n_bus_lines(min_lat, max_lat, min_lon, max_lon):
     bbox = [*map(lambda x: str(x), [min_lat, min_lon, max_lat, max_lon])]
     query = f'relation["route"="bus"]({",".join(bbox)});out;'
 
     # Execute the query
-    result = api.query(query)
+    result = query_overpass(query)
 
     # Output the number of bus stops
     return len(result.relations)
 
 def is_next_to_park(lat, lon):
-    api = overpy.Overpass()
-
     query = f'nwr["leisure"="park"](around:1000, {lat}, {lon});out;'
 
     # Execute the query
-    result = api.query(query)
+    result = query_overpass(query)
 
     next_to_park = False
     for way in result.ways:
